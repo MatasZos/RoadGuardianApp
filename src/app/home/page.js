@@ -23,7 +23,7 @@ export default function HomePage() {
       
         <div style={{ textAlign: "left", marginBottom: "30px" }}>
           <h1>Welcome, {name}</h1>
-          <p style={{ color: "#aaa" }}>Your motorcycle dashboard</p>
+          <p style={{ color: "#aaa" }}>Dashboard</p>
         </div>
 
         <h2 style={{ textAlign: "center" }}>Quick Actions</h2>
