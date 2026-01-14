@@ -2,32 +2,106 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Navbar from "../components/Navbar";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [fullName, setFullName] = useState("");
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const name = localStorage.getItem("userFullName");
-    if (!name) router.push("/login");
-    else setFullName(name);
-  }, []);
+    const fullName = localStorage.getItem("userFullName");
+    const email = localStorage.getItem("userEmail");
+    const phone = localStorage.getItem("userPhone");
 
-  const handleSignOut = () => {
-    localStorage.removeItem("userFullName");
-    router.push("/login");
-  };
+    if (!fullName || !email) {
+      router.push("/login");
+      return;
+    }
+
+    setUser({ fullName, email, phone });
+  }, [router]);
+
+  if (!user) return null;
 
   return (
-    <div style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", padding: "20px" }}>
-      <h1>Profile</h1>
-      <p><strong>Name:</strong> {fullName}</p>
+    <>
+      <Navbar />
 
-      <div style={{ marginTop: "20px" }}>
-        <button onClick={handleSignOut} style={{ padding: "10px 20px", borderRadius: "8px", border: "none", backgroundColor: "#e74c3c", color: "#fff", cursor: "pointer" }}>
-          Sign Out
-        </button>
+      <div style={styles.container}>
+        <div style={styles.card}>
+          <img
+            src="/profile.png"
+            alt="Profile"
+            style={styles.avatar}
+          />
+
+          <h2 style={styles.name}>{user.fullName}</h2>
+
+          <div style={styles.infoBlock}>
+            <label>Email</label>
+            <p>{user.email}</p>
+          </div>
+
+          <div style={styles.infoBlock}>
+            <label>Phone</label>
+            <p>{user.phone || "Not provided"}</p>
+          </div>
+
+          <button
+            style={styles.logout}
+            onClick={() => {
+              localStorage.clear();
+              router.push("/login");
+            }}
+          >
+            Sign Out
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
+
+const styles = {
+  container: {
+    minHeight: "calc(100vh - 60px)",
+    background: "#000",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: "20px",
+  },
+  card: {
+    background: "#111",
+    borderRadius: "16px",
+    padding: "40px",
+    width: "360px",
+    textAlign: "center",
+    boxShadow: "0 0 40px rgba(0,0,0,0.9)",
+  },
+  avatar: {
+    width: "100px",
+    height: "100px",
+    borderRadius: "50%",
+    marginBottom: "15px",
+  },
+  name: {
+    color: "#fff",
+    marginBottom: "25px",
+  },
+  infoBlock: {
+    textAlign: "left",
+    marginBottom: "15px",
+  },
+  logout: {
+    marginTop: "30px",
+    width: "100%",
+    padding: "12px",
+    background: "#e74c3c",
+    border: "none",
+    borderRadius: "8px",
+    color: "#fff",
+    fontWeight: "bold",
+    cursor: "pointer",
+  },
+};
