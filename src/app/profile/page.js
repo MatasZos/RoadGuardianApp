@@ -6,12 +6,15 @@ import Navbar from "../components/Navbar";
 
 export default function ProfilePage() {
   const [user, setUser] = useState(null);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const email = localStorage.getItem("userEmail");
+
     if (!email) {
+      setError("No email stored. Please log in.");
       setLoading(false);
       return;
     }
@@ -25,15 +28,21 @@ export default function ProfilePage() {
         });
 
         if (!res.ok) {
-          console.error("Failed to fetch profile");
+          const data = await res.json().catch(() => ({}));
+          setError(data.error || "Failed to fetch profile");
           setLoading(false);
           return;
         }
 
         const data = await res.json();
-        setUser(data);
+        if (!data.fullName) {
+          setError("User data not found");
+        } else {
+          setUser(data);
+        }
       } catch (err) {
         console.error(err);
+        setError("Server error fetching profile");
       } finally {
         setLoading(false);
       }
@@ -42,39 +51,53 @@ export default function ProfilePage() {
     fetchProfile();
   }, []);
 
-  if (loading)
+  if (loading) {
     return (
       <>
         <Navbar />
         <p style={{ color: "#fff", textAlign: "center", marginTop: "50px" }}>
-          Profile is loading
+          Loading profile...
         </p>
       </>
     );
+  }
 
-  if (!user)
+  if (error) {
     return (
       <>
         <Navbar />
-        <p style={{ color: "#fff", textAlign: "center", marginTop: "50px" }}>
-          No user data found
-        </p>
+        <div style={{ color: "#fff", textAlign: "center", marginTop: "50px" }}>
+          <p>{error}</p>
+          <button
+            style={{
+              marginTop: "20px",
+              padding: "10px 20px",
+              background: "#e74c3c",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+            }}
+            onClick={() => router.push("/login")}
+          >
+            Go to Login
+          </button>
+        </div>
       </>
     );
+  }
 
   return (
     <>
       <Navbar />
-
       <div style={styles.container}>
         <div style={styles.card}>
           <img src="/profile.png" style={styles.avatar} />
-
-          <h2 style={styles.name}>{user.fullName || "Your Name"}</h2>
+          <h2 style={styles.name}>{user.fullName}</h2>
 
           <div style={styles.infoBlock}>
             <label>Email</label>
-            <p>{user.email || "Your Email"}</p>
+            <p>{user.email}</p>
           </div>
 
           <div style={styles.infoBlock}>
