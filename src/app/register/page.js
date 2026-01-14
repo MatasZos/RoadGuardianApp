@@ -3,23 +3,32 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
+  const [accountType, setAccountType] = useState("user");
   const [message, setMessage] = useState("");
 
-  const handleLogin = async () => {
+  const handleRegister = async () => {
     setMessage("");
-    const res = await fetch("/api/login", {
+    if (!fullName || !email || !password || !phone) {
+      setMessage("Please fill all fields");
+      return;
+    }
+
+    const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ fullName, email, password, phone, accountType }),
     });
 
     const data = await res.json();
     if (res.ok) {
-      setMessage(data.message);
+      alert("Registration successful!");
+      router.push("/login");
     } else {
       setMessage(data.error);
     }
@@ -27,19 +36,21 @@ export default function LoginPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "50px" }}>
-      <h1>Login</h1>
+      <h1>Register</h1>
+      <input type="text" placeholder="Full Name" value={fullName} onChange={e => setFullName(e.target.value)} style={{ margin: "5px", padding: "10px" }} />
       <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={{ margin: "5px", padding: "10px" }} />
       <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={{ margin: "5px", padding: "10px" }} />
-      <button onClick={handleLogin} style={{ padding: "10px 20px", marginTop: "10px" }}>Login</button>
+      <input type="text" placeholder="Phone" value={phone} onChange={e => setPhone(e.target.value)} style={{ margin: "5px", padding: "10px" }} />
+      <button onClick={handleRegister} style={{ padding: "10px 20px", marginTop: "10px" }}>Register</button>
       {message && <p style={{ marginTop: "10px" }}>{message}</p>}
 
       <p style={{ marginTop: "15px" }}>
-        Don't have an account?{" "}
+        Already have an account?{" "}
         <span
-          onClick={() => router.push("/register")}
+          onClick={() => router.push("/login")}
           style={{ color: "#3498db", cursor: "pointer", textDecoration: "underline" }}
         >
-          Register here
+          Login here
         </span>
       </p>
     </div>
