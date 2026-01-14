@@ -7,29 +7,24 @@ import Navbar from "../components/Navbar";
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
-  const [checked, setChecked] = useState(false); // ensures we only redirect once
+  const [checked, setChecked] = useState(false); 
 
   useEffect(() => {
-    // grab localStorage AFTER mount
     const fullName = localStorage.getItem("userFullName");
     const email = localStorage.getItem("userEmail");
     const phone = localStorage.getItem("userPhone");
 
     if (!fullName || !email) {
-      // user is not logged in
       if (!checked) {
         setChecked(true);
         router.push("/login");
       }
       return;
     }
-
-    // user is logged in
     setUser({ fullName, email, phone });
     setChecked(true);
   }, [router, checked]);
 
-  // wait until we have checked localStorage
   if (!checked) return null;
 
   return (
