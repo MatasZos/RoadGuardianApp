@@ -7,7 +7,7 @@ const containerStyle = {
   height: "300px",
 };
 
-const defaultCenter = { lat: 40.73061, lng: -73.935242 }; 
+const defaultCenter = { lat: 53.3498, lng: 6.2603 }; 
 
 export default function Map({ lat = defaultCenter.lat, lng = defaultCenter.lng }) {
   const { isLoaded, loadError } = useLoadScript({
