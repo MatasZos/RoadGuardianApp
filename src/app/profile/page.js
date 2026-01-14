@@ -1,64 +1,57 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const [user, setUser] = useState(null);
-  const [checked, setChecked] = useState(false); 
+  const [user, setUser] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+  });
 
   useEffect(() => {
-    const fullName = localStorage.getItem("userFullName");
-    const email = localStorage.getItem("userEmail");
-    const phone = localStorage.getItem("userPhone");
+    // load user info from localStorage if available
+    const fullName = localStorage.getItem("userFullName") || "";
+    const email = localStorage.getItem("userEmail") || "";
+    const phone = localStorage.getItem("userPhone") || "";
 
-    if (!fullName || !email) {
-      if (!checked) {
-        setChecked(true);
-        router.push("/login");
-      }
-      return;
-    }
     setUser({ fullName, email, phone });
-    setChecked(true);
-  }, [router, checked]);
-
-  if (!checked) return null;
+  }, []);
 
   return (
     <>
       <Navbar />
 
-      {user && (
-        <div style={styles.container}>
-          <div style={styles.card}>
-            <img src="/profile.png" style={styles.avatar} />
-            <h2 style={styles.name}>{user.fullName}</h2>
+      <div style={styles.container}>
+        <div style={styles.card}>
+          <img src="/profile.png" style={styles.avatar} />
 
-            <div style={styles.infoBlock}>
-              <label>Email</label>
-              <p>{user.email}</p>
-            </div>
+          <h2 style={styles.name}>
+            {user.fullName || "Your Name"}
+          </h2>
 
-            <div style={styles.infoBlock}>
-              <label>Phone</label>
-              <p>{user.phone || "Not provided"}</p>
-            </div>
-
-            <button
-              style={styles.logout}
-              onClick={() => {
-                localStorage.clear();
-                router.push("/login");
-              }}
-            >
-              Sign Out
-            </button>
+          <div style={styles.infoBlock}>
+            <label>Email</label>
+            <p>{user.email || "Your Email"}</p>
           </div>
+
+          <div style={styles.infoBlock}>
+            <label>Phone</label>
+            <p>{user.phone || "Your Phone"}</p>
+          </div>
+
+          <button
+            style={styles.logout}
+            onClick={() => {
+              localStorage.clear();
+              window.location.href = "/login"; // redirect to login on sign out
+            }}
+          >
+            Sign Out
+          </button>
         </div>
-      )}
+      </div>
     </>
   );
 }
