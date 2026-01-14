@@ -7,40 +7,51 @@ import Navbar from "../components/Navbar";
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [checked, setChecked] = useState(false); // ensures we only redirect once
 
   useEffect(() => {
+    // grab localStorage AFTER mount
     const fullName = localStorage.getItem("userFullName");
     const email = localStorage.getItem("userEmail");
     const phone = localStorage.getItem("userPhone");
 
     if (!fullName || !email) {
-      setLoading(false);
-      return router.push("/login"); // only redirect if truly not logged in
+      // user is not logged in
+      if (!checked) {
+        setChecked(true);
+        router.push("/login");
+      }
+      return;
     }
 
+    // user is logged in
     setUser({ fullName, email, phone });
-    setLoading(false);
-  }, [router]);
+    setChecked(true);
+  }, [router, checked]);
 
-  if (loading) return null; // prevent flicker / immediate redirect
+  // wait until we have checked localStorage
+  if (!checked) return null;
 
   return (
     <>
       <Navbar />
+
       {user && (
         <div style={styles.container}>
           <div style={styles.card}>
             <img src="/profile.png" style={styles.avatar} />
             <h2 style={styles.name}>{user.fullName}</h2>
+
             <div style={styles.infoBlock}>
               <label>Email</label>
               <p>{user.email}</p>
             </div>
+
             <div style={styles.infoBlock}>
               <label>Phone</label>
               <p>{user.phone || "Not provided"}</p>
             </div>
+
             <button
               style={styles.logout}
               onClick={() => {
