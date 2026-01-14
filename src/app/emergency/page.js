@@ -24,7 +24,6 @@ export default function EmergencyPage() {
       <Navbar themeColor="#e74c3c" />
       <div style={{ padding: "20px", display: "flex", flexDirection: "column", alignItems: "center" }}>
         <h1 style={{ color: "#e74c3c" }}>Emergency Page</h1>
-        <p>Welcome back, {fullName}</p>
         <button onClick={handleEmergency} style={{ padding: "15px 25px", borderRadius: "10px", border: "none", backgroundColor: "#e74c3c", color: "#fff", fontSize: "1.1rem", fontWeight: "bold", cursor: "pointer", marginTop: "20px" }}>
           Call for Help
         </button>

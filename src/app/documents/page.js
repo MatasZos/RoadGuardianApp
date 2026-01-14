@@ -25,7 +25,6 @@ export default function DocumentsPage() {
       <Navbar themeColor="#3498db" />
       <div style={{ padding: "20px" }}>
         <h1 style={{ color: "#3498db" }}>My Documents</h1>
-        <p>Welcome back, {fullName}</p>
         <div style={{ marginTop: "20px" }}>
           {fakeDocuments.map((doc, index) => (
             <div key={index} style={{ background: "#fff", color: "#111", padding: "15px", borderRadius: "12px", boxShadow: "0 4px 10px rgba(0,0,0,0.5)", marginBottom: "15px" }}>
