@@ -19,7 +19,10 @@ export default function RegisterPage() {
     const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, accountType: "user" }),
+      body: JSON.stringify({
+        ...form,
+        accountType: "user",
+      }),
     });
 
     if (res.ok) {
@@ -33,26 +36,61 @@ export default function RegisterPage() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
+      
         <img src="/logo.png" alt="RoadGuardian" style={styles.logo} />
 
-        <h1 style={styles.title}>Create Account</h1>
+        <h1 style={styles.title}>Create your account</h1>
+
 
         <form onSubmit={handleRegister} style={styles.form}>
-          {["fullName", "email", "password", "phone"].map((field) => (
-            <input
-              key={field}
-              style={styles.input}
-              placeholder={field.replace(/([A-Z])/g, " $1")}
-              type={field === "password" ? "password" : "text"}
-              onChange={(e) => setForm({ ...form, [field]: e.target.value })}
-              required
-            />
-          ))}
+          <input
+            style={styles.input}
+            placeholder="Full Name"
+            value={form.fullName}
+            onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+            required
+          />
+
+          <input
+            style={styles.input}
+            placeholder="Email"
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            required
+          />
+
+          <input
+            style={styles.input}
+            placeholder="Password"
+            type="password"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            required
+          />
+
+          <input
+            style={styles.input}
+            placeholder="Phone Number"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            required
+          />
 
           <button style={styles.button}>Register</button>
         </form>
 
         {message && <p style={styles.message}>{message}</p>}
+
+        <p style={styles.loginText}>
+          Already have an account?{" "}
+          <span
+            style={styles.loginLink}
+            onClick={() => router.push("/login")}
+          >
+            Login here
+          </span>
+        </p>
       </div>
     </div>
   );
@@ -80,7 +118,12 @@ const styles = {
   },
   title: {
     color: "#fff",
-    marginBottom: "20px",
+    marginBottom: "5px",
+  },
+  subtitle: {
+    color: "#aaa",
+    marginBottom: "25px",
+    fontSize: "0.9rem",
   },
   form: {
     display: "flex",
@@ -107,5 +150,15 @@ const styles = {
   message: {
     marginTop: "12px",
     color: "#2ecc71",
+  },
+  loginText: {
+    marginTop: "22px",
+    color: "#aaa",
+    fontSize: "0.85rem",
+  },
+  loginLink: {
+    color: "#fff",
+    cursor: "pointer",
+    textDecoration: "underline",
   },
 };
