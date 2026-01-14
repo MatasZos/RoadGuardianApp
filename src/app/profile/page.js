@@ -6,33 +6,58 @@ import Navbar from "../components/Navbar";
 
 export default function ProfilePage() {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const email = localStorage.getItem("userEmail");
-    if (!email) return;
+    if (!email) {
+      setLoading(false);
+      return;
+    }
 
     async function fetchProfile() {
       try {
         const res = await fetch("/api/profile", {
+          method: "GET",
           headers: { "x-user-email": email },
+          cache: "no-store",
         });
+
+        if (!res.ok) {
+          console.error("Failed to fetch profile");
+          setLoading(false);
+          return;
+        }
+
         const data = await res.json();
         setUser(data);
       } catch (err) {
         console.error(err);
+      } finally {
+        setLoading(false);
       }
     }
 
     fetchProfile();
   }, []);
 
+  if (loading)
+    return (
+      <>
+        <Navbar />
+        <p style={{ color: "#fff", textAlign: "center", marginTop: "50px" }}>
+          Profile is loading
+        </p>
+      </>
+    );
+
   if (!user)
     return (
       <>
         <Navbar />
         <p style={{ color: "#fff", textAlign: "center", marginTop: "50px" }}>
-          Loading...
+          No user data found
         </p>
       </>
     );
@@ -45,11 +70,11 @@ export default function ProfilePage() {
         <div style={styles.card}>
           <img src="/profile.png" style={styles.avatar} />
 
-          <h2 style={styles.name}>{user.fullName}</h2>
+          <h2 style={styles.name}>{user.fullName || "Your Name"}</h2>
 
           <div style={styles.infoBlock}>
             <label>Email</label>
-            <p>{user.email}</p>
+            <p>{user.email || "Your Email"}</p>
           </div>
 
           <div style={styles.infoBlock}>
@@ -59,7 +84,7 @@ export default function ProfilePage() {
 
           <div style={styles.infoBlock}>
             <label>Password</label>
-            <p>{user.password.replace(/./g, "*")}</p>
+            <p>{user.password ? "*".repeat(user.password.length) : ""}</p>
           </div>
 
           <button
