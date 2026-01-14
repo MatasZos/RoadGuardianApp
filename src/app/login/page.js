@@ -32,10 +32,9 @@ export default function LoginPage() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <img src="/logo.png" alt="RoadGuardian" style={styles.logo} />
+        <img src="/logo.png" style={styles.logo} />
 
         <h1 style={styles.title}>Welcome to RoadGuardian</h1>
-        <p style={styles.subtitle}>Ride safe. Stay prepared.</p>
 
         <form onSubmit={handleLogin} style={styles.form}>
           <input
@@ -60,13 +59,6 @@ export default function LoginPage() {
         </form>
 
         {message && <p style={styles.message}>{message}</p>}
-
-        <p style={styles.linkText}>
-          Don’t have an account?{" "}
-          <span style={styles.link} onClick={() => router.push("/register")}>
-            Register
-          </span>
-        </p>
       </div>
     </div>
   );
@@ -92,20 +84,9 @@ const styles = {
     width: "110px",
     marginBottom: "15px",
   },
-  title: {
-    color: "#fff",
-    marginBottom: "5px",
-  },
-  subtitle: {
-    color: "#aaa",
-    marginBottom: "25px",
-    fontSize: "0.9rem",
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
+  title: { color: "#fff" },
+  subtitle: { color: "#aaa", marginBottom: "20px" },
+  form: { display: "flex", flexDirection: "column", gap: "12px" },
   input: {
     padding: "12px",
     borderRadius: "8px",
@@ -114,7 +95,6 @@ const styles = {
     color: "#fff",
   },
   button: {
-    marginTop: "10px",
     padding: "12px",
     borderRadius: "8px",
     border: "none",
@@ -123,18 +103,5 @@ const styles = {
     fontWeight: "bold",
     cursor: "pointer",
   },
-  message: {
-    marginTop: "12px",
-    color: "#2ecc71",
-  },
-  linkText: {
-    marginTop: "20px",
-    color: "#aaa",
-    fontSize: "0.85rem",
-  },
-  link: {
-    color: "#fff",
-    cursor: "pointer",
-    textDecoration: "underline",
-  },
+  message: { marginTop: "10px", color: "#2ecc71" },
 };
