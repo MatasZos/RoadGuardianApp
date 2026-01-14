@@ -14,6 +14,7 @@ export default function Navbar() {
 
   return (
     <div style={styles.navbar}>
+      {/* Left: Hamburger */}
       <div style={styles.left}>
         <div
           style={styles.hamburger}
@@ -24,21 +25,26 @@ export default function Navbar() {
           <div style={styles.line}></div>
         </div>
 
-        <div
-          style={styles.brand}
-          onClick={() => router.push("/")} 
-        >
-          <img src="/logo.png" alt="RoadGuardian" style={styles.logo} />
+        <div style={styles.brand}>
+          <img 
+          src="/logo.png" 
+          alt="RoadGuardian" 
+          style={styles.logo} 
+          onClick={() => router.push("/home")}
+          />
           <span>RoadGuardian</span>
         </div>
       </div>
 
+      {/* Right: Profile */}
       <img
         src="/profile.png"
         alt="Profile"
         style={styles.profile}
         onClick={() => router.push("/profile")}
       />
+
+      {/* Dropdown */}
       {open && (
         <div style={styles.dropdown}>
           <div style={styles.item} onClick={() => router.push("/profile")}>
@@ -97,7 +103,6 @@ const styles = {
     color: "#fff",
     fontWeight: "bold",
     fontSize: "1rem",
-    cursor: "pointer", 
   },
   logo: {
     width: "28px",
