@@ -7,73 +7,55 @@ import Map from "../components/Map";
 
 export default function HomePage() {
   const router = useRouter();
-  const [fullName, setFullName] = useState("");
+  const [name, setName] = useState("");
 
   useEffect(() => {
-    const name = localStorage.getItem("userFullName");
-    if (!name) router.push("/login");
-    else setFullName(name);
+    const stored = localStorage.getItem("userFullName");
+    if (!stored) router.push("/login");
+    else setName(stored);
   }, []);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#111", color: "#fff", fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>
-     
-      <Navbar themeColor="#fff" />
+    <div style={{ minHeight: "100vh", background: "#111", color: "#fff" }}>
+      <Navbar />
 
-      <div style={{ padding: "20px", textAlign: "center" }}>
-
-        <h1 style={{ fontSize: "2rem", marginBottom: "10px" }}>Welcome, {fullName}</h1>
-        <h2 style={{ marginBottom: "20px" }}>Quick Actions</h2>
-
-        <div style={{ display: "flex", justifyContent: "center", gap: "15px", flexWrap: "wrap" }}>
-          <button
-            style={{
-              backgroundColor: "#ffa500",
-              color: "#fff",
-              padding: "15px 25px",
-              border: "none",
-              borderRadius: "10px",
-              cursor: "pointer",
-              fontWeight: "bold",
-            }}
-            onClick={() => router.push("/maintenance")}
-          >
-            MAINTENANCE
-          </button>
-          <button
-            style={{
-              backgroundColor: "#3498db",
-              color: "#fff",
-              padding: "15px 25px",
-              border: "none",
-              borderRadius: "10px",
-              cursor: "pointer",
-              fontWeight: "bold",
-            }}
-            onClick={() => router.push("/documents")}
-          >
-            DOCUMENTS
-          </button>
-          <button
-            style={{
-              backgroundColor: "#e74c3c",
-              color: "#fff",
-              padding: "15px 25px",
-              border: "none",
-              borderRadius: "10px",
-              cursor: "pointer",
-              fontWeight: "bold",
-            }}
-            onClick={() => router.push("/emergency")}
-          >
-            EMERGENCY
-          </button>
+      <div style={{ padding: "30px" }}>
+      
+        <div style={{ textAlign: "left", marginBottom: "30px" }}>
+          <h1>Welcome, {name}</h1>
+          <p style={{ color: "#aaa" }}>Your motorcycle dashboard</p>
         </div>
 
-        <div style={{ marginTop: "30px", width: "80%", margin: "30px auto" }}>
+        <h2 style={{ textAlign: "center" }}>Quick Actions</h2>
+
+        <div style={styles.actions}>
+          <button style={{ ...styles.btn, background: "#f39c12" }} onClick={() => router.push("/maintenance")}>MAINTENANCE</button>
+          <button style={{ ...styles.btn, background: "#3498db" }} onClick={() => router.push("/documents")}>DOCUMENTS</button>
+          <button style={{ ...styles.btn, background: "#e74c3c" }} onClick={() => router.push("/emergency")}>EMERGENCY</button>
+        </div>
+
+        <div style={{ marginTop: "30px" }}>
           <Map lat={53.3498} lng={-6.2603} />
         </div>
       </div>
     </div>
   );
 }
+
+const styles = {
+  actions: {
+    display: "flex",
+    justifyContent: "center",
+    gap: "20px",
+    marginTop: "20px",
+    flexWrap: "wrap",
+  },
+  btn: {
+    padding: "15px 30px",
+    borderRadius: "12px",
+    border: "none",
+    color: "#fff",
+    fontWeight: "bold",
+    cursor: "pointer",
+  },
+};
