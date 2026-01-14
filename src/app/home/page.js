@@ -17,11 +17,11 @@ export default function HomePage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#111", color: "#fff", fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>
-      
+     
       <Navbar themeColor="#fff" />
 
       <div style={{ padding: "20px", textAlign: "center" }}>
-      
+
         <h1 style={{ fontSize: "2rem", marginBottom: "10px" }}>Welcome, {fullName}</h1>
         <h2 style={{ marginBottom: "20px" }}>Quick Actions</h2>
 
@@ -71,7 +71,7 @@ export default function HomePage() {
         </div>
 
         <div style={{ marginTop: "30px", width: "80%", margin: "30px auto" }}>
-          <Map lat={40.73061} lng={-73.935242} />
+          <Map lat={53.3498} lng={-6.2603} />
         </div>
       </div>
     </div>
