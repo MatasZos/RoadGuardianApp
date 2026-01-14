@@ -19,7 +19,7 @@ export default function EmergencyPage() {
   };
 
   return (
-    <div style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", minHeight: "100vh", background: "#f5f5f5" }}>
+    <div style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", minHeight: "100vh", background: "#111" }}>
       {/* Navbar */}
       <nav
         style={{
@@ -27,16 +27,16 @@ export default function EmergencyPage() {
           justifyContent: "space-between",
           alignItems: "center",
           padding: "10px 20px",
-          backgroundColor: "#2c3e50",
+          backgroundColor: "#222",
           color: "#fff",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.5)",
         }}
       >
-        <div style={{ fontWeight: "bold", fontSize: "1.2rem", cursor: "pointer" }} onClick={() => router.push("/home")}>
+        <div style={{ fontWeight: "bold", fontSize: "1.2rem", cursor: "pointer", color: "#e74c3c" }} onClick={() => router.push("/home")}>
           RoadGuardian
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-          <div style={{ fontSize: "1.5rem", cursor: "pointer" }}>☰</div>
+          <div style={{ fontSize: "1.5rem", cursor: "pointer", color: "#e74c3c" }}>☰</div>
           <img
             src="/profile.png"
             alt="Profile"
@@ -46,8 +46,8 @@ export default function EmergencyPage() {
         </div>
       </nav>
 
-      <div style={{ padding: "20px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <h1>Emergency Page</h1>
+      <div style={{ padding: "20px", color: "#fff", display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <h1 style={{ color: "#e74c3c" }}>Emergency Page</h1>
         <p>Welcome back, {fullName}</p>
 
         {/* Emergency Button */}
@@ -63,23 +63,20 @@ export default function EmergencyPage() {
             fontWeight: "bold",
             cursor: "pointer",
             marginTop: "20px",
-            transition: "0.3s",
           }}
-          onMouseOver={(e) => (e.currentTarget.style.opacity = "0.9")}
-          onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
         >
           Call for Help
         </button>
 
-        {/* Emergency Card */}
         {emergencyCalled && (
           <div
             style={{
               marginTop: "25px",
               padding: "20px",
               borderRadius: "12px",
-              boxShadow: "0 8px 20px rgba(0,0,0,0.2)",
+              boxShadow: "0 8px 20px rgba(0,0,0,0.5)",
               backgroundColor: "#fff",
+              color: "#111",
               width: "90%",
               maxWidth: "400px",
               textAlign: "center",
@@ -87,8 +84,8 @@ export default function EmergencyPage() {
           >
             <h2 style={{ marginBottom: "10px", color: "#e74c3c" }}>Emergency Team Dispatched!</h2>
             <p><strong>ETA:</strong> 5 minutes</p>
-            <p><strong>Location:</strong> City Centre</p>
-            <p><strong>Status:</strong> Help is on the way</p>
+            <p><strong>Location:</strong> City Center</p>
+            <p><strong>Status:</strong> Team is on the way </p>
           </div>
         )}
       </div>

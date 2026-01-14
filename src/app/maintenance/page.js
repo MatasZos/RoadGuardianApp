@@ -20,7 +20,7 @@ export default function MaintenancePage() {
   }, []);
 
   return (
-    <div style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", minHeight: "100vh", background: "#f5f5f5" }}>
+    <div style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", minHeight: "100vh", background: "#111" }}>
       {/* Navbar */}
       <nav
         style={{
@@ -28,16 +28,16 @@ export default function MaintenancePage() {
           justifyContent: "space-between",
           alignItems: "center",
           padding: "10px 20px",
-          backgroundColor: "#2c3e50",
+          backgroundColor: "#222",
           color: "#fff",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.5)",
         }}
       >
-        <div style={{ fontWeight: "bold", fontSize: "1.2rem", cursor: "pointer" }} onClick={() => router.push("/home")}>
+        <div style={{ fontWeight: "bold", fontSize: "1.2rem", cursor: "pointer", color: "#ffa500" }} onClick={() => router.push("/home")}>
           RoadGuardian
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-          <div style={{ fontSize: "1.5rem", cursor: "pointer" }}>☰</div>
+          <div style={{ fontSize: "1.5rem", cursor: "pointer", color: "#ffa500" }}>☰</div>
           <img
             src="/profile.png"
             alt="Profile"
@@ -47,8 +47,8 @@ export default function MaintenancePage() {
         </div>
       </nav>
 
-      <div style={{ padding: "20px" }}>
-        <h1>Maintenance Records</h1>
+      <div style={{ padding: "20px", color: "#fff" }}>
+        <h1 style={{ color: "#ffa500" }}>Maintenance Records</h1>
         <p>Welcome back, {fullName}</p>
 
         <div style={{ marginTop: "20px" }}>
@@ -57,13 +57,14 @@ export default function MaintenancePage() {
               key={index}
               style={{
                 background: "#fff",
+                color: "#111",
                 padding: "15px",
                 borderRadius: "12px",
-                boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+                boxShadow: "0 4px 10px rgba(0,0,0,0.5)",
                 marginBottom: "15px",
               }}
             >
-              <h2 style={{ marginBottom: "5px" }}>{record.type}</h2>
+              <h2 style={{ marginBottom: "5px", color: "#ffa500" }}>{record.type}</h2>
               <p><strong>Date:</strong> {record.date}</p>
               <p><strong>Kilometers:</strong> {record.km} km</p>
               <p><strong>Notes:</strong> {record.notes}</p>
@@ -77,12 +78,11 @@ export default function MaintenancePage() {
             padding: "12px 20px",
             borderRadius: "10px",
             border: "none",
-            backgroundColor: "#f39c12",
-            color: "#fff",
+            backgroundColor: "#ffa500",
+            color: "#111",
             fontWeight: "bold",
             cursor: "pointer",
           }}
-          onClick={() => alert("Feature coming soon!")}
         >
           Add New Maintenance Record
         </button>
