@@ -31,7 +31,7 @@ export default function Navbar() {
           style={styles.logo} 
           onClick={() => router.push("/home")}
           />
-          <span>RoadGuardian</span>
+          <span onClick={() => router.push("/home")}>RoadGuardian</span>
         </div>
       </div>
 
