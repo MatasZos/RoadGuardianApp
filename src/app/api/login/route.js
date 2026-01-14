@@ -1,6 +1,5 @@
 import clientPromise from "../../../lib/mongodb";
 
-
 export async function POST(req) {
   const { email, password } = await req.json();
 
@@ -14,12 +13,13 @@ export async function POST(req) {
     const userCollection = db.collection("user");
 
     const user = await userCollection.findOne({ email, password });
+
     if (!user) {
       return new Response(JSON.stringify({ error: "Invalid credentials" }), { status: 401 });
     }
 
     return new Response(JSON.stringify({ message: `Welcome ${user.fullName}` }), { status: 200 });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: "Server error" }), { status: 500 });
   }
 }

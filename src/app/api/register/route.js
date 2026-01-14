@@ -1,6 +1,5 @@
 import clientPromise from "../../../lib/mongodb";
 
-
 export async function POST(req) {
   const { fullName, email, password, phone, accountType } = await req.json();
 
@@ -20,8 +19,8 @@ export async function POST(req) {
 
     await userCollection.insertOne({ fullName, email, password, phone, accountType });
 
-    return new Response(JSON.stringify({ message: "User registered successfully" }), { status: 201 });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ message: "User registered successfully" }), { status: 200 });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: "Server error" }), { status: 500 });
   }
 }
