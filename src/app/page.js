@@ -1,11 +1,12 @@
+"use client"; 
+
 import { useState } from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation"; 
 
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
 
-  // Styles as objects
   const styles = {
     navbar: {
       display: "flex",
@@ -54,7 +55,7 @@ export default function Home() {
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
-      marginTop: "50px",
+      marginTop: "30px",
       gap: "20px",
     },
     mainButton: (bgColor) => ({
@@ -67,6 +68,18 @@ export default function Home() {
       borderRadius: "5px",
       backgroundColor: bgColor,
     }),
+    mapPlaceholder: {
+      width: "90%",
+      height: "300px",
+      backgroundColor: "#ddd",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: "40px",
+      borderRadius: "10px",
+      fontSize: "20px",
+      color: "#555",
+    },
   };
 
   return (
@@ -79,7 +92,7 @@ export default function Home() {
           <div style={styles.bar}></div>
         </div>
 
-        <div>Breakdown App</div>
+        <div>ROADGUARDIAN</div>
 
         <img
           src="/profile.png"
@@ -95,7 +108,7 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Main Buttons */}
+ 
       <div style={styles.container}>
         <button
           style={styles.mainButton("#f39c12")}
@@ -116,6 +129,9 @@ export default function Home() {
           EMERGENCY
         </button>
       </div>
+
+    
+      <div style={styles.mapPlaceholder}>Map </div>
     </div>
   );
 }
