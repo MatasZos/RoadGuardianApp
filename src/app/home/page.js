@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Navbar from "../../components/Navbar";
 
 export default function HomePage() {
   const router = useRouter();
@@ -14,28 +15,25 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>
-      {/* Navbar */}
-      <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 20px", backgroundColor: "#2c3e50", color: "#fff", boxShadow: "0 2px 6px rgba(0,0,0,0.2)" }}>
-        <div style={{ fontWeight: "bold", fontSize: "1.2rem", cursor: "pointer" }} onClick={() => router.push("/home")}>RoadGuardian</div>
-        <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-          <div style={{ fontSize: "1.5rem", cursor: "pointer" }}>☰</div>
-          <img src="/profile.png" alt="Profile" style={{ width: "35px", height: "35px", borderRadius: "50%", cursor: "pointer" }} onClick={() => router.push("/profile")} />
-        </div>
-      </nav>
-
-      <div style={{ padding: "20px" }}>
-        <h1 style={{ marginBottom: "20px" }}>Welcome {fullName}</h1>
-
-        <h2 style={{ marginBottom: "10px" }}>Quick Actions</h2>
-        <div style={{ display: "flex", gap: "15px", marginBottom: "30px" }}>
-          <button onClick={() => router.push("/maintenance")} style={{ flex: 1, padding: "15px", borderRadius: "10px", border: "none", backgroundColor: "#f39c12", color: "#fff", fontWeight: "bold", cursor: "pointer" }}>Maintenance</button>
-          <button onClick={() => router.push("/documents")} style={{ flex: 1, padding: "15px", borderRadius: "10px", border: "none", backgroundColor: "#3498db", color: "#fff", fontWeight: "bold", cursor: "pointer" }}>Documents</button>
-          <button onClick={() => router.push("/emergency")} style={{ flex: 1, padding: "15px", borderRadius: "10px", border: "none", backgroundColor: "#e74c3c", color: "#fff", fontWeight: "bold", cursor: "pointer" }}>Emergency</button>
+    <div style={{ minHeight: "100vh", background: "#111", color: "#fff", fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>
+      <Navbar themeColor="#fff" />
+      <div style={{ padding: "20px", textAlign: "center" }}>
+        <h1 style={{ fontSize: "2rem" }}>Welcome, {fullName}</h1>
+        <h2>Quick Actions</h2>
+        <div style={{ display: "flex", justifyContent: "center", gap: "15px", marginTop: "20px" }}>
+          <button style={{ backgroundColor: "#ffa500", color: "#fff", padding: "15px 25px", border: "none", borderRadius: "10px", cursor: "pointer" }} onClick={() => router.push("/maintenance")}>
+            MAINTENANCE
+          </button>
+          <button style={{ backgroundColor: "#3498db", color: "#fff", padding: "15px 25px", border: "none", borderRadius: "10px", cursor: "pointer" }} onClick={() => router.push("/documents")}>
+            DOCUMENTS
+          </button>
+          <button style={{ backgroundColor: "#e74c3c", color: "#fff", padding: "15px 25px", border: "none", borderRadius: "10px", cursor: "pointer" }} onClick={() => router.push("/emergency")}>
+            EMERGENCY
+          </button>
         </div>
 
-        <div style={{ height: "400px", backgroundColor: "#dcdcdc", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: "#666", fontSize: "1.2rem" }}>
-          Map Placeholder
+        <div style={{ marginTop: "30px", backgroundColor: "#333", height: "300px", width: "80%", margin: "30px auto", borderRadius: "12px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+          <p>Map Placeholder</p>
         </div>
       </div>
     </div>
