@@ -1,23 +1,41 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
 
 export default function ProfilePage() {
-  const [user, setUser] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-  });
+  const [user, setUser] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
-    // load user info from localStorage if available
-    const fullName = localStorage.getItem("userFullName") || "";
-    const email = localStorage.getItem("userEmail") || "";
-    const phone = localStorage.getItem("userPhone") || "";
+    const email = localStorage.getItem("userEmail");
+    if (!email) return;
 
-    setUser({ fullName, email, phone });
+    async function fetchProfile() {
+      try {
+        const res = await fetch("/api/profile", {
+          headers: { "x-user-email": email },
+        });
+        const data = await res.json();
+        setUser(data);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    fetchProfile();
   }, []);
+
+  if (!user)
+    return (
+      <>
+        <Navbar />
+        <p style={{ color: "#fff", textAlign: "center", marginTop: "50px" }}>
+          Loading...
+        </p>
+      </>
+    );
 
   return (
     <>
@@ -27,25 +45,28 @@ export default function ProfilePage() {
         <div style={styles.card}>
           <img src="/profile.png" style={styles.avatar} />
 
-          <h2 style={styles.name}>
-            {user.fullName || "Your Name"}
-          </h2>
+          <h2 style={styles.name}>{user.fullName}</h2>
 
           <div style={styles.infoBlock}>
             <label>Email</label>
-            <p>{user.email || "Your Email"}</p>
+            <p>{user.email}</p>
           </div>
 
           <div style={styles.infoBlock}>
             <label>Phone</label>
-            <p>{user.phone || "Your Phone"}</p>
+            <p>{user.phone || "Not provided"}</p>
+          </div>
+
+          <div style={styles.infoBlock}>
+            <label>Password</label>
+            <p>{user.password.replace(/./g, "*")}</p>
           </div>
 
           <button
             style={styles.logout}
             onClick={() => {
               localStorage.clear();
-              window.location.href = "/login"; // redirect to login on sign out
+              router.push("/login");
             }}
           >
             Sign Out
@@ -86,6 +107,7 @@ const styles = {
   infoBlock: {
     textAlign: "left",
     marginBottom: "15px",
+    color: "#ccc",
   },
   logout: {
     marginTop: "30px",
