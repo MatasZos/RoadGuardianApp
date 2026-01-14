@@ -7,6 +7,7 @@ import Navbar from "../components/Navbar";
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fullName = localStorage.getItem("userFullName");
@@ -14,50 +15,44 @@ export default function ProfilePage() {
     const phone = localStorage.getItem("userPhone");
 
     if (!fullName || !email) {
-      router.push("/login");
-      return;
+      setLoading(false);
+      return router.push("/login"); // only redirect if truly not logged in
     }
 
     setUser({ fullName, email, phone });
+    setLoading(false);
   }, [router]);
 
-  if (!user) return null;
+  if (loading) return null; // prevent flicker / immediate redirect
 
   return (
     <>
       <Navbar />
-
-      <div style={styles.container}>
-        <div style={styles.card}>
-          <img
-            src="/profile.png"
-            alt="Profile"
-            style={styles.avatar}
-          />
-
-          <h2 style={styles.name}>{user.fullName}</h2>
-
-          <div style={styles.infoBlock}>
-            <label>Email</label>
-            <p>{user.email}</p>
+      {user && (
+        <div style={styles.container}>
+          <div style={styles.card}>
+            <img src="/profile.png" style={styles.avatar} />
+            <h2 style={styles.name}>{user.fullName}</h2>
+            <div style={styles.infoBlock}>
+              <label>Email</label>
+              <p>{user.email}</p>
+            </div>
+            <div style={styles.infoBlock}>
+              <label>Phone</label>
+              <p>{user.phone || "Not provided"}</p>
+            </div>
+            <button
+              style={styles.logout}
+              onClick={() => {
+                localStorage.clear();
+                router.push("/login");
+              }}
+            >
+              Sign Out
+            </button>
           </div>
-
-          <div style={styles.infoBlock}>
-            <label>Phone</label>
-            <p>{user.phone || "Not provided"}</p>
-          </div>
-
-          <button
-            style={styles.logout}
-            onClick={() => {
-              localStorage.clear();
-              router.push("/login");
-            }}
-          >
-            Sign Out
-          </button>
         </div>
-      </div>
+      )}
     </>
   );
 }
