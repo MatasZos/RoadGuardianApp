@@ -1,4 +1,4 @@
-import clientPromise from "@/lib/mongodb"; 
+import clientPromise from "../../lib/mongodb"; 
 
 export async function POST(req) {
   const { fullName, email, password, phone, accountType } = await req.json();
@@ -9,7 +9,7 @@ export async function POST(req) {
 
   try {
     const client = await clientPromise;
-    const db = client.db("login"); 
+    const db = client.db("login");
     const userCollection = db.collection("user");
 
     const existingUser = await userCollection.findOne({ email });
