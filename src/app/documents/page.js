@@ -10,7 +10,7 @@ export default function DocumentsPage() {
 
   const fakeDocuments = [
     { type: "Insurance", issueDate: "2025-06-01", expiryDate: "2026-06-01", notes: "Third-party coverage" },
-    { type: "Registration", issueDate: "2024-09-15", expiryDate: "N/A", notes: "Bike registereation" },
+    { type: "Registration", issueDate: "2024-09-15", expiryDate: "N/A", notes: "Bike registration" },
     { type: "Service Manual", issueDate: "2025-01-01", expiryDate: "N/A", notes: "Digital copy of manual" },
   ];
 

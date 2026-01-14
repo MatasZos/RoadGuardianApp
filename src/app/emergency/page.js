@@ -32,7 +32,7 @@ export default function EmergencyPage() {
           <div style={{ marginTop: "25px", padding: "20px", borderRadius: "12px", boxShadow: "0 8px 20px rgba(0,0,0,0.5)", backgroundColor: "#fff", color: "#111", width: "90%", maxWidth: "400px", textAlign: "center" }}>
             <h2 style={{ marginBottom: "10px", color: "#e74c3c" }}>Emergency Team Dispatched!</h2>
             <p><strong>ETA:</strong> 5 minutes</p>
-            <p><strong>Location:</strong> City Center</p>
+            <p><strong>Location:</strong> City Centre</p>
             <p><strong>Status:</strong> Team is on the way </p>
           </div>
         )}
