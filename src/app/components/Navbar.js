@@ -14,7 +14,6 @@ export default function Navbar() {
 
   return (
     <div style={styles.navbar}>
-      {/* Left: Hamburger */}
       <div style={styles.left}>
         <div
           style={styles.hamburger}
@@ -36,7 +35,6 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Right: Profile */}
       <img
         src="/profile.png"
         alt="Profile"
@@ -44,7 +42,6 @@ export default function Navbar() {
         onClick={() => router.push("/profile")}
       />
 
-      {/* Dropdown */}
       {open && (
         <div style={styles.dropdown}>
           <div style={styles.item} onClick={() => router.push("/profile")}>
