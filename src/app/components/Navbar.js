@@ -40,25 +40,26 @@ export default function Navbar() {
       />
 
       {/* Dropdown */}
-        {open && (
-            <div style={styles.dropdown}>
-                <div style={styles.item}>My Bike</div>
-                <div style={styles.item}>Maintenance History</div>
-                <div style={styles.item}>Settings</div>
-                <div style={styles.item}>Help & Support</div>
-                <div style={styles.divider}></div>
-                <div
-                style={{ ...styles.item, color: "#e74c3c" }}
-                onClick={() => {
-                    localStorage.clear();
-                    router.push("/login");
-                }}
-                >
-                Sign Out
-                </div>
-            </div>
-            )}
-
+      {open && (
+        <div style={styles.dropdown}>
+          <div style={styles.item} onClick={() => router.push("/profile")}>
+            My Profile
+          </div>
+          <div style={styles.item}>
+            My Bike
+          </div>
+          <div style={styles.item}>
+            Settings
+          </div>
+          <div style={styles.item}>
+            Support
+          </div>
+          <div style={styles.divider}></div>
+          <div style={{ ...styles.item, color: "#e74c3c" }} onClick={logout}>
+            Sign Out
+          </div>
+        </div>
+      )}
     </div>
   );
 }
