@@ -28,10 +28,10 @@ export default function Navbar() {
           <img 
           src="/logo.png" 
           alt="RoadGuardian" 
-          style={styles.logo} 
+          style={{ ...styles.logo, cursor: "pointer" }}
           onClick={() => router.push("/home")}
           />
-          <span onClick={() => router.push("/home")}>RoadGuardian</span>
+          <span style={{ cursor: "pointer" }} onClick={() => router.push("/home")}>RoadGuardian</span>
         </div>
       </div>
 
