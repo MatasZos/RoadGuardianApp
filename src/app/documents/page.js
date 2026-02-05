@@ -16,7 +16,6 @@ export default function DocumentsPage() {
       ? localStorage.getItem("userEmail")
       : null;
 
-  // Fetch documents
   useEffect(() => {
     if (!email) return;
 
@@ -32,7 +31,6 @@ export default function DocumentsPage() {
 
     fetchDocs();
   }, [email]);
-
   async function handleSubmit(e) {
     e.preventDefault();
     if (!email) return;
@@ -62,6 +60,7 @@ export default function DocumentsPage() {
       <div style={styles.container}>
         <h1 style={styles.title}>Documents</h1>
 
+        {/* Add Document */}
         <form onSubmit={handleSubmit} style={styles.form}>
           <input
             placeholder="Document Title (Insurance, Tax, etc.)"
@@ -86,6 +85,7 @@ export default function DocumentsPage() {
           <button>Add Document</button>
         </form>
 
+        {/* Documents List */}
         <div style={styles.list}>
           {docs.length === 0 && (
             <p style={{ color: "#aaa" }}>No documents added yet</p>
