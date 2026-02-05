@@ -1,44 +1,146 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
 
 export default function MaintenancePage() {
-  const router = useRouter();
-  const [fullName, setFullName] = useState("");
+  const [records, setRecords] = useState([]);
+  const [form, setForm] = useState({
+    type: "",
+    date: "",
+    km: "",
+    notes: "",
+  });
 
-  const fakeRecords = [
-    { type: "Oil Change", date: "2026-01-10", km: 12000, notes: "Used synthetic oil" },
-    { type: "Chain Adjustment", date: "2026-01-05", km: 11850, notes: "Lubricated chain" },
-    { type: "Brake Pads Replacement", date: "2025-12-20", km: 11500, notes: "Front pads replaced" },
-  ];
+  const email =
+    typeof window !== "undefined"
+      ? localStorage.getItem("userEmail")
+      : null;
 
   useEffect(() => {
-    const name = localStorage.getItem("userFullName");
-    if (!name) router.push("/login");
-    else setFullName(name);
-  }, []);
+    if (!email) return;
+
+    async function fetchRecords() {
+      const res = await fetch("/api/maintenance", {
+        headers: { "x-user-email": email },
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+      setRecords(data);
+    }
+
+    fetchRecords();
+  }, [email]);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+
+    if (!email) return;
+
+    await fetch("/api/maintenance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userEmail: email,
+        ...form,
+      }),
+    });
+
+    setForm({ type: "", date: "", km: "", notes: "" });
+
+    const res = await fetch("/api/maintenance", {
+      headers: { "x-user-email": email },
+      cache: "no-store",
+    });
+    setRecords(await res.json());
+  }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#111", color: "#fff" }}>
-      <Navbar themeColor="#ffa500" />
-      <div style={{ padding: "20px" }}>
-        <h1 style={{ color: "#ffa500" }}>Maintenance Records</h1>
-        <div style={{ marginTop: "20px" }}>
-          {fakeRecords.map((record, index) => (
-            <div key={index} style={{ background: "#fff", color: "#111", padding: "15px", borderRadius: "12px", boxShadow: "0 4px 10px rgba(0,0,0,0.5)", marginBottom: "15px" }}>
-              <h2 style={{ color: "#ffa500" }}>{record.type}</h2>
-              <p><strong>Date:</strong> {record.date}</p>
-              <p><strong>Kilometers:</strong> {record.km} km</p>
-              <p><strong>Notes:</strong> {record.notes}</p>
+    <>
+      <Navbar />
+
+      <div style={styles.container}>
+        <h1 style={styles.title}>Maintenance Records</h1>
+
+        <form onSubmit={handleSubmit} style={styles.form}>
+          <input
+            placeholder="Maintenance Type (e.g. Oil Change)"
+            value={form.type}
+            onChange={(e) => setForm({ ...form, type: e.target.value })}
+            required
+          />
+          <input
+            type="date"
+            value={form.date}
+            onChange={(e) => setForm({ ...form, date: e.target.value })}
+            required
+          />
+          <input
+            type="number"
+            placeholder="Kilometers"
+            value={form.km}
+            onChange={(e) => setForm({ ...form, km: e.target.value })}
+            required
+          />
+          <textarea
+            placeholder="Notes"
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          />
+
+          <button>Add Record</button>
+        </form>
+
+        {/* Records List */}
+        <div style={styles.list}>
+          {records.length === 0 && (
+            <p style={{ color: "#aaa" }}>No maintenance records yet</p>
+          )}
+
+          {records.map((r, i) => (
+            <div key={i} style={styles.card}>
+              <h3>{r.type}</h3>
+              <p><strong>Date:</strong> {r.date}</p>
+              <p><strong>KM:</strong> {r.km}</p>
+              <p>{r.notes}</p>
             </div>
           ))}
         </div>
-        <button style={{ marginTop: "20px", padding: "12px 20px", borderRadius: "10px", border: "none", backgroundColor: "#ffa500", color: "#111", fontWeight: "bold", cursor: "pointer" }} >
-          Add New Maintenance Record
-        </button>
       </div>
-    </div>
+    </>
   );
 }
+
+const styles = {
+  container: {
+    minHeight: "100vh",
+    background: "#0e0e0e",
+    padding: "30px",
+    color: "#fff",
+  },
+  title: {
+    color: "#ff8c00",
+    marginBottom: "20px",
+  },
+  form: {
+    background: "#111",
+    padding: "20px",
+    borderRadius: "12px",
+    maxWidth: "400px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    marginBottom: "30px",
+  },
+  list: {
+    display: "grid",
+    gap: "15px",
+  },
+  card: {
+    background: "#111",
+    padding: "15px",
+    borderRadius: "10px",
+    borderLeft: "5px solid #ff8c00",
+  },
+};
