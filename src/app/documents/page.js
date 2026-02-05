@@ -1,44 +1,140 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
 
 export default function DocumentsPage() {
-  const router = useRouter();
-  const [fullName, setFullName] = useState("");
+  const [docs, setDocs] = useState([]);
+  const [form, setForm] = useState({
+    title: "",
+    expiryDate: "",
+    notes: "",
+  });
 
-  const fakeDocuments = [
-    { type: "Insurance", issueDate: "2025-06-01", expiryDate: "2026-06-01", notes: "Third-party coverage" },
-    { type: "Registration", issueDate: "2024-09-15", expiryDate: "N/A", notes: "Bike registration" },
-    { type: "Service Manual", issueDate: "2025-01-01", expiryDate: "N/A", notes: "Digital copy of manual" },
-  ];
+  const email =
+    typeof window !== "undefined"
+      ? localStorage.getItem("userEmail")
+      : null;
 
+  // Fetch documents
   useEffect(() => {
-    const name = localStorage.getItem("userFullName");
-    if (!name) router.push("/login");
-    else setFullName(name);
-  }, []);
+    if (!email) return;
+
+    async function fetchDocs() {
+      const res = await fetch("/api/documents", {
+        headers: { "x-user-email": email },
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+      setDocs(data);
+    }
+
+    fetchDocs();
+  }, [email]);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!email) return;
+
+    await fetch("/api/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userEmail: email,
+        ...form,
+      }),
+    });
+
+    setForm({ title: "", expiryDate: "", notes: "" });
+
+    const res = await fetch("/api/documents", {
+      headers: { "x-user-email": email },
+      cache: "no-store",
+    });
+    setDocs(await res.json());
+  }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#111", color: "#fff" }}>
-      <Navbar themeColor="#3498db" />
-      <div style={{ padding: "20px" }}>
-        <h1 style={{ color: "#3498db" }}>My Documents</h1>
-        <div style={{ marginTop: "20px" }}>
-          {fakeDocuments.map((doc, index) => (
-            <div key={index} style={{ background: "#fff", color: "#111", padding: "15px", borderRadius: "12px", boxShadow: "0 4px 10px rgba(0,0,0,0.5)", marginBottom: "15px" }}>
-              <h2 style={{ color: "#3498db" }}>{doc.type}</h2>
-              <p><strong>Issue Date:</strong> {doc.issueDate}</p>
-              <p><strong>Expiry Date:</strong> {doc.expiryDate}</p>
-              <p><strong>Notes:</strong> {doc.notes}</p>
+    <>
+      <Navbar />
+
+      <div style={styles.container}>
+        <h1 style={styles.title}>Documents</h1>
+
+        <form onSubmit={handleSubmit} style={styles.form}>
+          <input
+            placeholder="Document Title (Insurance, Tax, etc.)"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            required
+          />
+
+          <input
+            type="date"
+            value={form.expiryDate}
+            onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
+            required
+          />
+
+          <textarea
+            placeholder="Notes"
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          />
+
+          <button>Add Document</button>
+        </form>
+
+        <div style={styles.list}>
+          {docs.length === 0 && (
+            <p style={{ color: "#aaa" }}>No documents added yet</p>
+          )}
+
+          {docs.map((d, i) => (
+            <div key={i} style={styles.card}>
+              <h3>{d.title}</h3>
+              <p>
+                <strong>Expires:</strong> {d.expiryDate}
+              </p>
+              <p>{d.notes}</p>
             </div>
           ))}
         </div>
-        <button style={{ marginTop: "20px", padding: "12px 20px", borderRadius: "10px", border: "none", backgroundColor: "#3498db", color: "#111", fontWeight: "bold", cursor: "pointer" }} >
-          Add New Document
-        </button>
       </div>
-    </div>
+    </>
   );
 }
+
+const styles = {
+  container: {
+    minHeight: "100vh",
+    background: "#0b0f1a",
+    padding: "30px",
+    color: "#fff",
+  },
+  title: {
+    color: "#3b82f6",
+    marginBottom: "20px",
+  },
+  form: {
+    background: "#0f172a",
+    padding: "20px",
+    borderRadius: "12px",
+    maxWidth: "400px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    marginBottom: "30px",
+  },
+  list: {
+    display: "grid",
+    gap: "15px",
+  },
+  card: {
+    background: "#0f172a",
+    padding: "15px",
+    borderRadius: "10px",
+    borderLeft: "5px solid #3b82f6",
+  },
+};
