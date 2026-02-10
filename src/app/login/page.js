@@ -22,6 +22,8 @@ export default function LoginPage() {
 
     if (res.ok) {
       localStorage.setItem("userFullName", data.fullName);
+      localStorage.setItem("userEmail", data.email);
+
       setMessage("Login successful");
       setTimeout(() => router.push("/home"), 1200);
     } else {
@@ -32,11 +34,9 @@ export default function LoginPage() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        {/* Logo */}
         <img src="/logo.png" alt="RoadGuardian" style={styles.logo} />
 
         <h1 style={styles.title}>Welcome to RoadGuardian</h1>
-      
 
         <form onSubmit={handleLogin} style={styles.form}>
           <input
@@ -62,10 +62,12 @@ export default function LoginPage() {
 
         {message && <p style={styles.message}>{message}</p>}
 
-   
         <p style={styles.registerText}>
           Don’t have an account?{" "}
-          <span style={styles.registerLink} onClick={() => router.push("/register")}>
+          <span
+            style={styles.registerLink}
+            onClick={() => router.push("/register")}
+          >
             Register here
           </span>
         </p>
@@ -97,11 +99,6 @@ const styles = {
   title: {
     color: "#fff",
     marginBottom: "5px",
-  },
-  subtitle: {
-    color: "#aaa",
-    marginBottom: "25px",
-    fontSize: "0.9rem",
   },
   form: {
     display: "flex",
