@@ -17,18 +17,15 @@ import {
 export default function ProfilePage() {
   const router = useRouter();
 
-  // Display values
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Edit mode + form
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Messages
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -47,8 +44,6 @@ export default function ProfilePage() {
     setPassword(passLS);
 
     setEditName(nameLS);
-    setEditPassword("");
-    setConfirmPassword("");
   }, [router]);
 
   const handleSignOut = () => {
@@ -71,23 +66,20 @@ export default function ProfilePage() {
     setError("");
     setSuccess("");
     setIsEditing(false);
-    setEditName(fullName);
-    setEditPassword("");
-    setConfirmPassword("");
   };
 
   const handleSave = () => {
     setError("");
     setSuccess("");
 
-    const trimmedName = editName.trim();
-    if (!trimmedName) {
+    if (!editName.trim()) {
       setError("Name cannot be empty.");
       return;
     }
 
-    // If user typed a new password, validate it
-    const wantsPasswordChange = editPassword.length > 0 || confirmPassword.length > 0;
+    const wantsPasswordChange =
+      editPassword.length > 0 || confirmPassword.length > 0;
+
     if (wantsPasswordChange) {
       if (editPassword.length < 6) {
         setError("Password must be at least 6 characters.");
@@ -97,134 +89,100 @@ export default function ProfilePage() {
         setError("Passwords do not match.");
         return;
       }
-    }
-
-    // Save name
-    localStorage.setItem("userFullName", trimmedName);
-    setFullName(trimmedName);
-
-    // Save password only if changed
-    if (wantsPasswordChange) {
       localStorage.setItem("userPassword", editPassword);
       setPassword(editPassword);
     }
 
+    localStorage.setItem("userFullName", editName.trim());
+    setFullName(editName.trim());
+
     setIsEditing(false);
     setEditPassword("");
     setConfirmPassword("");
-    setSuccess("Profile updated successfully.");
+    setSuccess("Profile updated.");
   };
 
-  const maskedPassword = password ? "•".repeat(Math.min(password.length, 12)) : "Not set yet";
-  const shownEmail = email || "Not set yet";
+  const maskedPassword = password
+    ? "•".repeat(Math.min(password.length, 12))
+    : "Not set";
 
   return (
-    <Box sx={{ minHeight: "100vh", p: 3, bgcolor: "#f5f7fb" }}>
-      <Box sx={{ maxWidth: 520, mx: "auto" }}>
-        <Typography variant="h4" sx={{ mb: 2, fontWeight: 700 }}>
-          Profile
-        </Typography>
+    <Box>
+      <Typography variant="h4">Profile</Typography>
 
-        <Card elevation={1} sx={{ borderRadius: 3 }}>
-          <CardContent>
-            <Stack spacing={2}>
-              {error && <Alert severity="error">{error}</Alert>}
-              {success && <Alert severity="success">{success}</Alert>}
+      <Card>
+        <CardContent>
+          <Stack spacing={2}>
+            {error && <Alert severity="error">{error}</Alert>}
+            {success && <Alert severity="success">{success}</Alert>}
 
-              <Box>
-                <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
-                  Name
-                </Typography>
+            <div>
+              <Typography variant="subtitle2">Name</Typography>
+              {!isEditing ? (
+                <Typography>{fullName}</Typography>
+              ) : (
+                <TextField
+                  fullWidth
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                />
+              )}
+            </div>
 
-                {!isEditing ? (
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {fullName}
-                  </Typography>
-                ) : (
+            <Divider />
+
+            <div>
+              <Typography variant="subtitle2">Email</Typography>
+              <Typography>{email || "Not set"}</Typography>
+            </div>
+
+            <div>
+              <Typography variant="subtitle2">Password</Typography>
+              {!isEditing ? (
+                <Typography>{maskedPassword}</Typography>
+              ) : (
+                <Stack spacing={1}>
                   <TextField
                     fullWidth
-                    size="small"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    placeholder="Your name"
+                    type="password"
+                    placeholder="New password"
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
                   />
-                )}
-              </Box>
+                  <TextField
+                    fullWidth
+                    type="password"
+                    placeholder="Confirm password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                </Stack>
+              )}
+            </div>
 
-              <Divider />
+            <Divider />
 
-              <Box>
-                <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
-                  Email
-                </Typography>
-                <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                  {shownEmail}
-                </Typography>
-              </Box>
-
-              <Box>
-                <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
-                  Password
-                </Typography>
-
-                {!isEditing ? (
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {maskedPassword}
-                  </Typography>
-                ) : (
-                  <Stack spacing={1}>
-                    <TextField
-                      fullWidth
-                      size="small"
-                      type="password"
-                      value={editPassword}
-                      onChange={(e) => setEditPassword(e.target.value)}
-                      placeholder="New password"
-                      helperText="Leave blank to keep your current password"
-                    />
-                    <TextField
-                      fullWidth
-                      size="small"
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Confirm new password"
-                    />
-                  </Stack>
-                )}
-              </Box>
-
-              <Divider />
-
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-                {!isEditing ? (
-                  <Button variant="contained" onClick={startEditing}>
-                    Edit Profile
-                  </Button>
-                ) : (
-                  <>
-                    <Button variant="contained" onClick={handleSave}>
-                      Save Changes
-                    </Button>
-                    <Button variant="outlined" onClick={cancelEditing}>
-                      Cancel
-                    </Button>
-                  </>
-                )}
-
-                <Box sx={{ flex: 1 }} />
-
-                <Button color="error" variant="contained" onClick={handleSignOut}>
-                  Sign Out
+            {!isEditing ? (
+              <Button variant="contained" onClick={startEditing}>
+                Edit Profile
+              </Button>
+            ) : (
+              <Stack direction="row" spacing={1}>
+                <Button variant="contained" onClick={handleSave}>
+                  Save
+                </Button>
+                <Button variant="outlined" onClick={cancelEditing}>
+                  Cancel
                 </Button>
               </Stack>
+            )}
 
-              <Typography variant="caption" sx={{ color: "text.secondary" }}>
-              </Typography>
-            </Stack>
-          </CardContent>
-        </Card>
-      </Box>
+            <Button color="error" onClick={handleSignOut}>
+              Sign Out
+            </Button>
+          </Stack>
+        </CardContent>
+      </Card>
     </Box>
   );
 }
