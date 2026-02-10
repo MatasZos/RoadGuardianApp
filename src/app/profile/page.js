@@ -42,7 +42,6 @@ export default function ProfilePage() {
     setFullName(nameLS);
     setEmail(emailLS);
     setPassword(passLS);
-
     setEditName(nameLS);
   }, [router]);
 
@@ -51,21 +50,6 @@ export default function ProfilePage() {
     localStorage.removeItem("userEmail");
     localStorage.removeItem("userPassword");
     router.push("/login");
-  };
-
-  const startEditing = () => {
-    setError("");
-    setSuccess("");
-    setIsEditing(true);
-    setEditName(fullName);
-    setEditPassword("");
-    setConfirmPassword("");
-  };
-
-  const cancelEditing = () => {
-    setError("");
-    setSuccess("");
-    setIsEditing(false);
   };
 
   const handleSave = () => {
@@ -77,10 +61,7 @@ export default function ProfilePage() {
       return;
     }
 
-    const wantsPasswordChange =
-      editPassword.length > 0 || confirmPassword.length > 0;
-
-    if (wantsPasswordChange) {
+    if (editPassword || confirmPassword) {
       if (editPassword.length < 6) {
         setError("Password must be at least 6 characters.");
         return;
@@ -107,16 +88,23 @@ export default function ProfilePage() {
     : "Not set";
 
   return (
-    <Box>
-      <Typography variant="h4">Profile</Typography>
+    <Box sx={{ maxWidth: 600, mx: "auto", mt: 4 }}>
+      <Typography variant="h4" sx={{ mb: 2 }}>
+        Profile
+      </Typography>
 
-      <Card>
+      <Card
+        sx={{
+          borderRadius: 3,
+          boxShadow: 3,
+        }}
+      >
         <CardContent>
           <Stack spacing={2}>
             {error && <Alert severity="error">{error}</Alert>}
             {success && <Alert severity="success">{success}</Alert>}
 
-            <div>
+            <Box>
               <Typography variant="subtitle2">Name</Typography>
               {!isEditing ? (
                 <Typography>{fullName}</Typography>
@@ -127,16 +115,16 @@ export default function ProfilePage() {
                   onChange={(e) => setEditName(e.target.value)}
                 />
               )}
-            </div>
+            </Box>
 
             <Divider />
 
-            <div>
+            <Box>
               <Typography variant="subtitle2">Email</Typography>
               <Typography>{email || "Not set"}</Typography>
-            </div>
+            </Box>
 
-            <div>
+            <Box>
               <Typography variant="subtitle2">Password</Typography>
               {!isEditing ? (
                 <Typography>{maskedPassword}</Typography>
@@ -158,28 +146,32 @@ export default function ProfilePage() {
                   />
                 </Stack>
               )}
-            </div>
+            </Box>
 
             <Divider />
 
-            {!isEditing ? (
-              <Button variant="contained" onClick={startEditing}>
-                Edit Profile
-              </Button>
-            ) : (
-              <Stack direction="row" spacing={1}>
-                <Button variant="contained" onClick={handleSave}>
-                  Save
+            <Stack direction="row" spacing={1}>
+              {!isEditing ? (
+                <Button variant="contained" onClick={() => setIsEditing(true)}>
+                  Edit Profile
                 </Button>
-                <Button variant="outlined" onClick={cancelEditing}>
-                  Cancel
-                </Button>
-              </Stack>
-            )}
+              ) : (
+                <>
+                  <Button variant="contained" onClick={handleSave}>
+                    Save
+                  </Button>
+                  <Button variant="outlined" onClick={() => setIsEditing(false)}>
+                    Cancel
+                  </Button>
+                </>
+              )}
 
-            <Button color="error" onClick={handleSignOut}>
-              Sign Out
-            </Button>
+              <Box sx={{ flexGrow: 1 }} />
+
+              <Button color="error" onClick={handleSignOut}>
+                Sign Out
+              </Button>
+            </Stack>
           </Stack>
         </CardContent>
       </Card>
