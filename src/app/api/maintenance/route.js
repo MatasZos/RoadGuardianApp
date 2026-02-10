@@ -15,7 +15,7 @@ export async function GET(req) {
       .sort({ _id: -1 })
       .toArray();
 
-    return NextResponse.json(records, { status: 200 });
+    return NextResponse.json(records);
   } catch (err) {
     console.error("MAINTENANCE GET ERROR:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -44,13 +44,9 @@ export async function POST(req) {
 
     const result = await db.collection("maintenance").insertOne(doc);
 
-    return NextResponse.json(
-      { success: true, insertedId: result.insertedId },
-      { status: 200 }
-    );
+    return NextResponse.json({ success: true, insertedId: result.insertedId });
   } catch (err) {
     console.error("MAINTENANCE POST ERROR:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
-
