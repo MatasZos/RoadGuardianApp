@@ -217,12 +217,6 @@ export default function ProfilePage() {
                 <Button color="error" variant="contained" onClick={handleSignOut}>
                   Sign Out
                 </Button>
-              </Stack>
-
-              <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                Note: storing passwords in localStorage is not secure. For real apps, use proper authentication.
-              </Typography>
-            </Stack>
           </CardContent>
         </Card>
       </Box>
