@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 export async function GET(req) {
   try {
     const email = req.headers.get("x-user-email");
-    if (!email) return NextResponse.json([], { status: 200 });
+    if (!email) return NextResponse.json([]);
 
     const client = await clientPromise;
     const db = client.db("login");
@@ -30,6 +30,9 @@ export async function POST(req) {
       return NextResponse.json({ error: "Missing userEmail" }, { status: 400 });
     }
 
+    const client = await clientPromise;
+    const db = client.db("login");
+
     const doc = {
       userEmail: body.userEmail,
       type: body.type || "",
@@ -39,12 +42,9 @@ export async function POST(req) {
       createdAt: new Date(),
     };
 
-    const client = await clientPromise;
-    const db = client.db("login");
+    await db.collection("maintenance").insertOne(doc);
 
-    const result = await db.collection("maintenance").insertOne(doc);
-
-    return NextResponse.json({ success: true, insertedId: result.insertedId });
+    return NextResponse.json({ success: true });
   } catch (err) {
     console.error("MAINTENANCE POST ERROR:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
