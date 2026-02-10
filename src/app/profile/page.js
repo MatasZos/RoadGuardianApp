@@ -120,7 +120,7 @@ export default function ProfilePage() {
   const shownEmail = email || "Not set yet";
 
   return (
-    <Box sx={{ minHeight: "100vh", p: 3, bgcolor: "#f5f7fb" }}>
+    <Box sx={{ minHeight: "100vh", p: 3 }}>
       <Box sx={{ maxWidth: 520, mx: "auto" }}>
         <Typography variant="h4" sx={{ mb: 2, fontWeight: 700 }}>
           Profile
