@@ -217,6 +217,11 @@ export default function ProfilePage() {
                 <Button color="error" variant="contained" onClick={handleSignOut}>
                   Sign Out
                 </Button>
+              </Stack>
+
+              <Typography variant="caption" sx={{ color: "text.secondary" }}>
+              </Typography>
+            </Stack>
           </CardContent>
         </Card>
       </Box>
