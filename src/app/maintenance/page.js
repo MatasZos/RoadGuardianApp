@@ -53,6 +53,7 @@ export default function MaintenancePage() {
       headers: { "x-user-email": email },
       cache: "no-store",
     });
+
     setRecords(await res.json());
   }
 
@@ -92,7 +93,6 @@ export default function MaintenancePage() {
           <button>Add Record</button>
         </form>
 
-        {/* Records List */}
         <div style={styles.list}>
           {records.length === 0 && (
             <p style={{ color: "#aaa" }}>No maintenance records yet</p>
