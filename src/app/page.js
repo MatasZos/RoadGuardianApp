@@ -10,7 +10,7 @@ export default function LandingPage() {
       <section style={styles.hero}>
         <h1 style={styles.heroTitle}>RoadGuardian</h1>
         <p style={styles.heroSubtitle}>
-          A smarter, safer, more organized way to manage your vehicle.
+          Your all‑in‑one companion for safer, smarter, and more connected driving.
         </p>
       </section>
       <section style={styles.featuresSection}>
@@ -28,9 +28,22 @@ export default function LandingPage() {
         />
 
         <Feature
-          title="Trip & Fuel Insights"
-          description="Track mileage, fuel usage, and trip history to understand your driving habits and save money."
-          image="/insights.png"
+          title="Emergency Response Help"
+          description="Instant access to emergency contacts, roadside assistance, and quick‑action tools when you need them most."
+          image="/emergency.png"
+        />
+
+        <Feature
+          title="AI Support Chatbot"
+          description="Get real‑time help, guidance, and answers from your personal AI assistant built right into RoadGuardian."
+          image="/ai.png"
+          reverse
+        />
+
+        <Feature
+          title="Community Rider Chat"
+          description="Connect with other drivers, share tips, ask questions, and be part of a growing community."
+          image="/community.png"
         />
       </section>
 
