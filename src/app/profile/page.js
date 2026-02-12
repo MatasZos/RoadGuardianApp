@@ -22,12 +22,14 @@ export default function ProfilePage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [motorbike, setMotorbike] = useState("");
 
   // Edit mode + form
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [editMotorbike, setEditMotorbike] = useState("");
 
   // Messages
   const [error, setError] = useState("");
@@ -37,6 +39,7 @@ export default function ProfilePage() {
     const nameLS = localStorage.getItem("userFullName");
     const emailLS = localStorage.getItem("userEmail") || "";
     const passLS = localStorage.getItem("userPassword") || "";
+    const bikeLS = localStorage.getItem("userMotorbike") || "";
 
     if (!nameLS) {
       router.push("/login");
@@ -46,16 +49,19 @@ export default function ProfilePage() {
     setFullName(nameLS);
     setEmail(emailLS);
     setPassword(passLS);
+    setMotorbike(bikeLS);
 
     setEditName(nameLS);
     setEditPassword("");
     setConfirmPassword("");
+    setEditMotorbike(bikeLS);
   }, [router]);
 
   const handleSignOut = () => {
     localStorage.removeItem("userFullName");
     localStorage.removeItem("userEmail");
     localStorage.removeItem("userPassword");
+    localStorage.removeItem("userMotorbike");
     router.push("/login");
   };
 
@@ -66,6 +72,7 @@ export default function ProfilePage() {
     setEditName(fullName);
     setEditPassword("");
     setConfirmPassword("");
+    setEditMotorbike(motorbike);
   };
 
   const cancelEditing = () => {
@@ -75,6 +82,7 @@ export default function ProfilePage() {
     setEditName(fullName);
     setEditPassword("");
     setConfirmPassword("");
+    setEditMotorbike(motorbike);
   };
 
   const handleSave = () => {
@@ -87,8 +95,16 @@ export default function ProfilePage() {
       return;
     }
 
+    const trimmedBike = editMotorbike.trim();
+    if (!trimmedBike) {
+      setError("Motorbike cannot be empty.");
+      return;
+    }
+
     // If user typed a new password, validate it
-    const wantsPasswordChange = editPassword.length > 0 || confirmPassword.length > 0;
+    const wantsPasswordChange =
+      editPassword.length > 0 || confirmPassword.length > 0;
+
     if (wantsPasswordChange) {
       if (editPassword.length < 6) {
         setError("Password must be at least 6 characters.");
@@ -104,6 +120,10 @@ export default function ProfilePage() {
     localStorage.setItem("userFullName", trimmedName);
     setFullName(trimmedName);
 
+    // Save motorbike
+    localStorage.setItem("userMotorbike", trimmedBike);
+    setMotorbike(trimmedBike);
+
     // Save password only if changed
     if (wantsPasswordChange) {
       localStorage.setItem("userPassword", editPassword);
@@ -116,11 +136,17 @@ export default function ProfilePage() {
     setSuccess("Profile updated successfully.");
   };
 
-  const maskedPassword = password ? "•".repeat(Math.min(password.length, 12)) : "Not set yet";
+  const maskedPassword = password
+    ? "•".repeat(Math.min(password.length, 12))
+    : "Not set yet";
+
   const shownEmail = email || "Not set yet";
+  const shownBike = motorbike || "Not set yet";
 
   return (
     <Box sx={{ minHeight: "100vh", p: 3 }}>
+      <Navbar />
+
       <Box sx={{ maxWidth: 520, mx: "auto" }}>
         <Typography variant="h4" sx={{ mb: 2, fontWeight: 700 }}>
           Profile
@@ -162,6 +188,30 @@ export default function ProfilePage() {
                   {shownEmail}
                 </Typography>
               </Box>
+
+              <Divider />
+
+              <Box>
+                <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
+                  Motorbike
+                </Typography>
+
+                {!isEditing ? (
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                    {shownBike}
+                  </Typography>
+                ) : (
+                  <TextField
+                    fullWidth
+                    size="small"
+                    value={editMotorbike}
+                    onChange={(e) => setEditMotorbike(e.target.value)}
+                    placeholder="e.g. Yamaha R6"
+                  />
+                )}
+              </Box>
+
+              <Divider />
 
               <Box>
                 <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
@@ -215,14 +265,14 @@ export default function ProfilePage() {
 
                 <Box sx={{ flex: 1 }} />
 
-                <Button color="error" variant="contained" onClick={handleSignOut}>
+                <Button
+                  color="error"
+                  variant="contained"
+                  onClick={handleSignOut}
+                >
                   Sign Out
                 </Button>
               </Stack>
-
-              <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                
-              </Typography>
             </Stack>
           </CardContent>
         </Card>
