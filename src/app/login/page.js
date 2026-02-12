@@ -23,7 +23,8 @@ export default function LoginPage() {
     if (res.ok) {
       localStorage.setItem("userFullName", data.fullName);
       localStorage.setItem("userEmail", data.email);
-      localStorage.setItem("userMotorbike", data.motorbike || ""); // ✅ added
+      localStorage.setItem("userMotorbike", data.motorbike || "");
+      localStorage.setItem("userPassword", password);
 
       setMessage("Login successful");
       setTimeout(() => router.push("/home"), 1200);
