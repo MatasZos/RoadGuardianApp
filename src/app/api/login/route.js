@@ -18,5 +18,6 @@ export async function POST(req) {
   return NextResponse.json({
     fullName: user.fullName,
     email: user.email,
+    motorbike: user.motorbike || "", // ✅ added
   });
 }
