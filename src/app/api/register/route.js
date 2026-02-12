@@ -1,10 +1,13 @@
 import clientPromise from "../../../lib/mongodb";
 
 export async function POST(req) {
-  const { fullName, email, password, phone, accountType } = await req.json();
+  const { fullName, email, password, phone, motorbike, accountType } =
+    await req.json();
 
-  if (!fullName || !email || !password || !phone || !accountType) {
-    return new Response(JSON.stringify({ error: "Missing fields" }), { status: 400 });
+  if (!fullName || !email || !password || !phone || !motorbike || !accountType) {
+    return new Response(JSON.stringify({ error: "Missing fields" }), {
+      status: 400,
+    });
   }
 
   try {
@@ -14,13 +17,27 @@ export async function POST(req) {
 
     const existingUser = await userCollection.findOne({ email });
     if (existingUser) {
-      return new Response(JSON.stringify({ error: "Email already exists" }), { status: 400 });
+      return new Response(JSON.stringify({ error: "Email already exists" }), {
+        status: 400,
+      });
     }
 
-    await userCollection.insertOne({ fullName, email, password, phone, accountType });
+    await userCollection.insertOne({
+      fullName,
+      email,
+      password,
+      phone,
+      motorbike,
+      accountType,
+    });
 
-    return new Response(JSON.stringify({ message: "User registered successfully" }), { status: 200 });
+    return new Response(
+      JSON.stringify({ message: "User registered successfully" }),
+      { status: 200 }
+    );
   } catch (error) {
-    return new Response(JSON.stringify({ error: "Server error" }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Server error" }), {
+      status: 500,
+    });
   }
 }
