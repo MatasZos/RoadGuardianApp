@@ -85,7 +85,7 @@ export default function ProfilePage() {
     setEditMotorbike(motorbike);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setError("");
     setSuccess("");
 
@@ -101,7 +101,6 @@ export default function ProfilePage() {
       return;
     }
 
-    // If user typed a new password, validate it
     const wantsPasswordChange =
       editPassword.length > 0 || confirmPassword.length > 0;
 
@@ -116,15 +115,32 @@ export default function ProfilePage() {
       }
     }
 
-    // Save name
-    localStorage.setItem("userFullName", trimmedName);
-    setFullName(trimmedName);
+    // Update DB first
+    const res = await fetch("/api/profile/update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        fullName: trimmedName,
+        motorbike: trimmedBike,
+        password: wantsPasswordChange ? editPassword : "",
+      }),
+    });
 
-    // Save motorbike
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data?.error || "Update failed");
+      return;
+    }
+
+    // Update localStorage to match DB
+    localStorage.setItem("userFullName", trimmedName);
     localStorage.setItem("userMotorbike", trimmedBike);
+
+    setFullName(trimmedName);
     setMotorbike(trimmedBike);
 
-    // Save password only if changed
     if (wantsPasswordChange) {
       localStorage.setItem("userPassword", editPassword);
       setPassword(editPassword);
