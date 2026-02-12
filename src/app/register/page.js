@@ -5,12 +5,15 @@ import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
   const router = useRouter();
+
   const [form, setForm] = useState({
     fullName: "",
     email: "",
     password: "",
     phone: "",
+    motorbike: "",
   });
+
   const [message, setMessage] = useState("");
 
   async function handleRegister(e) {
@@ -36,18 +39,18 @@ export default function RegisterPage() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-      
         <img src="/logo.png" alt="RoadGuardian" style={styles.logo} />
 
         <h1 style={styles.title}>Create your account</h1>
-
 
         <form onSubmit={handleRegister} style={styles.form}>
           <input
             style={styles.input}
             placeholder="Full Name"
             value={form.fullName}
-            onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, fullName: e.target.value })
+            }
             required
           />
 
@@ -56,7 +59,9 @@ export default function RegisterPage() {
             placeholder="Email"
             type="email"
             value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, email: e.target.value })
+            }
             required
           />
 
@@ -65,7 +70,9 @@ export default function RegisterPage() {
             placeholder="Password"
             type="password"
             value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, password: e.target.value })
+            }
             required
           />
 
@@ -73,7 +80,19 @@ export default function RegisterPage() {
             style={styles.input}
             placeholder="Phone Number"
             value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, phone: e.target.value })
+            }
+            required
+          />
+
+          <input
+            style={styles.input}
+            placeholder="Motorbike (e.g. Yamaha R6)"
+            value={form.motorbike}
+            onChange={(e) =>
+              setForm({ ...form, motorbike: e.target.value })
+            }
             required
           />
 
@@ -119,11 +138,6 @@ const styles = {
   title: {
     color: "#fff",
     marginBottom: "5px",
-  },
-  subtitle: {
-    color: "#aaa",
-    marginBottom: "25px",
-    fontSize: "0.9rem",
   },
   form: {
     display: "flex",
