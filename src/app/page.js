@@ -7,6 +7,7 @@ export default function LandingPage() {
 
   return (
     <div style={styles.page}>
+      {/* HERO */}
       <section style={styles.hero}>
         <h1 style={styles.heroTitle}>RoadGuardian</h1>
         <p style={styles.heroSubtitle}>
@@ -46,8 +47,6 @@ export default function LandingPage() {
           image="/community.png"
         />
       </section>
-
-      {/* CALL TO ACTION */}
       <section style={styles.cta}>
         <h2 style={styles.ctaTitle}>Get Started</h2>
         <p style={styles.ctaSubtitle}>
