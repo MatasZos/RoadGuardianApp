@@ -33,7 +33,6 @@ export default function MaintenancePage() {
     "Tire Pressure Check",
     "Spark Plug Replacement",
     "Battery Replacement",
-    "General Service",
     "Clutch Cable Adjustment",
     "Throttle Cable Adjustment",
     "Fuel Filter Replacement",
