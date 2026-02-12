@@ -21,10 +21,8 @@ export default function DocumentsPage() {
     { label: "Insurance", expires: true },
     { label: "Motor Tax", expires: true },
     { label: "Warranty", expires: true },
-    { label: "NCT Certificate", expires: false },
     { label: "Service Receipt", expires: false },
-    { label: "Roadside Assistance", expires: false },
-    { label: "Purchase Invoice", expires: false },
+    { label: "Product Purchase", expires: false },
     { label: "Other", expires: false },
   ];
 
