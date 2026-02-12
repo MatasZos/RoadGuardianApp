@@ -18,6 +18,7 @@ export default function MaintenancePage() {
     typeof window !== "undefined"
       ? localStorage.getItem("userEmail")
       : null;
+
   const maintenanceTypes = [
     "Oil Change",
     "Oil Filter Replacement",
@@ -32,13 +33,15 @@ export default function MaintenancePage() {
     "Spark Plug Replacement",
     "Battery Replacement",
     "Clutch Cable Adjustment",
-    "Valve Clearance Check",
+    "Throttle Cable Adjustment",
     "Fuel Filter Replacement",
+    "Fork Oil Change",
     "Suspension Service",
     "Wheel Bearings Check",
     "Headlight Bulb Replacement",
     "Indicator Bulb Replacement",
     "Brake Disc Replacement",
+  
   ];
 
   useEffect(() => {
@@ -86,10 +89,10 @@ export default function MaintenancePage() {
   function startEdit(record) {
     setEditingId(record._id);
     setForm({
-      type: record.type,
-      date: record.date,
-      km: record.km,
-      notes: record.notes,
+      type: Array.isArray(record.type) ? record.type : [record.type],
+      date: record.date || "",
+      km: record.km ?? "",
+      notes: record.notes || "",
     });
   }
 
@@ -109,6 +112,7 @@ export default function MaintenancePage() {
 
       <div style={styles.container}>
         <h1 style={styles.title}>Maintenance Records</h1>
+
         <form onSubmit={handleSubmit} style={styles.form}>
           <label style={{ color: "#ccc" }}>Tasks Done:</label>
           <select
@@ -158,6 +162,7 @@ export default function MaintenancePage() {
             {editingId ? "Save Changes" : "Add Record"}
           </button>
         </form>
+
         <div style={styles.list}>
           {records.length === 0 && (
             <p style={{ color: "#aaa" }}>No maintenance records yet</p>
@@ -165,7 +170,9 @@ export default function MaintenancePage() {
 
           {records.map((r) => (
             <div key={r._id} style={styles.card}>
-              <h3 style={styles.cardTitle}>{r.type.join(", ")}</h3>
+              <h3 style={styles.cardTitle}>
+                {Array.isArray(r.type) ? r.type.join(", ") : r.type}
+              </h3>
 
               <p style={styles.cardText}>
                 <strong>Date:</strong> {r.date}

@@ -29,9 +29,9 @@ export async function POST(req) {
 
     const doc = {
       userEmail: body.userEmail,
-      type: body.type, 
-      date: body.date,
-      km: Number(body.km),
+      type: Array.isArray(body.type) ? body.type : [],
+      date: body.date || "",
+      km: Number(body.km || 0),
       notes: body.notes || "",
       createdAt: new Date(),
     };
@@ -59,9 +59,9 @@ export async function PUT(req) {
       { _id: new ObjectId(body._id) },
       {
         $set: {
-          type: body.type,
-          date: body.date,
-          km: Number(body.km),
+          type: Array.isArray(body.type) ? body.type : [],
+          date: body.date || "",
+          km: Number(body.km || 0),
           notes: body.notes || "",
         },
       }
