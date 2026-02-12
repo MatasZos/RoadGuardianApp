@@ -19,6 +19,7 @@ export default function MaintenancePage() {
       ? localStorage.getItem("userEmail")
       : null;
 
+  // Motorcycle-specific maintenance tasks
   const maintenanceTypes = [
     "Oil Change",
     "Oil Filter Replacement",
@@ -32,16 +33,15 @@ export default function MaintenancePage() {
     "Tire Pressure Check",
     "Spark Plug Replacement",
     "Battery Replacement",
+    "General Service",
     "Clutch Cable Adjustment",
     "Throttle Cable Adjustment",
     "Fuel Filter Replacement",
-    "Fork Oil Change",
     "Suspension Service",
     "Wheel Bearings Check",
     "Headlight Bulb Replacement",
     "Indicator Bulb Replacement",
     "Brake Disc Replacement",
-  
   ];
 
   useEffect(() => {
@@ -59,6 +59,18 @@ export default function MaintenancePage() {
 
     fetchRecords();
   }, [email]);
+
+  function toggleTask(task) {
+    setForm((prev) => {
+      const exists = prev.type.includes(task);
+      return {
+        ...prev,
+        type: exists
+          ? prev.type.filter((t) => t !== task)
+          : [...prev.type, task],
+      };
+    });
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -113,26 +125,31 @@ export default function MaintenancePage() {
       <div style={styles.container}>
         <h1 style={styles.title}>Maintenance Records</h1>
 
+        {/* Add / Edit Form */}
         <form onSubmit={handleSubmit} style={styles.form}>
-          <label style={{ color: "#ccc" }}>Tasks Done:</label>
-          <select
-            multiple
-            style={styles.input}
-            value={form.type}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                type: Array.from(e.target.selectedOptions, (opt) => opt.value),
-              })
-            }
-            required
-          >
-            {maintenanceTypes.map((t, i) => (
-              <option key={i} value={t}>
-                {t}
-              </option>
+          <label style={{ color: "#ccc", fontWeight: "bold" }}>
+            Select Tasks Done:
+          </label>
+
+          <div style={styles.checkboxContainer}>
+            {maintenanceTypes.map((task, i) => (
+              <label key={i} style={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={form.type.includes(task)}
+                  onChange={() => toggleTask(task)}
+                />
+                {task}
+              </label>
             ))}
-          </select>
+          </div>
+
+          <textarea
+            style={styles.textarea}
+            value={form.type.join(", ")}
+            readOnly
+            placeholder="Chosen services"
+          />
 
           <input
             style={styles.input}
@@ -162,7 +179,6 @@ export default function MaintenancePage() {
             {editingId ? "Save Changes" : "Add Record"}
           </button>
         </form>
-
         <div style={styles.list}>
           {records.length === 0 && (
             <p style={{ color: "#aaa" }}>No maintenance records yet</p>
@@ -221,11 +237,27 @@ const styles = {
     background: "#111",
     padding: "20px",
     borderRadius: "12px",
-    maxWidth: "450px",
+    maxWidth: "500px",
     display: "flex",
     flexDirection: "column",
     gap: "12px",
     marginBottom: "40px",
+  },
+  checkboxContainer: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "8px",
+    maxHeight: "200px",
+    overflowY: "auto",
+    padding: "10px",
+    background: "#1a1a1a",
+    borderRadius: "8px",
+  },
+  checkboxLabel: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    fontSize: "0.9rem",
   },
   input: {
     padding: "12px",
@@ -240,7 +272,7 @@ const styles = {
     border: "1px solid #222",
     background: "#1a1a1a",
     color: "#fff",
-    minHeight: "80px",
+    minHeight: "60px",
   },
   button: {
     padding: "12px",

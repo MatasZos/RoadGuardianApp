@@ -18,7 +18,6 @@ export async function GET(req) {
 
     return NextResponse.json(records);
   } catch (err) {
-    console.error("MAINTENANCE GET ERROR:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -30,8 +29,8 @@ export async function POST(req) {
     const doc = {
       userEmail: body.userEmail,
       type: Array.isArray(body.type) ? body.type : [],
-      date: body.date || "",
-      km: Number(body.km || 0),
+      date: body.date,
+      km: Number(body.km),
       notes: body.notes || "",
       createdAt: new Date(),
     };
@@ -43,7 +42,6 @@ export async function POST(req) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("MAINTENANCE POST ERROR:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -60,8 +58,8 @@ export async function PUT(req) {
       {
         $set: {
           type: Array.isArray(body.type) ? body.type : [],
-          date: body.date || "",
-          km: Number(body.km || 0),
+          date: body.date,
+          km: Number(body.km),
           notes: body.notes || "",
         },
       }
@@ -69,7 +67,6 @@ export async function PUT(req) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("MAINTENANCE PUT ERROR:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -87,7 +84,6 @@ export async function DELETE(req) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("MAINTENANCE DELETE ERROR:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
