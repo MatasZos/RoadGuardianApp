@@ -1,5 +1,6 @@
 import clientPromise from "../../../lib/mongodb";
 import { NextResponse } from "next/server";
+import { ObjectId } from "mongodb";
 
 export async function GET(req) {
   try {
@@ -26,13 +27,9 @@ export async function POST(req) {
   try {
     const body = await req.json();
 
-    if (!body?.userEmail) {
-      return NextResponse.json({ error: "Missing userEmail" }, { status: 400 });
-    }
-
     const doc = {
       userEmail: body.userEmail,
-      title: body.title || "",
+      title: body.title,
       expiryDate: body.expiryDate || "",
       notes: body.notes || "",
       createdAt: new Date(),
@@ -41,15 +38,54 @@ export async function POST(req) {
     const client = await clientPromise;
     const db = client.db("login");
 
-    const result = await db.collection("documents").insertOne(doc);
+    await db.collection("documents").insertOne(doc);
 
-    return NextResponse.json(
-      { success: true, insertedId: result.insertedId },
-      { status: 200 }
-    );
+    return NextResponse.json({ success: true });
   } catch (err) {
     console.error("DOCUMENTS POST ERROR:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
 
+export async function PUT(req) {
+  try {
+    const body = await req.json();
+
+    const client = await clientPromise;
+    const db = client.db("login");
+
+    await db.collection("documents").updateOne(
+      { _id: new ObjectId(body._id) },
+      {
+        $set: {
+          title: body.title,
+          expiryDate: body.expiryDate || "",
+          notes: body.notes || "",
+        },
+      }
+    );
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("DOCUMENTS PUT ERROR:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req) {
+  try {
+    const body = await req.json();
+
+    const client = await clientPromise;
+    const db = client.db("login");
+
+    await db
+      .collection("documents")
+      .deleteOne({ _id: new ObjectId(body._id) });
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("DOCUMENTS DELETE ERROR:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
