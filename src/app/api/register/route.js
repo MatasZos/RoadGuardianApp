@@ -1,5 +1,5 @@
 import clientPromise from "../../../lib/mongodb";
-import bcrypt
+import bcrypt f
 
 export async function POST(req) {
   const { fullName, email, password, phone, motorbike, accountType } =
