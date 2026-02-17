@@ -24,10 +24,13 @@ export async function POST(req) {
       });
     }
 
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
     await userCollection.insertOne({
       fullName,
       email,
-      password,
+      passwordHash,
       phone,
       motorbike,
       accountType,
