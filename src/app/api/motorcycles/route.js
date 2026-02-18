@@ -15,7 +15,7 @@ export async function GET(req) {
     );
   }
 
-  const url = new URL("https://api.api-ninjas.com/v1/motorcycles");
+  const url = new URL("https://api-ninjas.com/api/motorcycles#v1-motorcycles");
   if (make) url.searchParams.set("make", make);
   if (model) url.searchParams.set("model", model);
   if (year) url.searchParams.set("year", year);
