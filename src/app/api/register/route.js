@@ -9,7 +9,6 @@ function cleanString(value) {
 function validEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
-
 function strongPassword(password) {
   return (
     password.length >= 8 &&
@@ -20,9 +19,19 @@ function strongPassword(password) {
   );
 }
 
-export async function POST(req) {
-  const body = await req.json();
+function validPhone(phone) {
+  return /^\d{10}$/.test(phone);
+}
 
+export async function POST(req) {
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+      status: 400,
+    });
+  }
   const fullName = cleanString(body.fullName);
   const email = cleanString(body.email)?.toLowerCase();
   const password = cleanString(body.password);
@@ -34,6 +43,7 @@ export async function POST(req) {
       status: 400,
     });
   }
+
   if (!validEmail(email)) {
     return new Response(JSON.stringify({ error: "Invalid email" }), {
       status: 400,
@@ -48,13 +58,21 @@ export async function POST(req) {
       { status: 400 }
     );
   }
+  if (!validPhone(phone)) {
+    return new Response(
+      JSON.stringify({
+        error: "Phone must be exactly 10 digits (e.g. 0871234567)",
+      }),
+      { status: 400 }
+    );
+  }
 
   try {
     const client = await clientPromise;
     const db = client.db("login");
     const users = db.collection("user");
-    const existingUser = await users.findOne({ email });
 
+    const existingUser = await users.findOne({ email });
     if (existingUser) {
       return new Response(JSON.stringify({ error: "Email already exists" }), {
         status: 400,
@@ -76,6 +94,12 @@ export async function POST(req) {
       status: 200,
     });
   } catch (err) {
+    if (err?.code === 11000) {
+      return new Response(JSON.stringify({ error: "Email already exists" }), {
+        status: 400,
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Server error" }), {
       status: 500,
     });
