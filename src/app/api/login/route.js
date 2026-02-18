@@ -16,7 +16,6 @@ export async function POST(req) {
         { status: 401 }
     );
   }
-
     if (!user.passwordHash) {
       return NextResponse.json(
         { error: "Account needs password update. Please re-register." },
