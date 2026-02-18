@@ -11,7 +11,6 @@ export async function POST(req) {
       status: 400,
     });
   }
-
   try {
     const client = await clientPromise;
     const db = client.db("login");
