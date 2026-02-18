@@ -181,7 +181,7 @@ export default function ProfilePage() {
 
   const maskedPassword = password
     ? "•".repeat(Math.min(password.length, 12))
-    : "Not set yet";
+    : "";
 
   const shownEmail = email || "Not set yet";
   const shownBike = motorbike || "Not set yet";
