@@ -19,6 +19,71 @@ export default function MaintenancePage() {
       ? localStorage.getItem("userEmail")
       : null;
 
+  // ---------------------------
+  // ✅ Motorbike search state
+  // ---------------------------
+  const [bikeSearch, setBikeSearch] = useState({
+    make: "",
+    model: "",
+    year: "",
+  });
+  const [bikeResults, setBikeResults] = useState([]);
+  const [bikeLoading, setBikeLoading] = useState(false);
+  const [selectedBike, setSelectedBike] = useState("");
+
+  useEffect(() => {
+    // load selected bike from localStorage if it exists
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("userMotorbike") || "";
+      setSelectedBike(saved);
+    }
+  }, []);
+
+  async function handleBikeSearch() {
+    setBikeResults([]);
+
+    const make = bikeSearch.make.trim();
+    const model = bikeSearch.model.trim();
+    const year = bikeSearch.year.trim();
+
+    if (!make && !model) {
+      alert("Enter a Make or Model to search.");
+      return;
+    }
+
+    const qs = new URLSearchParams();
+    if (make) qs.set("make", make);
+    if (model) qs.set("model", model);
+    if (year) qs.set("year", year);
+
+    setBikeLoading(true);
+    try {
+      const res = await fetch(`/api/motorcycles?${qs.toString()}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Bike search failed");
+        return;
+      }
+
+      setBikeResults(Array.isArray(data) ? data : []);
+      if (!data || data.length === 0) alert("No bikes found.");
+    } catch (err) {
+      alert("Bike search error.");
+    } finally {
+      setBikeLoading(false);
+    }
+  }
+
+  function pickBike(bike) {
+    const label = `${bike.make} ${String(bike.model).trim()} (${bike.year})`;
+    setSelectedBike(label);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("userMotorbike", label);
+    }
+    setBikeResults([]);
+  }
+
   // Motorcycle-specific maintenance tasks
   const maintenanceTypes = [
     "Oil Change",
@@ -124,6 +189,75 @@ export default function MaintenancePage() {
       <div style={styles.container}>
         <h1 style={styles.title}>Maintenance Records</h1>
 
+        {/* ✅ Motorbike Search Section */}
+        <div style={styles.bikeCard}>
+          <h2 style={styles.bikeTitle}>Your Motorbike</h2>
+
+          <p style={styles.bikeSelected}>
+            <strong>Selected:</strong>{" "}
+            {selectedBike ? selectedBike : "None selected"}
+          </p>
+
+          <div style={styles.bikeRow}>
+            <input
+              style={styles.input}
+              placeholder="Make (e.g. Kawasaki)"
+              value={bikeSearch.make}
+              onChange={(e) =>
+                setBikeSearch({ ...bikeSearch, make: e.target.value })
+              }
+            />
+            <input
+              style={styles.input}
+              placeholder="Model (e.g. Ninja)"
+              value={bikeSearch.model}
+              onChange={(e) =>
+                setBikeSearch({ ...bikeSearch, model: e.target.value })
+              }
+            />
+            <input
+              style={styles.input}
+              placeholder="Year (optional)"
+              value={bikeSearch.year}
+              onChange={(e) =>
+                setBikeSearch({ ...bikeSearch, year: e.target.value })
+              }
+            />
+
+            <button
+              type="button"
+              style={styles.bikeButton}
+              onClick={handleBikeSearch}
+              disabled={bikeLoading}
+            >
+              {bikeLoading ? "Searching..." : "Search"}
+            </button>
+          </div>
+
+          {bikeResults.length > 0 && (
+            <div style={styles.bikeResults}>
+              {bikeResults.slice(0, 8).map((bike, idx) => (
+                <button
+                  key={`${bike.make}-${bike.model}-${bike.year}-${idx}`}
+                  type="button"
+                  style={styles.bikeResultItem}
+                  onClick={() => pickBike(bike)}
+                >
+                  <div>
+                    <strong>
+                      {bike.make} {String(bike.model).trim()}
+                    </strong>{" "}
+                    <span style={{ color: "#aaa" }}>({bike.year})</span>
+                  </div>
+                  <div style={{ color: "#aaa", fontSize: "0.85rem" }}>
+                    {bike.type ? `Type: ${bike.type}` : "Tap to select"}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Add / Edit Form */}
         <form onSubmit={handleSubmit} style={styles.form}>
           <label style={{ color: "#ccc", fontWeight: "bold" }}>
@@ -178,6 +312,7 @@ export default function MaintenancePage() {
             {editingId ? "Save Changes" : "Add Record"}
           </button>
         </form>
+
         <div style={styles.list}>
           {records.length === 0 && (
             <p style={{ color: "#aaa" }}>No maintenance records yet</p>
@@ -232,6 +367,53 @@ const styles = {
     fontSize: "2rem",
     fontWeight: "bold",
   },
+
+  // ✅ bike section styles (matches your color scheme)
+  bikeCard: {
+    background: "#111",
+    padding: "20px",
+    borderRadius: "12px",
+    borderLeft: "5px solid #ff8c00",
+    marginBottom: "25px",
+  },
+  bikeTitle: {
+    margin: "0 0 10px 0",
+    color: "#fff",
+  },
+  bikeSelected: {
+    color: "#ccc",
+    margin: "0 0 12px 0",
+  },
+  bikeRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr 1fr 120px",
+    gap: "10px",
+    alignItems: "center",
+  },
+  bikeButton: {
+    padding: "12px",
+    borderRadius: "8px",
+    border: "none",
+    background: "#ff8c00",
+    color: "#000",
+    fontWeight: "bold",
+    cursor: "pointer",
+  },
+  bikeResults: {
+    marginTop: "12px",
+    display: "grid",
+    gap: "10px",
+  },
+  bikeResultItem: {
+    textAlign: "left",
+    padding: "12px",
+    borderRadius: "10px",
+    border: "1px solid #222",
+    background: "#1a1a1a",
+    color: "#fff",
+    cursor: "pointer",
+  },
+
   form: {
     background: "#111",
     padding: "20px",
