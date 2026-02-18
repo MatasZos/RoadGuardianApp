@@ -38,23 +38,51 @@ export default function ProfilePage() {
   useEffect(() => {
     const nameLS = localStorage.getItem("userFullName");
     const emailLS = localStorage.getItem("userEmail") || "";
-    const passLS = localStorage.getItem("userPassword") || "";
-    const bikeLS = localStorage.getItem("userMotorbike") || "";
 
-    if (!nameLS) {
+    if (!nameLS || !emailLS) {
       router.push("/login");
       return;
     }
 
+    // Set initial values from localStorage (fast UI)
     setFullName(nameLS);
     setEmail(emailLS);
-    setPassword(passLS);
-    setMotorbike(bikeLS);
 
     setEditName(nameLS);
     setEditPassword("");
     setConfirmPassword("");
-    setEditMotorbike(bikeLS);
+
+    (async () => {
+      try {
+        const res = await fetch("/api/profile", {
+          headers: {
+            "x-user-email": emailLS,
+          },
+          cache: "no-store",
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setError(data?.error || "Failed to load profile");
+          return;
+        }
+
+        setFullName(data.fullName || "");
+        setPassword(data.password || "");
+        setMotorbike(data.motorbike || "");
+
+        localStorage.setItem("userFullName", data.fullName || "");
+        localStorage.setItem("userPassword", data.password || "");
+        localStorage.setItem("userMotorbike", data.motorbike || "");
+
+    
+        setEditName(data.fullName || "");
+        setEditMotorbike(data.motorbike || "");
+      } catch (err) {
+        setError("Server error loading profile");
+      }
+    })();
   }, [router]);
 
   const handleSignOut = () => {
@@ -115,7 +143,6 @@ export default function ProfilePage() {
       }
     }
 
-    // Update DB first
     const res = await fetch("/api/profile/update", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -134,7 +161,7 @@ export default function ProfilePage() {
       return;
     }
 
-    // Update localStorage to match DB
+    
     localStorage.setItem("userFullName", trimmedName);
     localStorage.setItem("userMotorbike", trimmedBike);
 
