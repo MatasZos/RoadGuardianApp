@@ -20,8 +20,9 @@ function strongPassword(password) {
 }
 
 function validPhone(phone) {
-  return /^\d{10}$/.test(phone);
+  return /^08[0-9]{8}$/.test(phone);
 }
+
 
 export async function POST(req) {
   let body;
@@ -59,13 +60,14 @@ export async function POST(req) {
     );
   }
   if (!validPhone(phone)) {
-    return new Response(
-      JSON.stringify({
-        error: "Phone must be exactly 10 digits (e.g. 0871234567)",
-      }),
-      { status: 400 }
-    );
-  }
+  return new Response(
+    JSON.stringify({
+      error: "Phone must start with 08 and be exactly 10 digits",
+    }),
+    { status: 400 }
+  );
+}
+
 
   try {
     const client = await clientPromise;
