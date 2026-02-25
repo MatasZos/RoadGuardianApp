@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
 
 export default function DocumentsPage() {
@@ -17,6 +17,7 @@ export default function DocumentsPage() {
     typeof window !== "undefined"
       ? localStorage.getItem("userEmail")
       : null;
+
   const documentTypes = [
     { label: "Insurance", expires: true },
     { label: "Motor Tax", expires: true },
@@ -28,6 +29,81 @@ export default function DocumentsPage() {
 
   const selectedType = documentTypes.find((t) => t.label === form.title);
 
+  // ---------------------------
+  // ✅ Expiry helpers
+  // ---------------------------
+  function parseISODate(value) {
+    // expects "YYYY-MM-DD"
+    if (!value) return null;
+    const d = new Date(`${value}T00:00:00`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  function formatDisplayDate(value) {
+    const d = parseISODate(value);
+    if (!d) return String(value || "");
+    return d.toLocaleDateString(undefined, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
+
+  function daysUntil(expiryDateStr) {
+    const d = parseISODate(expiryDateStr);
+    if (!d) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffMs = d.getTime() - today.getTime();
+    return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  }
+
+  const categorized = useMemo(() => {
+    const expired = [];
+    const expiringSoon = [];
+    const valid = [];
+    const noExpiry = [];
+
+    for (const doc of docs) {
+      if (!doc.expiryDate) {
+        noExpiry.push(doc);
+        continue;
+      }
+
+      const dLeft = daysUntil(doc.expiryDate);
+
+      // if invalid date string, treat as noExpiry to avoid crashes
+      if (dLeft === null) {
+        noExpiry.push(doc);
+        continue;
+      }
+
+      if (dLeft < 0) expired.push(doc);
+      else if (dLeft <= 30) expiringSoon.push(doc);
+      else valid.push(doc);
+    }
+
+    // Sort inside each group (closest expiry first)
+    const bySoonest = (a, b) => {
+      const da = daysUntil(a.expiryDate) ?? 999999;
+      const db = daysUntil(b.expiryDate) ?? 999999;
+      return da - db;
+    };
+
+    expired.sort(bySoonest);
+    expiringSoon.sort(bySoonest);
+    valid.sort(bySoonest);
+
+    // No expiry: newest first (fallback)
+    noExpiry.sort((a, b) => {
+      const ca = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const cb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return cb - ca;
+    });
+
+    return { expired, expiringSoon, valid, noExpiry };
+  }, [docs]);
+
   useEffect(() => {
     if (!email) return;
 
@@ -38,7 +114,7 @@ export default function DocumentsPage() {
       });
 
       const data = await res.json();
-      setDocs(data);
+      setDocs(Array.isArray(data) ? data : []);
     }
 
     fetchDocs();
@@ -47,6 +123,12 @@ export default function DocumentsPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!email) return;
+
+    // If selected type expires, ensure expiryDate is present
+    if (selectedType?.expires && !form.expiryDate) {
+      alert("Please select an expiry date for this document type.");
+      return;
+    }
 
     const method = editingId ? "PUT" : "POST";
 
@@ -67,7 +149,8 @@ export default function DocumentsPage() {
       headers: { "x-user-email": email },
       cache: "no-store",
     });
-    setDocs(await res.json());
+    const data = await res.json();
+    setDocs(Array.isArray(data) ? data : []);
   }
 
   function startEdit(doc) {
@@ -86,7 +169,73 @@ export default function DocumentsPage() {
       body: JSON.stringify({ _id: id }),
     });
 
-    setDocs(docs.filter((d) => d._id !== id));
+    setDocs((prev) => prev.filter((d) => String(d._id) !== String(id)));
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm({ title: "", expiryDate: "", notes: "" });
+  }
+
+  function Section({ title, subtitle, items, accentColor }) {
+    return (
+      <div style={styles.section}>
+        <div style={styles.sectionHeader}>
+          <div>
+            <h2 style={styles.sectionTitle}>{title}</h2>
+            {subtitle ? <p style={styles.sectionSubtitle}>{subtitle}</p> : null}
+          </div>
+          <div style={{ ...styles.badge, borderColor: accentColor, color: accentColor }}>
+            {items.length}
+          </div>
+        </div>
+
+        {items.length === 0 ? (
+          <p style={{ color: "#94a3b8" }}>None</p>
+        ) : (
+          <div style={styles.list}>
+            {items.map((d) => {
+              const dLeft = d.expiryDate ? daysUntil(d.expiryDate) : null;
+
+              return (
+                <div key={d._id} style={styles.card}>
+                  <h3 style={styles.cardTitle}>{d.title}</h3>
+
+                  {d.expiryDate ? (
+                    <p style={styles.cardText}>
+                      <strong>Expires:</strong> {formatDisplayDate(d.expiryDate)}
+                      {typeof dLeft === "number" && (
+                        <span style={styles.daysPill}>
+                          {dLeft < 0
+                            ? `${Math.abs(dLeft)} day(s) ago`
+                            : `${dLeft} day(s) left`}
+                        </span>
+                      )}
+                    </p>
+                  ) : (
+                    <p style={styles.cardText}>
+                      <strong>Expiry:</strong> Not required
+                    </p>
+                  )}
+
+                  {d.notes && <p style={styles.cardNotes}>{d.notes}</p>}
+
+                  <div style={styles.cardActions}>
+                    <button style={styles.editBtn} onClick={() => startEdit(d)}>
+                      Edit
+                    </button>
+
+                    <button style={styles.deleteBtn} onClick={() => deleteDoc(d._id)}>
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -95,6 +244,8 @@ export default function DocumentsPage() {
 
       <div style={styles.container}>
         <h1 style={styles.title}>Your Documents</h1>
+
+        {/* Add / Edit Form */}
         <form onSubmit={handleSubmit} style={styles.form}>
           <select
             style={styles.input}
@@ -138,42 +289,46 @@ export default function DocumentsPage() {
           <button style={styles.button}>
             {editingId ? "Save Changes" : "Add Document"}
           </button>
-        </form>
-        <div style={styles.list}>
-          {docs.length === 0 && (
-            <p style={{ color: "#aaa" }}>No documents added yet</p>
+
+          {editingId && (
+            <button
+              type="button"
+              style={styles.cancelButton}
+              onClick={cancelEdit}
+            >
+              Cancel Edit
+            </button>
           )}
+        </form>
 
-          {docs.map((d) => (
-            <div key={d._id} style={styles.card}>
-              <h3 style={styles.cardTitle}>{d.title}</h3>
+        {/* ✅ Expiry reminder sections */}
+        <Section
+          title="❌ Expired"
+          subtitle="These documents are past their expiry date."
+          items={categorized.expired}
+          accentColor="#ef4444"
+        />
 
-              {d.expiryDate && (
-                <p style={styles.cardText}>
-                  <strong>Expires:</strong> {d.expiryDate}
-                </p>
-              )}
+        <Section
+          title="⚠️ Expiring soon (next 30 days)"
+          subtitle="Renew these soon to avoid issues."
+          items={categorized.expiringSoon}
+          accentColor="#f59e0b"
+        />
 
-              {d.notes && <p style={styles.cardNotes}>{d.notes}</p>}
+        <Section
+          title="✅ Valid"
+          subtitle="Up to date documents."
+          items={categorized.valid}
+          accentColor="#22c55e"
+        />
 
-              <div style={styles.cardActions}>
-                <button
-                  style={styles.editBtn}
-                  onClick={() => startEdit(d)}
-                >
-                  Edit
-                </button>
-
-                <button
-                  style={styles.deleteBtn}
-                  onClick={() => deleteDoc(d._id)}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+        <Section
+          title="📄 No expiry required"
+          subtitle="Receipts and documents that don’t expire."
+          items={categorized.noExpiry}
+          accentColor="#3b82f6"
+        />
       </div>
     </>
   );
@@ -200,7 +355,7 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     gap: "12px",
-    marginBottom: "40px",
+    marginBottom: "30px",
   },
   input: {
     padding: "12px",
@@ -226,23 +381,79 @@ const styles = {
     fontWeight: "bold",
     cursor: "pointer",
   },
+  cancelButton: {
+    padding: "12px",
+    borderRadius: "8px",
+    border: "none",
+    background: "#334155",
+    color: "#fff",
+    fontWeight: "bold",
+    cursor: "pointer",
+  },
+
+  // Sections
+  section: {
+    background: "#0f172a",
+    borderRadius: "12px",
+    padding: "18px",
+    marginBottom: "16px",
+    border: "1px solid #1e293b",
+  },
+  sectionHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "12px",
+    marginBottom: "12px",
+  },
+  sectionTitle: {
+    margin: 0,
+    fontSize: "1.1rem",
+  },
+  sectionSubtitle: {
+    margin: "6px 0 0 0",
+    color: "#94a3b8",
+    fontSize: "0.9rem",
+  },
+  badge: {
+    border: "1px solid",
+    padding: "6px 10px",
+    borderRadius: "999px",
+    fontWeight: "bold",
+    fontSize: "0.9rem",
+    minWidth: "34px",
+    textAlign: "center",
+  },
+
   list: {
     display: "grid",
-    gap: "15px",
+    gap: "12px",
   },
   card: {
-    background: "#0f172a",
-    padding: "18px",
+    background: "#0b1220",
+    padding: "16px",
     borderRadius: "10px",
     borderLeft: "5px solid #3b82f6",
   },
   cardTitle: {
     marginBottom: "6px",
-    fontSize: "1.2rem",
+    fontSize: "1.1rem",
   },
   cardText: {
-    marginBottom: "4px",
+    marginBottom: "6px",
     color: "#cbd5e1",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    flexWrap: "wrap",
+  },
+  daysPill: {
+    display: "inline-block",
+    padding: "4px 10px",
+    borderRadius: "999px",
+    background: "#1e293b",
+    color: "#e2e8f0",
+    fontSize: "0.85rem",
   },
   cardNotes: {
     color: "#94a3b8",
