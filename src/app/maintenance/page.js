@@ -19,9 +19,6 @@ export default function MaintenancePage() {
       ? localStorage.getItem("userEmail")
       : null;
 
-  // ---------------------------
-  // ✅ Motorbike search state
-  // ---------------------------
   const [bikeSearch, setBikeSearch] = useState({
     make: "",
     model: "",
@@ -31,12 +28,50 @@ export default function MaintenancePage() {
   const [bikeLoading, setBikeLoading] = useState(false);
   const [selectedBike, setSelectedBike] = useState("");
 
+  function safeDate(value) {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  function formatDisplayDate(value) {
+    const d = safeDate(value);
+    if (!d) return String(value || "");
+    return d.toLocaleDateString(undefined, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
+
+  function monthYearLabel(value) {
+    const d = safeDate(value);
+    if (!d) return "Unknown date";
+    return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  }
+
+  function groupByMonth(recs) {
+    const groups = {};
+    for (const r of recs) {
+      const key = monthYearLabel(r.date || r.createdAt);
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(r);
+    }
+    return groups;
+  }
+
+  const grouped = groupByMonth(records);
+  const monthSections = Object.entries(grouped);
+
   useEffect(() => {
-    // load selected bike from localStorage if it exists
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("userMotorbike") || "";
       setSelectedBike(saved);
     }
+
+    setForm((prev) => ({
+      ...prev,
+      date: prev.date || new Date().toISOString().slice(0, 10),
+    }));
   }, []);
 
   async function handleBikeSearch() {
@@ -84,7 +119,6 @@ export default function MaintenancePage() {
     setBikeResults([]);
   }
 
-  // Motorcycle-specific maintenance tasks
   const maintenanceTypes = [
     "Oil Change",
     "Oil Filter Replacement",
@@ -118,7 +152,7 @@ export default function MaintenancePage() {
       });
 
       const data = await res.json();
-      setRecords(data);
+      setRecords(Array.isArray(data) ? data : []);
     }
 
     fetchRecords();
@@ -152,14 +186,20 @@ export default function MaintenancePage() {
       }),
     });
 
-    setForm({ type: [], date: "", km: "", notes: "" });
+    setForm({
+      type: [],
+      date: new Date().toISOString().slice(0, 10),
+      km: "",
+      notes: "",
+    });
     setEditingId(null);
 
     const res = await fetch("/api/maintenance", {
       headers: { "x-user-email": email },
       cache: "no-store",
     });
-    setRecords(await res.json());
+    const data = await res.json();
+    setRecords(Array.isArray(data) ? data : []);
   }
 
   function startEdit(record) {
@@ -189,7 +229,6 @@ export default function MaintenancePage() {
       <div style={styles.container}>
         <h1 style={styles.title}>Maintenance Records</h1>
 
-        {/* ✅ Motorbike Search Section */}
         <div style={styles.bikeCard}>
           <h2 style={styles.bikeTitle}>Your Motorbike</h2>
 
@@ -258,7 +297,6 @@ export default function MaintenancePage() {
           )}
         </div>
 
-        {/* Add / Edit Form */}
         <form onSubmit={handleSubmit} style={styles.form}>
           <label style={{ color: "#ccc", fontWeight: "bold" }}>
             Select Tasks Done:
@@ -313,38 +351,60 @@ export default function MaintenancePage() {
           </button>
         </form>
 
-        <div style={styles.list}>
+        <div style={styles.timeline}>
           {records.length === 0 && (
             <p style={{ color: "#aaa" }}>No maintenance records yet</p>
           )}
 
-          {records.map((r) => (
-            <div key={r._id} style={styles.card}>
-              <h3 style={styles.cardTitle}>
-                {Array.isArray(r.type) ? r.type.join(", ") : r.type}
-              </h3>
+          {monthSections.map(([month, items]) => (
+            <div key={month} style={styles.monthSection}>
+              <h2 style={styles.monthTitle}>{month}</h2>
 
-              <p style={styles.cardText}>
-                <strong>Date:</strong> {r.date}
-              </p>
+              <div style={styles.timelineList}>
+                {items.map((r, idx) => (
+                  <div key={r._id} style={styles.timelineItem}>
+                    <div style={styles.timelineLeft}>
+                      <div style={styles.dot} />
+                      {idx !== items.length - 1 ? (
+                        <div style={styles.line} />
+                      ) : (
+                        <div style={styles.lineEnd} />
+                      )}
+                    </div>
 
-              <p style={styles.cardText}>
-                <strong>KM:</strong> {r.km}
-              </p>
+                    <div style={styles.timelineCard}>
+                      <h3 style={styles.cardTitle}>
+                        {Array.isArray(r.type) ? r.type.join(", ") : r.type}
+                      </h3>
 
-              {r.notes && <p style={styles.cardNotes}>{r.notes}</p>}
+                      <p style={styles.cardText}>
+                        <strong>Date:</strong> {formatDisplayDate(r.date)}
+                      </p>
 
-              <div style={styles.cardActions}>
-                <button style={styles.editBtn} onClick={() => startEdit(r)}>
-                  Edit
-                </button>
+                      <p style={styles.cardText}>
+                        <strong>KM:</strong> {r.km}
+                      </p>
 
-                <button
-                  style={styles.deleteBtn}
-                  onClick={() => deleteRecord(r._id)}
-                >
-                  Delete
-                </button>
+                      {r.notes && <p style={styles.cardNotes}>{r.notes}</p>}
+
+                      <div style={styles.cardActions}>
+                        <button
+                          style={styles.editBtn}
+                          onClick={() => startEdit(r)}
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          style={styles.deleteBtn}
+                          onClick={() => deleteRecord(r._id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))}
@@ -368,7 +428,6 @@ const styles = {
     fontWeight: "bold",
   },
 
-  // ✅ bike section styles (matches your color scheme)
   bikeCard: {
     background: "#111",
     padding: "20px",
@@ -464,16 +523,62 @@ const styles = {
     fontWeight: "bold",
     cursor: "pointer",
   },
-  list: {
+
+  timeline: {
     display: "grid",
-    gap: "15px",
+    gap: "18px",
   },
-  card: {
+  monthSection: {
+    display: "grid",
+    gap: "10px",
+  },
+  monthTitle: {
+    margin: "0",
+    color: "#fff",
+    fontSize: "1.1rem",
+    opacity: 0.9,
+  },
+  timelineList: {
+    display: "grid",
+    gap: "14px",
+  },
+  timelineItem: {
+    display: "grid",
+    gridTemplateColumns: "26px 1fr",
+    gap: "12px",
+    alignItems: "stretch",
+  },
+  timelineLeft: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+  },
+  dot: {
+    width: "12px",
+    height: "12px",
+    borderRadius: "50%",
+    background: "#ff8c00",
+    marginTop: "18px",
+  },
+  line: {
+    width: "2px",
+    flex: 1,
+    background: "#222",
+    marginTop: "6px",
+  },
+  lineEnd: {
+    width: "2px",
+    height: "12px",
+    background: "transparent",
+    marginTop: "6px",
+  },
+  timelineCard: {
     background: "#111",
     padding: "18px",
     borderRadius: "10px",
     borderLeft: "5px solid #ff8c00",
   },
+
   cardTitle: {
     marginBottom: "6px",
     fontSize: "1.2rem",
