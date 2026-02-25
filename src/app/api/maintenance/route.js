@@ -13,7 +13,7 @@ export async function GET(req) {
     const records = await db
       .collection("maintenance")
       .find({ userEmail: email })
-      .sort({ _id: -1 })
+      .sort({ createdAt: -1, _id: -1 })
       .toArray();
 
     return NextResponse.json(records);
