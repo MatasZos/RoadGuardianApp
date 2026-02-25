@@ -13,7 +13,7 @@ export async function GET(req) {
     const docs = await db
       .collection("documents")
       .find({ userEmail: email })
-      .sort({ _id: -1 })
+      .sort({ expiryDate: 1, createdAt: -1, _id: -1 })
       .toArray();
 
     return NextResponse.json(docs, { status: 200 });
@@ -79,9 +79,9 @@ export async function DELETE(req) {
     const client = await clientPromise;
     const db = client.db("login");
 
-    await db
-      .collection("documents")
-      .deleteOne({ _id: new ObjectId(body._id) });
+    await db.collection("documents").deleteOne({
+      _id: new ObjectId(body._id),
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {
