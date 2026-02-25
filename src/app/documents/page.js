@@ -29,11 +29,7 @@ export default function DocumentsPage() {
 
   const selectedType = documentTypes.find((t) => t.label === form.title);
 
-  // ---------------------------
-  // ✅ Expiry helpers
-  // ---------------------------
   function parseISODate(value) {
-    // expects "YYYY-MM-DD"
     if (!value) return null;
     const d = new Date(`${value}T00:00:00`);
     return Number.isNaN(d.getTime()) ? null : d;
@@ -72,7 +68,6 @@ export default function DocumentsPage() {
 
       const dLeft = daysUntil(doc.expiryDate);
 
-      // if invalid date string, treat as noExpiry to avoid crashes
       if (dLeft === null) {
         noExpiry.push(doc);
         continue;
@@ -83,7 +78,6 @@ export default function DocumentsPage() {
       else valid.push(doc);
     }
 
-    // Sort inside each group (closest expiry first)
     const bySoonest = (a, b) => {
       const da = daysUntil(a.expiryDate) ?? 999999;
       const db = daysUntil(b.expiryDate) ?? 999999;
@@ -94,7 +88,6 @@ export default function DocumentsPage() {
     expiringSoon.sort(bySoonest);
     valid.sort(bySoonest);
 
-    // No expiry: newest first (fallback)
     noExpiry.sort((a, b) => {
       const ca = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const cb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -124,7 +117,6 @@ export default function DocumentsPage() {
     e.preventDefault();
     if (!email) return;
 
-    // If selected type expires, ensure expiryDate is present
     if (selectedType?.expires && !form.expiryDate) {
       alert("Please select an expiry date for this document type.");
       return;
@@ -245,7 +237,6 @@ export default function DocumentsPage() {
       <div style={styles.container}>
         <h1 style={styles.title}>Your Documents</h1>
 
-        {/* Add / Edit Form */}
         <form onSubmit={handleSubmit} style={styles.form}>
           <select
             style={styles.input}
@@ -301,7 +292,6 @@ export default function DocumentsPage() {
           )}
         </form>
 
-        {/* ✅ Expiry reminder sections */}
         <Section
           title="❌ Expired"
           subtitle="These documents are past their expiry date."
@@ -391,7 +381,6 @@ const styles = {
     cursor: "pointer",
   },
 
-  // Sections
   section: {
     background: "#0f172a",
     borderRadius: "12px",
