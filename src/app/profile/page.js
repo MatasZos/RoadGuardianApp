@@ -18,39 +18,41 @@ import {
 export default function ProfilePage() {
   const router = useRouter();
 
-  // Display values
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [motorbike, setMotorbike] = useState("");
+  const [phone, setPhone] = useState(""); 
 
-  // Edit mode + form
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [editMotorbike, setEditMotorbike] = useState("");
+  const [editPhone, setEditPhone] = useState(""); 
 
-  // Messages
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
     const nameLS = localStorage.getItem("userFullName");
     const emailLS = localStorage.getItem("userEmail") || "";
+    const phoneLS = localStorage.getItem("userPhone") || ""; 
 
     if (!nameLS || !emailLS) {
       router.push("/login");
       return;
     }
 
-    // Set initial values from localStorage (fast UI)
     setFullName(nameLS);
     setEmail(emailLS);
+
+    setPhone(phoneLS); 
 
     setEditName(nameLS);
     setEditPassword("");
     setConfirmPassword("");
+    setEditPhone(phoneLS); 
 
     (async () => {
       try {
@@ -71,14 +73,16 @@ export default function ProfilePage() {
         setFullName(data.fullName || "");
         setPassword(data.password || "");
         setMotorbike(data.motorbike || "");
+        setPhone(data.phone || ""); 
 
         localStorage.setItem("userFullName", data.fullName || "");
         localStorage.setItem("userPassword", data.password || "");
         localStorage.setItem("userMotorbike", data.motorbike || "");
+        localStorage.setItem("userPhone", data.phone || ""); 
 
-    
         setEditName(data.fullName || "");
         setEditMotorbike(data.motorbike || "");
+        setEditPhone(data.phone || ""); 
       } catch (err) {
         setError("Server error loading profile");
       }
@@ -90,6 +94,7 @@ export default function ProfilePage() {
     localStorage.removeItem("userEmail");
     localStorage.removeItem("userPassword");
     localStorage.removeItem("userMotorbike");
+    localStorage.removeItem("userPhone"); 
     router.push("/login");
   };
 
@@ -101,6 +106,7 @@ export default function ProfilePage() {
     setEditPassword("");
     setConfirmPassword("");
     setEditMotorbike(motorbike);
+    setEditPhone(phone); 
   };
 
   const cancelEditing = () => {
@@ -111,6 +117,7 @@ export default function ProfilePage() {
     setEditPassword("");
     setConfirmPassword("");
     setEditMotorbike(motorbike);
+    setEditPhone(phone); 
   };
 
   const handleSave = async () => {
@@ -126,6 +133,12 @@ export default function ProfilePage() {
     const trimmedBike = editMotorbike.trim();
     if (!trimmedBike) {
       setError("Motorbike cannot be empty.");
+      return;
+    }
+
+    const trimmedPhone = editPhone.trim(); 
+    if (!trimmedPhone) {
+      setError("Phone number cannot be empty.");
       return;
     }
 
@@ -150,6 +163,7 @@ export default function ProfilePage() {
         email,
         fullName: trimmedName,
         motorbike: trimmedBike,
+        phone: trimmedPhone, 
         password: wantsPasswordChange ? editPassword : "",
       }),
     });
@@ -161,12 +175,13 @@ export default function ProfilePage() {
       return;
     }
 
-    
     localStorage.setItem("userFullName", trimmedName);
     localStorage.setItem("userMotorbike", trimmedBike);
+    localStorage.setItem("userPhone", trimmedPhone); 
 
     setFullName(trimmedName);
     setMotorbike(trimmedBike);
+    setPhone(trimmedPhone); 
 
     if (wantsPasswordChange) {
       localStorage.setItem("userPassword", editPassword);
@@ -185,6 +200,7 @@ export default function ProfilePage() {
 
   const shownEmail = email || "Not set yet";
   const shownBike = motorbike || "Not set yet";
+  const shownPhone = phone || "Not set yet"; 
 
   return (
     <Box sx={{ minHeight: "100vh", p: 3 }}>
@@ -230,6 +246,28 @@ export default function ProfilePage() {
                 <Typography variant="body1" sx={{ fontWeight: 600 }}>
                   {shownEmail}
                 </Typography>
+              </Box>
+
+              <Divider />
+
+              <Box>
+                <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
+                  Phone
+                </Typography>
+
+                {!isEditing ? (
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                    {shownPhone}
+                  </Typography>
+                ) : (
+                  <TextField
+                    fullWidth
+                    size="small"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    placeholder="e.g. +353 87 123 4567"
+                  />
+                )}
               </Box>
 
               <Divider />
