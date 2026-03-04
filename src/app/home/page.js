@@ -1,26 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Navbar from "../components/Navbar";
 import Map from "../components/Map";
+import AiChat from "../components/AiChat";
 
 export default function HomePage() {
   const router = useRouter();
-  const [name, setName] = useState("");
+  const { data: session, status } = useSession();
 
   useEffect(() => {
-    const stored = localStorage.getItem("userFullName");
-    if (!stored) router.push("/login");
-    else setName(stored);
-  }, []);
+    if (status === "loading") return;
+    if (status === "unauthenticated") router.push("/login");
+  }, [status, router]);
+
+  if (status === "loading") {
+    return (
+      <div style={{ minHeight: "100vh", background: "#111", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        Loading...
+      </div>
+    );
+  }
+
+  const name = session?.user?.name || "";
 
   return (
     <div style={{ minHeight: "100vh", background: "#111", color: "#fff" }}>
       <Navbar />
 
       <div style={{ padding: "30px" }}>
-      
         <div style={{ textAlign: "left", marginBottom: "30px" }}>
           <h1>Welcome, {name}</h1>
           <p style={{ color: "#aaa" }}>Dashboard</p>
@@ -37,6 +47,7 @@ export default function HomePage() {
         <div style={{ marginTop: "30px" }}>
           <Map lat={53.3498} lng={-6.2603} />
         </div>
+        <AiChat />
       </div>
     </div>
   );

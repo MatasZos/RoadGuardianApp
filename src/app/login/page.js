@@ -2,34 +2,33 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handleLogin(e) {
     e.preventDefault();
+    setMessage("");
+    setLoading(true);
 
-    const res = await fetch("/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+    const res = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
     });
 
-    const data = await res.json();
+    setLoading(false);
 
-    if (res.ok) {
-      localStorage.setItem("userFullName", data.fullName);
-      localStorage.setItem("userEmail", data.email);
-      localStorage.setItem("userMotorbike", data.motorbike || "");
-      localStorage.setItem("userPassword", password);
-
+    if (res?.ok) {
       setMessage("Login successful");
-      setTimeout(() => router.push("/home"), 1200);
+      setTimeout(() => router.push("/home"), 600);
     } else {
-      setMessage(data.error || "Login failed");
+      setMessage("Invalid email or password");
     }
   }
 
@@ -46,7 +45,10 @@ export default function LoginPage() {
             placeholder="Email"
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setMessage("");
+              setEmail(e.target.value);
+            }}
             required
           />
 
@@ -55,11 +57,16 @@ export default function LoginPage() {
             placeholder="Password"
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setMessage("");
+              setPassword(e.target.value);
+            }}
             required
           />
 
-          <button style={styles.button}>Login</button>
+          <button style={styles.button} disabled={loading}>
+            {loading ? "Logging in..." : "Login"}
+          </button>
         </form>
 
         {message && <p style={styles.message}>{message}</p>}
