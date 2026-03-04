@@ -2,8 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export default function MaintenancePage() {
+  const router = useRouter();
+  const { data: session, status } = useSession();
+
   const [records, setRecords] = useState([]);
   const [editingId, setEditingId] = useState(null);
 
@@ -14,10 +19,8 @@ export default function MaintenancePage() {
     notes: "",
   });
 
-  const email =
-    typeof window !== "undefined"
-      ? localStorage.getItem("userEmail")
-      : null;
+  // ✅ email from session (NOT localStorage)
+  const email = session?.user?.email || null;
 
   const [bikeSearch, setBikeSearch] = useState({
     make: "",
@@ -62,7 +65,14 @@ export default function MaintenancePage() {
   const grouped = groupByMonth(records);
   const monthSections = Object.entries(grouped);
 
+  // ✅ Protect page (NextAuth)
   useEffect(() => {
+    if (status === "loading") return;
+    if (status === "unauthenticated") router.push("/login");
+  }, [status, router]);
+
+  useEffect(() => {
+    // this is just preference storage, not auth
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("userMotorbike") || "";
       setSelectedBike(saved);
@@ -142,6 +152,7 @@ export default function MaintenancePage() {
     "Brake Disc Replacement",
   ];
 
+  // ✅ Fetch records once we have session email
   useEffect(() => {
     if (!email) return;
 
@@ -220,6 +231,24 @@ export default function MaintenancePage() {
     });
 
     setRecords(records.filter((r) => r._id !== id));
+  }
+
+  // Optional loading screen
+  if (status === "loading") {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#0e0e0e",
+          color: "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        Loading...
+      </div>
+    );
   }
 
   return (
@@ -414,6 +443,7 @@ export default function MaintenancePage() {
   );
 }
 
+// ✅ Your existing styles unchanged:
 const styles = {
   container: {
     minHeight: "100vh",
