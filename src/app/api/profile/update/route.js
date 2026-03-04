@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { email, fullName, password, motorbike } = body;
+    const { email, fullName, password, motorbike, phone } = body; 
 
     if (!email || typeof email !== "string") {
       return NextResponse.json({ error: "Missing email" }, { status: 400 });
@@ -12,18 +12,20 @@ export async function POST(req) {
 
     const updateDoc = {};
 
-    // Update name if provided
     if (typeof fullName === "string" && fullName.trim()) {
       updateDoc.fullName = fullName.trim();
     }
 
-    // Update motorbike if provided
     if (typeof motorbike === "string" && motorbike.trim()) {
       updateDoc.motorbike = motorbike.trim();
     }
 
+    if (typeof phone === "string" && phone.trim()) {
+      updateDoc.phone = phone.trim();
+    }
+
     if (typeof password === "string" && password.trim().length >= 6) {
-      updateDoc.password = password; 
+      updateDoc.password = password;
     }
 
     if (Object.keys(updateDoc).length === 0) {
