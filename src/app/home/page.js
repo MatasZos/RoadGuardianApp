@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Navbar from "../components/Navbar";
-import Map from "../components/Map";
 import AiChat from "../components/AiChat";
 
 export default function HomePage() {
@@ -18,7 +17,16 @@ export default function HomePage() {
 
   if (status === "loading") {
     return (
-      <div style={{ minHeight: "100vh", background: "#111", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#111",
+          color: "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         Loading...
       </div>
     );
@@ -39,14 +47,26 @@ export default function HomePage() {
         <h2 style={{ textAlign: "center" }}>Quick Actions</h2>
 
         <div style={styles.actions}>
-          <button style={{ ...styles.btn, background: "#f39c12" }} onClick={() => router.push("/maintenance")}>MAINTENANCE</button>
-          <button style={{ ...styles.btn, background: "#3498db" }} onClick={() => router.push("/documents")}>DOCUMENTS</button>
-          <button style={{ ...styles.btn, background: "#e74c3c" }} onClick={() => router.push("/emergency")}>EMERGENCY</button>
+          <button
+            style={{ ...styles.btn, background: "#f39c12" }}
+            onClick={() => router.push("/maintenance")}
+          >
+            MAINTENANCE
+          </button>
+          <button
+            style={{ ...styles.btn, background: "#3498db" }}
+            onClick={() => router.push("/documents")}
+          >
+            DOCUMENTS
+          </button>
+          <button
+            style={{ ...styles.btn, background: "#e74c3c" }}
+            onClick={() => router.push("/emergency")}
+          >
+            EMERGENCY
+          </button>
         </div>
 
-        <div style={{ marginTop: "30px" }}>
-          <Map lat={53.3498} lng={-6.2603} />
-        </div>
         <AiChat />
       </div>
     </div>
