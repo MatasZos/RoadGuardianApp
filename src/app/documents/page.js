@@ -1,9 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Navbar from "../components/Navbar";
 
 export default function DocumentsPage() {
+  const router = useRouter();
+  const { data: session, status } = useSession();
+
   const [docs, setDocs] = useState([]);
   const [editingId, setEditingId] = useState(null);
 
@@ -13,10 +18,7 @@ export default function DocumentsPage() {
     notes: "",
   });
 
-  const email =
-    typeof window !== "undefined"
-      ? localStorage.getItem("userEmail")
-      : null;
+  const email = session?.user?.email || null;
 
   const documentTypes = [
     { label: "Insurance", expires: true },
@@ -28,6 +30,11 @@ export default function DocumentsPage() {
   ];
 
   const selectedType = documentTypes.find((t) => t.label === form.title);
+
+  useEffect(() => {
+    if (status === "loading") return;
+    if (status === "unauthenticated") router.push("/login");
+  }, [status, router]);
 
   function parseISODate(value) {
     if (!value) return null;
@@ -48,8 +55,10 @@ export default function DocumentsPage() {
   function daysUntil(expiryDateStr) {
     const d = parseISODate(expiryDateStr);
     if (!d) return null;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
     const diffMs = d.getTime() - today.getTime();
     return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
   }
@@ -141,6 +150,7 @@ export default function DocumentsPage() {
       headers: { "x-user-email": email },
       cache: "no-store",
     });
+
     const data = await res.json();
     setDocs(Array.isArray(data) ? data : []);
   }
@@ -169,15 +179,39 @@ export default function DocumentsPage() {
     setForm({ title: "", expiryDate: "", notes: "" });
   }
 
+  if (status === "loading") {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#0b0f1a",
+          color: "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        Loading...
+      </div>
+    );
+  }
+
   function Section({ title, subtitle, items, accentColor }) {
     return (
       <div style={styles.section}>
         <div style={styles.sectionHeader}>
           <div>
             <h2 style={styles.sectionTitle}>{title}</h2>
-            {subtitle ? <p style={styles.sectionSubtitle}>{subtitle}</p> : null}
+            {subtitle && <p style={styles.sectionSubtitle}>{subtitle}</p>}
           </div>
-          <div style={{ ...styles.badge, borderColor: accentColor, color: accentColor }}>
+
+          <div
+            style={{
+              ...styles.badge,
+              borderColor: accentColor,
+              color: accentColor,
+            }}
+          >
             {items.length}
           </div>
         </div>
@@ -195,7 +229,8 @@ export default function DocumentsPage() {
 
                   {d.expiryDate ? (
                     <p style={styles.cardText}>
-                      <strong>Expires:</strong> {formatDisplayDate(d.expiryDate)}
+                      <strong>Expires:</strong>{" "}
+                      {formatDisplayDate(d.expiryDate)}
                       {typeof dLeft === "number" && (
                         <span style={styles.daysPill}>
                           {dLeft < 0
@@ -213,11 +248,17 @@ export default function DocumentsPage() {
                   {d.notes && <p style={styles.cardNotes}>{d.notes}</p>}
 
                   <div style={styles.cardActions}>
-                    <button style={styles.editBtn} onClick={() => startEdit(d)}>
+                    <button
+                      style={styles.editBtn}
+                      onClick={() => startEdit(d)}
+                    >
                       Edit
                     </button>
 
-                    <button style={styles.deleteBtn} onClick={() => deleteDoc(d._id)}>
+                    <button
+                      style={styles.deleteBtn}
+                      onClick={() => deleteDoc(d._id)}
+                    >
                       Delete
                     </button>
                   </div>
