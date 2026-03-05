@@ -59,9 +59,15 @@ export default function Navbar() {
           <div style={styles.item} onClick={() => { router.push("/settings"); setOpen(false); }}>
             Settings
         </div>
-          <div style={styles.item}>
-            Support
-          </div>
+         <div
+          style={styles.item}
+          onClick={() => {
+            router.push("/support");
+            setOpen(false);
+          }}
+        >
+          Support
+        </div>
           <div style={styles.divider}></div>
           <div style={{ ...styles.item, color: "#e74c3c" }} onClick={logout}>
             Sign Out
