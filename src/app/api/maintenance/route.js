@@ -2,6 +2,11 @@ import clientPromise from "../../../lib/mongodb";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 
+function cleanString(v) {
+  if (typeof v !== "string") return "";
+  return v.trim();
+}
+
 export async function GET(req) {
   try {
     const email = req.headers.get("x-user-email");
@@ -27,11 +32,12 @@ export async function POST(req) {
     const body = await req.json();
 
     const doc = {
-      userEmail: body.userEmail,
+      userEmail: cleanString(body.userEmail),
+      motorbike: cleanString(body.motorbike), 
       type: Array.isArray(body.type) ? body.type : [],
-      date: body.date,
+      date: cleanString(body.date),
       km: Number(body.km),
-      notes: body.notes || "",
+      notes: cleanString(body.notes || ""),
       createdAt: new Date(),
     };
 
@@ -57,10 +63,11 @@ export async function PUT(req) {
       { _id: new ObjectId(body._id) },
       {
         $set: {
+          motorbike: cleanString(body.motorbike),
           type: Array.isArray(body.type) ? body.type : [],
-          date: body.date,
+          date: cleanString(body.date),
           km: Number(body.km),
-          notes: body.notes || "",
+          notes: cleanString(body.notes || ""),
         },
       }
     );
@@ -78,9 +85,9 @@ export async function DELETE(req) {
     const client = await clientPromise;
     const db = client.db("login");
 
-    await db
-      .collection("maintenance")
-      .deleteOne({ _id: new ObjectId(body._id) });
+    await db.collection("maintenance").deleteOne({
+      _id: new ObjectId(body._id),
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {

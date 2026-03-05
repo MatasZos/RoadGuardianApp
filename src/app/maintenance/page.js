@@ -19,7 +19,6 @@ export default function MaintenancePage() {
     notes: "",
   });
 
-  // ✅ email from session (NOT localStorage)
   const email = session?.user?.email || null;
 
   const [bikeSearch, setBikeSearch] = useState({
@@ -65,14 +64,13 @@ export default function MaintenancePage() {
   const grouped = groupByMonth(records);
   const monthSections = Object.entries(grouped);
 
-  // ✅ Protect page (NextAuth)
   useEffect(() => {
     if (status === "loading") return;
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
   useEffect(() => {
-    // this is just preference storage, not auth
+    // preference only (not auth)
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("userMotorbike") || "";
       setSelectedBike(saved);
@@ -152,7 +150,6 @@ export default function MaintenancePage() {
     "Brake Disc Replacement",
   ];
 
-  // ✅ Fetch records once we have session email
   useEffect(() => {
     if (!email) return;
 
@@ -185,6 +182,11 @@ export default function MaintenancePage() {
     e.preventDefault();
     if (!email) return;
 
+    if (!selectedBike) {
+      alert("Please select a motorbike before adding a record.");
+      return;
+    }
+
     const method = editingId ? "PUT" : "POST";
 
     await fetch("/api/maintenance", {
@@ -192,6 +194,7 @@ export default function MaintenancePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         userEmail: email,
+        motorbike: selectedBike, // ✅ saved with the record
         _id: editingId,
         ...form,
       }),
@@ -215,6 +218,7 @@ export default function MaintenancePage() {
 
   function startEdit(record) {
     setEditingId(record._id);
+    setSelectedBike(record.motorbike || ""); // ✅ load bike for that record
     setForm({
       type: Array.isArray(record.type) ? record.type : [record.type],
       date: record.date || "",
@@ -233,7 +237,6 @@ export default function MaintenancePage() {
     setRecords(records.filter((r) => r._id !== id));
   }
 
-  // Optional loading screen
   if (status === "loading") {
     return (
       <div
@@ -406,6 +409,13 @@ export default function MaintenancePage() {
                         {Array.isArray(r.type) ? r.type.join(", ") : r.type}
                       </h3>
 
+                      {/* ✅ show the bike for THIS record */}
+                      {r.motorbike && (
+                        <p style={styles.cardText}>
+                          <strong>Bike:</strong> {r.motorbike}
+                        </p>
+                      )}
+
                       <p style={styles.cardText}>
                         <strong>Date:</strong> {formatDisplayDate(r.date)}
                       </p>
@@ -443,7 +453,6 @@ export default function MaintenancePage() {
   );
 }
 
-// ✅ Your existing styles unchanged:
 const styles = {
   container: {
     minHeight: "100vh",
