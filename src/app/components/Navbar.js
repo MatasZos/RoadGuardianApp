@@ -56,9 +56,9 @@ export default function Navbar() {
         >
           My Bike
         </div>
-          <div style={styles.item}>
+          <div style={styles.item} onClick={() => { router.push("/settings"); setOpen(false); }}>
             Settings
-          </div>
+        </div>
           <div style={styles.item}>
             Support
           </div>
