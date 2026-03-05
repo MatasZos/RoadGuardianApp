@@ -1,14 +1,18 @@
 import clientPromise from "../../../lib/mongodb";
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]/route";
 
-export async function GET(req) {
-  const email = req.headers.get("x-user-email");
-
-  if (!email) {
-    return NextResponse.json({ error: "Email missing" }, { status: 400 });
-  }
-
+export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const email = session.user.email.toLowerCase();
+
     const client = await clientPromise;
     const db = client.db("login");
     const userCollection = db.collection("user");
@@ -34,13 +38,15 @@ export async function GET(req) {
 }
 
 export async function PUT(req) {
-  const email = req.headers.get("x-user-email");
-
-  if (!email) {
-    return NextResponse.json({ error: "Email missing" }, { status: 400 });
-  }
-
   try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const email = session.user.email.toLowerCase();
+
     const body = await req.json();
     const { motorbike, bikeYear, bikeMileage, bikeNotes } = body;
 
@@ -70,4 +76,3 @@ export async function PUT(req) {
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
-
