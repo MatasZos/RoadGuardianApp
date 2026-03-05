@@ -2,8 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function MyBikePage() {
+  const router = useRouter();
+  const { data: session, status } = useSession();
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -14,24 +19,17 @@ export default function MyBikePage() {
     bikeNotes: "",
   });
 
-  const email =
-    typeof window !== "undefined" ? localStorage.getItem("userEmail") : null;
-
   useEffect(() => {
+    if (status === "loading") return;
+
+    if (status === "unauthenticated") {
+      setLoading(false);
+      return;
+    }
+
     const fetchBike = async () => {
-      if (!email) {
-        setLoading(false);
-        return;
-      }
-
       try {
-        const res = await fetch("/api/mybike", {
-          method: "GET",
-          headers: {
-            "x-user-email": email,
-          },
-        });
-
+        const res = await fetch("/api/mybike", { method: "GET" });
         const data = await res.json();
 
         if (res.ok) {
@@ -52,7 +50,7 @@ export default function MyBikePage() {
     };
 
     fetchBike();
-  }, [email]);
+  }, [status]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -60,16 +58,11 @@ export default function MyBikePage() {
   };
 
   const handleSave = async () => {
-    if (!email) return;
-
     setSaving(true);
     try {
       const res = await fetch("/api/mybike", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-email": email,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
 
@@ -90,6 +83,8 @@ export default function MyBikePage() {
     }
   };
 
+  const showAuthWarning = status === "unauthenticated";
+
   return (
     <>
       <Navbar />
@@ -103,14 +98,24 @@ export default function MyBikePage() {
           </p>
 
           <div className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-5">
-            {loading ? (
+            {status === "loading" || loading ? (
               <p className="text-white/70">Loading bike details...</p>
-            ) : !email ? (
-              <p className="text-red-400">
-                No user email found. Please sign in again.
-              </p>
+            ) : showAuthWarning ? (
+              <div className="space-y-3">
+                <p className="text-red-400">You’re not signed in. Please log in again.</p>
+                <button
+                  onClick={() => router.push("/login")}
+                  className="px-6 py-3 rounded-lg bg-orange-500 hover:bg-orange-600 transition"
+                >
+                  Go to Login
+                </button>
+              </div>
             ) : (
               <>
+                <p className="text-white/50 text-sm">
+                  Signed in as: {session?.user?.email}
+                </p>
+
                 <div>
                   <label className="block text-sm text-white/70 mb-2">
                     Bike (Make + Model)
