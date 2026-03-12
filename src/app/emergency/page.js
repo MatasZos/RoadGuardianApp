@@ -60,7 +60,7 @@ export default function EmergencyPage() {
     setEmergencyCalled(true);
     setError("");
 
-    // ✅ email from session (NOT localStorage)
+  
     const email = session?.user?.email;
     if (!email) {
       setError("You must be logged in.");
