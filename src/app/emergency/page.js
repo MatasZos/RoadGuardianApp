@@ -20,7 +20,7 @@ export default function EmergencyPage() {
   const mapRef = useRef(null);
   const markerRef = useRef(null);
 
-  // ✅ Auth + name from session (NOT localStorage)
+  
   useEffect(() => {
     if (status === "loading") return;
     if (status === "unauthenticated") {
