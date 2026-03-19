@@ -1,27 +1,12 @@
 import clientPromise from "../../../lib/mongodb";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 
 export async function POST(req) {
   try {
-    // get logged-in user from session
-    const session = await getServerSession(authOptions);
+    const { userEmail, lat, lng } = await req.json();
 
-    if (!session || !session.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const { lat, lng } = await req.json();
-
-    if (typeof lat !== "number" || typeof lng !== "number") {
-      return NextResponse.json(
-        { error: "Missing or invalid coordinates" },
-        { status: 400 }
-      );
+    if (!userEmail || typeof lat !== "number" || typeof lng !== "number") {
+      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
     const client = await clientPromise;
@@ -29,24 +14,15 @@ export async function POST(req) {
     const emergencies = db.collection("emergencies");
 
     await emergencies.insertOne({
-      userEmail: session.user.email, 
-      name: session.user.name,
+      userEmail,
       lat,
       lng,
       status: "DISPATCHED",
       createdAt: new Date(),
     });
 
-    return NextResponse.json(
-      { message: "Emergency saved" },
-      { status: 200 }
-    );
+    return NextResponse.json({ message: "Emergency saved" }, { status: 200 });
   } catch (e) {
-    console.error(e);
-
-    return NextResponse.json(
-      { error: "Server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
