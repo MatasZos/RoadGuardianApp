@@ -19,8 +19,8 @@ export default function EmergencyPage() {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
-  const otherMarkersRef = useRef({});
 
+  // handle auth
   useEffect(() => {
     if (status === "loading") return;
 
@@ -32,7 +32,7 @@ export default function EmergencyPage() {
     setFullName(session?.user?.name || "");
   }, [status, session, router]);
 
-  // init map once
+  // init map
   useEffect(() => {
     mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -46,77 +46,17 @@ export default function EmergencyPage() {
     mapRef.current = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: "mapbox://styles/mapbox/dark-v11",
-      center: [-6.2603, 53.3498], // Dublin default
+      center: [-6.2603, 53.3498],
       zoom: 12,
     });
 
     mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
 
     return () => {
-      Object.values(otherMarkersRef.current).forEach((marker) => marker.remove());
-      otherMarkersRef.current = {};
-
-      markerRef.current?.remove();
-      markerRef.current = null;
-
       mapRef.current?.remove();
       mapRef.current = null;
     };
   }, []);
-
-  // poll active emergencies and show other users
-  useEffect(() => {
-    if (!mapRef.current || !session?.user?.email) return;
-
-    const fetchEmergencies = async () => {
-      try {
-        const res = await fetch("/api/emergency", { cache: "no-store" });
-        const data = await res.json();
-
-        if (!res.ok) return;
-
-        const users = data.emergencies || [];
-        const myEmail = session.user.email;
-        const seen = new Set();
-
-        users.forEach((user) => {
-          if (!user?._id) return;
-          if (user.userEmail === myEmail) return;
-          if (typeof user.lat !== "number" || typeof user.lng !== "number") return;
-
-          const id = user._id.toString();
-          seen.add(id);
-
-          if (!otherMarkersRef.current[id]) {
-            otherMarkersRef.current[id] = new mapboxgl.Marker({ color: "#3b82f6" })
-              .setLngLat([user.lng, user.lat])
-              .setPopup(
-                new mapboxgl.Popup().setHTML(
-                  `<strong>${user.userName || "Rider"}</strong><br/>${user.userEmail || ""}`
-                )
-              )
-              .addTo(mapRef.current);
-          } else {
-            otherMarkersRef.current[id].setLngLat([user.lng, user.lat]);
-          }
-        });
-
-        Object.keys(otherMarkersRef.current).forEach((id) => {
-          if (!seen.has(id)) {
-            otherMarkersRef.current[id].remove();
-            delete otherMarkersRef.current[id];
-          }
-        });
-      } catch (err) {
-        console.error("Error fetching emergencies:", err);
-      }
-    };
-
-    fetchEmergencies();
-    const interval = setInterval(fetchEmergencies, 5000);
-
-    return () => clearInterval(interval);
-  }, [session]);
 
   const handleEmergency = () => {
     setEmergencyCalled(true);
@@ -136,18 +76,14 @@ export default function EmergencyPage() {
       async (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
+
         setCoords({ lat, lng });
 
-        // show your marker on map
+        // show marker
         if (mapRef.current) {
           if (!markerRef.current) {
             markerRef.current = new mapboxgl.Marker({ color: "#e74c3c" })
               .setLngLat([lng, lat])
-              .setPopup(
-                new mapboxgl.Popup().setHTML(
-                  `<strong>${fullName || session?.user?.name || "You"}</strong><br/>Your emergency location`
-                )
-              )
               .addTo(mapRef.current);
           } else {
             markerRef.current.setLngLat([lng, lat]);
@@ -156,7 +92,7 @@ export default function EmergencyPage() {
           mapRef.current.flyTo({ center: [lng, lat], zoom: 15 });
         }
 
-        // save to MongoDB via API using session on backend
+        // send to backend (SESSION handles user)
         const res = await fetch("/api/emergency", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -164,6 +100,7 @@ export default function EmergencyPage() {
         });
 
         const data = await res.json().catch(() => ({}));
+
         if (!res.ok) {
           setError(data.error || "Could not save emergency.");
         }
@@ -210,7 +147,9 @@ export default function EmergencyPage() {
           gap: "16px",
         }}
       >
-        <h1 style={{ color: "#e74c3c", marginBottom: 0 }}>Emergency Page</h1>
+        <h1 style={{ color: "#e74c3c", marginBottom: 0 }}>
+          Emergency Page
+        </h1>
 
         <div
           style={{
@@ -221,10 +160,15 @@ export default function EmergencyPage() {
             boxShadow: "0 8px 20px rgba(0,0,0,0.5)",
           }}
         >
-          <div ref={mapContainerRef} style={{ width: "100%", height: "320px" }} />
+          <div
+            ref={mapContainerRef}
+            style={{ width: "100%", height: "320px" }}
+          />
         </div>
 
-        {error && <p style={{ color: "#ffb4b4", margin: 0 }}>{error}</p>}
+        {error && (
+          <p style={{ color: "#ffb4b4", margin: 0 }}>{error}</p>
+        )}
 
         <button
           onClick={handleEmergency}
@@ -260,15 +204,18 @@ export default function EmergencyPage() {
             <h2 style={{ marginBottom: "10px", color: "#e74c3c" }}>
               Emergency Team Dispatched!
             </h2>
+
             <p>
               <strong>ETA:</strong> 5 minutes
             </p>
+
             <p>
               <strong>Location:</strong>{" "}
               {coords
                 ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`
                 : "Getting your location..."}
             </p>
+
             <p>
               <strong>Status:</strong> Team is on the way
             </p>
