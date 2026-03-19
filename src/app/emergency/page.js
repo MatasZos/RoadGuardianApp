@@ -20,19 +20,16 @@ export default function EmergencyPage() {
   const mapRef = useRef(null);
   const markerRef = useRef(null);
 
-  // handle auth
   useEffect(() => {
     if (status === "loading") return;
-
     if (status === "unauthenticated") {
       router.push("/login");
       return;
     }
-
     setFullName(session?.user?.name || "");
   }, [status, session, router]);
 
-  // init map
+  // init map once
   useEffect(() => {
     mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -62,7 +59,8 @@ export default function EmergencyPage() {
     setEmergencyCalled(true);
     setError("");
 
-    if (!session?.user) {
+    const email = session?.user?.email;
+    if (!email) {
       setError("You must be logged in.");
       return;
     }
@@ -76,10 +74,9 @@ export default function EmergencyPage() {
       async (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
-
         setCoords({ lat, lng });
 
-        // show marker
+        // show marker on map
         if (mapRef.current) {
           if (!markerRef.current) {
             markerRef.current = new mapboxgl.Marker({ color: "#e74c3c" })
@@ -88,22 +85,18 @@ export default function EmergencyPage() {
           } else {
             markerRef.current.setLngLat([lng, lat]);
           }
-
           mapRef.current.flyTo({ center: [lng, lat], zoom: 15 });
         }
 
-        // send to backend (SESSION handles user)
+        // save to MongoDB via API
         const res = await fetch("/api/emergency", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lat, lng }),
+          body: JSON.stringify({ userEmail: email, lat, lng }),
         });
 
         const data = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-          setError(data.error || "Could not save emergency.");
-        }
+        if (!res.ok) setError(data.error || "Could not save emergency.");
       },
       (err) => setError(err.message || "Could not get your location."),
       { enableHighAccuracy: true, timeout: 10000 }
@@ -128,96 +121,27 @@ export default function EmergencyPage() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#111",
-        color: "#fff",
-        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-      }}
-    >
+    <div style={{ minHeight: "100vh", background: "#111", color: "#fff" }}>
       <Navbar themeColor="#e74c3c" />
 
-      <div
-        style={{
-          padding: "20px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "16px",
-        }}
-      >
-        <h1 style={{ color: "#e74c3c", marginBottom: 0 }}>
-          Emergency Page
-        </h1>
+      <div style={{ padding: "20px", textAlign: "center" }}>
+        <h1>Emergency Page</h1>
 
-        <div
-          style={{
-            width: "100%",
-            maxWidth: "900px",
-            borderRadius: "12px",
-            overflow: "hidden",
-            boxShadow: "0 8px 20px rgba(0,0,0,0.5)",
-          }}
-        >
-          <div
-            ref={mapContainerRef}
-            style={{ width: "100%", height: "320px" }}
-          />
-        </div>
+        <div ref={mapContainerRef} style={{ height: "320px" }} />
 
-        {error && (
-          <p style={{ color: "#ffb4b4", margin: 0 }}>{error}</p>
-        )}
+        {error && <p>{error}</p>}
 
-        <button
-          onClick={handleEmergency}
-          style={{
-            padding: "15px 25px",
-            borderRadius: "10px",
-            border: "none",
-            backgroundColor: "#e74c3c",
-            color: "#fff",
-            fontSize: "1.1rem",
-            fontWeight: "bold",
-            cursor: "pointer",
-            marginTop: "4px",
-          }}
-        >
+        <button onClick={handleEmergency}>
           Call for Help
         </button>
 
         {emergencyCalled && (
-          <div
-            style={{
-              marginTop: "10px",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 8px 20px rgba(0,0,0,0.5)",
-              backgroundColor: "#fff",
-              color: "#111",
-              width: "90%",
-              maxWidth: "400px",
-              textAlign: "center",
-            }}
-          >
-            <h2 style={{ marginBottom: "10px", color: "#e74c3c" }}>
-              Emergency Team Dispatched!
-            </h2>
-
+          <div>
+            <h2>Emergency Team Dispatched!</h2>
             <p>
-              <strong>ETA:</strong> 5 minutes
-            </p>
-
-            <p>
-              <strong>Location:</strong>{" "}
               {coords
                 ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`
-                : "Getting your location..."}
-            </p>
-
-            <p>
-              <strong>Status:</strong> Team is on the way
+                : "Getting location..."}
             </p>
           </div>
         )}
