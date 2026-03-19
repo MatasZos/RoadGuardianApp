@@ -19,14 +19,16 @@ export default function EmergencyPage() {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
+  const otherMarkersRef = useRef({});
 
-  
   useEffect(() => {
     if (status === "loading") return;
+
     if (status === "unauthenticated") {
       router.push("/login");
       return;
     }
+
     setFullName(session?.user?.name || "");
   }, [status, session, router]);
 
@@ -51,18 +53,76 @@ export default function EmergencyPage() {
     mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
 
     return () => {
+      Object.values(otherMarkersRef.current).forEach((marker) => marker.remove());
+      otherMarkersRef.current = {};
+
+      markerRef.current?.remove();
+      markerRef.current = null;
+
       mapRef.current?.remove();
       mapRef.current = null;
     };
   }, []);
 
+  // poll active emergencies and show other users
+  useEffect(() => {
+    if (!mapRef.current || !session?.user?.email) return;
+
+    const fetchEmergencies = async () => {
+      try {
+        const res = await fetch("/api/emergency", { cache: "no-store" });
+        const data = await res.json();
+
+        if (!res.ok) return;
+
+        const users = data.emergencies || [];
+        const myEmail = session.user.email;
+        const seen = new Set();
+
+        users.forEach((user) => {
+          if (!user?._id) return;
+          if (user.userEmail === myEmail) return;
+          if (typeof user.lat !== "number" || typeof user.lng !== "number") return;
+
+          const id = user._id.toString();
+          seen.add(id);
+
+          if (!otherMarkersRef.current[id]) {
+            otherMarkersRef.current[id] = new mapboxgl.Marker({ color: "#3b82f6" })
+              .setLngLat([user.lng, user.lat])
+              .setPopup(
+                new mapboxgl.Popup().setHTML(
+                  `<strong>${user.userName || "Rider"}</strong><br/>${user.userEmail || ""}`
+                )
+              )
+              .addTo(mapRef.current);
+          } else {
+            otherMarkersRef.current[id].setLngLat([user.lng, user.lat]);
+          }
+        });
+
+        Object.keys(otherMarkersRef.current).forEach((id) => {
+          if (!seen.has(id)) {
+            otherMarkersRef.current[id].remove();
+            delete otherMarkersRef.current[id];
+          }
+        });
+      } catch (err) {
+        console.error("Error fetching emergencies:", err);
+      }
+    };
+
+    fetchEmergencies();
+    const interval = setInterval(fetchEmergencies, 5000);
+
+    return () => clearInterval(interval);
+  }, [session]);
+
   const handleEmergency = () => {
     setEmergencyCalled(true);
     setError("");
 
-  
-    const email = session?.user?.email;
-    if (!email) {
+    if (!session?.user) {
       setError("You must be logged in.");
       return;
     }
@@ -78,34 +138,41 @@ export default function EmergencyPage() {
         const lng = pos.coords.longitude;
         setCoords({ lat, lng });
 
-        // show marker on map
+        // show your marker on map
         if (mapRef.current) {
           if (!markerRef.current) {
             markerRef.current = new mapboxgl.Marker({ color: "#e74c3c" })
               .setLngLat([lng, lat])
+              .setPopup(
+                new mapboxgl.Popup().setHTML(
+                  `<strong>${fullName || session?.user?.name || "You"}</strong><br/>Your emergency location`
+                )
+              )
               .addTo(mapRef.current);
           } else {
             markerRef.current.setLngLat([lng, lat]);
           }
+
           mapRef.current.flyTo({ center: [lng, lat], zoom: 15 });
         }
 
-        // save to MongoDB via API
+        // save to MongoDB via API using session on backend
         const res = await fetch("/api/emergency", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userEmail: email, lat, lng }),
+          body: JSON.stringify({ lat, lng }),
         });
 
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) setError(data.error || "Could not save emergency.");
+        if (!res.ok) {
+          setError(data.error || "Could not save emergency.");
+        }
       },
       (err) => setError(err.message || "Could not get your location."),
       { enableHighAccuracy: true, timeout: 10000 }
     );
   };
 
-  // Optional loading screen while session loads
   if (status === "loading") {
     return (
       <div
