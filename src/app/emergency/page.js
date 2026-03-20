@@ -27,15 +27,18 @@ export default function EmergencyPage() {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
+  const otherMarkersRef = useRef({});
 
   const email = session?.user?.email || null;
 
   useEffect(() => {
     if (status === "loading") return;
+
     if (status === "unauthenticated") {
       router.push("/login");
       return;
     }
+
     setFullName(session?.user?.name || "");
   }, [status, session, router]);
 
@@ -59,10 +62,73 @@ export default function EmergencyPage() {
     mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
 
     return () => {
+      Object.values(otherMarkersRef.current).forEach((marker) => marker.remove());
+      otherMarkersRef.current = {};
+
+      markerRef.current?.remove();
+      markerRef.current = null;
+
       mapRef.current?.remove();
       mapRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    if (!email) return;
+
+    const fetchEmergencies = async () => {
+      if (!mapRef.current) return;
+
+      try {
+        const res = await fetch("/api/emergency", { cache: "no-store" });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          console.error(data?.error || "Failed to fetch emergencies");
+          return;
+        }
+
+        const users = data.emergencies || [];
+        const seen = new Set();
+
+        users.forEach((user) => {
+          if (!user?._id) return;
+          if (user.userEmail === email) return;
+          if (typeof user.lat !== "number" || typeof user.lng !== "number") return;
+
+          const id = String(user._id);
+          seen.add(id);
+
+          if (!otherMarkersRef.current[id]) {
+            otherMarkersRef.current[id] = new mapboxgl.Marker({ color: "#3b82f6" })
+              .setLngLat([user.lng, user.lat])
+              .setPopup(
+                new mapboxgl.Popup().setHTML(
+                  `<strong>${user.userName || "Rider"}</strong><br/>${user.userEmail || ""}`
+                )
+              )
+              .addTo(mapRef.current);
+          } else {
+            otherMarkersRef.current[id].setLngLat([user.lng, user.lat]);
+          }
+        });
+
+        Object.keys(otherMarkersRef.current).forEach((id) => {
+          if (!seen.has(id)) {
+            otherMarkersRef.current[id].remove();
+            delete otherMarkersRef.current[id];
+          }
+        });
+      } catch (err) {
+        console.error("Error fetching emergencies:", err);
+      }
+    };
+
+    fetchEmergencies();
+    const interval = setInterval(fetchEmergencies, 5000);
+
+    return () => clearInterval(interval);
+  }, [email]);
 
   async function loadConversations() {
     if (!email) return;
@@ -190,17 +256,23 @@ export default function EmergencyPage() {
           if (!markerRef.current) {
             markerRef.current = new mapboxgl.Marker({ color: "#e74c3c" })
               .setLngLat([lng, lat])
+              .setPopup(
+                new mapboxgl.Popup().setHTML(
+                  `<strong>${fullName || "You"}</strong><br/>Your emergency location`
+                )
+              )
               .addTo(mapRef.current);
           } else {
             markerRef.current.setLngLat([lng, lat]);
           }
+
           mapRef.current.flyTo({ center: [lng, lat], zoom: 15 });
         }
 
         const res = await fetch("/api/emergency", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userEmail: email, lat, lng }),
+          body: JSON.stringify({ lat, lng }),
         });
 
         const data = await res.json().catch(() => ({}));
@@ -318,7 +390,6 @@ export default function EmergencyPage() {
         )}
       </div>
 
-      {/* Floating chat button */}
       <button
         onClick={() => setChatOpen((prev) => !prev)}
         style={styles.chatButton}
@@ -326,7 +397,6 @@ export default function EmergencyPage() {
         💬
       </button>
 
-      {/* Sidebar */}
       <div
         style={{
           ...styles.chatSidebar,
@@ -372,7 +442,7 @@ export default function EmergencyPage() {
                     style={{
                       ...styles.chatListItem,
                       background:
-                        selectedConversation?._id === conv._id
+                        String(selectedConversation?._id) === String(conv._id)
                           ? "#1f2937"
                           : "#111",
                     }}
@@ -392,9 +462,7 @@ export default function EmergencyPage() {
 
           <div style={styles.chatPanel}>
             {!selectedConversation ? (
-              <div style={styles.emptyChat}>
-                Select a conversation
-              </div>
+              <div style={styles.emptyChat}>Select a conversation</div>
             ) : (
               <>
                 <div style={styles.messagesArea}>
