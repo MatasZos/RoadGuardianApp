@@ -28,6 +28,7 @@ export default function EmergencyPage() {
   const mapRef = useRef(null);
   const markerRef = useRef(null);
   const otherMarkersRef = useRef({});
+  const watchIdRef = useRef(null);
 
   const email = session?.user?.email || null;
 
@@ -67,6 +68,11 @@ export default function EmergencyPage() {
 
       markerRef.current?.remove();
       markerRef.current = null;
+
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
 
       mapRef.current?.remove();
       mapRef.current = null;
@@ -246,7 +252,12 @@ export default function EmergencyPage() {
       return;
     }
 
-    navigator.geolocation.watchPosition(...)(
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
       async (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
@@ -276,10 +287,18 @@ export default function EmergencyPage() {
         });
 
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) setError(data.error || "Could not save emergency.");
+        if (!res.ok) {
+          setError(data.error || "Could not save emergency.");
+        }
       },
-      (err) => setError(err.message || "Could not get your location."),
-      { enableHighAccuracy: true, timeout: 10000 }
+      (err) => {
+        setError(err.message || "Could not get your location.");
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
     );
   };
 
@@ -405,10 +424,7 @@ export default function EmergencyPage() {
       >
         <div style={styles.chatHeader}>
           <strong>Rider Messages</strong>
-          <button
-            onClick={() => setChatOpen(false)}
-            style={styles.closeBtn}
-          >
+          <button onClick={() => setChatOpen(false)} style={styles.closeBtn}>
             ✕
           </button>
         </div>
