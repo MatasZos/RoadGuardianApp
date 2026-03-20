@@ -21,7 +21,10 @@ export async function POST(req) {
     const db = client.db("login");
     const emergencies = db.collection("emergencies");
 
-    await emergencies.insertOne({
+    await emergencies.updateOne(
+  { userEmail: session.user.email },
+  {
+    $set: {
       userId: session.user.id,
       userEmail: session.user.email,
       userName: session.user.name || "User",
@@ -29,7 +32,10 @@ export async function POST(req) {
       lng,
       status: "DISPATCHED",
       createdAt: new Date(),
-    });
+    },
+  },
+  { upsert: true }
+);
 
     return NextResponse.json({ message: "Emergency saved" }, { status: 200 });
   } catch (e) {
