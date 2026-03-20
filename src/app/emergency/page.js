@@ -24,14 +24,22 @@ export default function EmergencyPage() {
   const [newChatEmail, setNewChatEmail] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
 
+  const [followMode, setFollowMode] = useState(true);
+
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
   const otherMarkersRef = useRef({});
   const watchIdRef = useRef(null);
   const hasCenteredRef = useRef(false);
+  const lastCoordsRef = useRef(null);
+  const followModeRef = useRef(true);
 
   const email = session?.user?.email || null;
+
+  useEffect(() => {
+    followModeRef.current = followMode;
+  }, [followMode]);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -62,6 +70,11 @@ export default function EmergencyPage() {
     });
 
     mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
+
+    mapRef.current.on("dragstart", () => {
+      followModeRef.current = false;
+      setFollowMode(false);
+    });
 
     return () => {
       Object.values(otherMarkersRef.current).forEach((marker) => marker.remove());
@@ -100,6 +113,10 @@ export default function EmergencyPage() {
 
         if (markerRef.current && emergencyCalled) {
           markerRef.current.setLngLat([lng, lat]);
+        }
+
+        if (emergencyCalled) {
+          updateDrivingCamera(lat, lng);
         }
       },
       (err) => {
@@ -142,6 +159,45 @@ export default function EmergencyPage() {
         }
       );
     });
+  }
+
+  function getBearing(from, to) {
+    const toRad = (deg) => (deg * Math.PI) / 180;
+    const toDeg = (rad) => (rad * 180) / Math.PI;
+
+    const lat1 = toRad(from.lat);
+    const lon1 = toRad(from.lng);
+    const lat2 = toRad(to.lat);
+    const lon2 = toRad(to.lng);
+
+    const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+    const x =
+      Math.cos(lat1) * Math.sin(lat2) -
+      Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+
+    return (toDeg(Math.atan2(y, x)) + 360) % 360;
+  }
+
+  function updateDrivingCamera(lat, lng) {
+    if (!mapRef.current || !followModeRef.current) return;
+
+    let bearing = mapRef.current.getBearing();
+
+    if (lastCoordsRef.current) {
+      bearing = getBearing(lastCoordsRef.current, { lat, lng });
+    }
+
+    mapRef.current.easeTo({
+      center: [lng, lat],
+      zoom: 17,
+      pitch: 65,
+      bearing,
+      duration: 800,
+      offset: [0, 180],
+      essential: true,
+    });
+
+    lastCoordsRef.current = { lat, lng };
   }
 
   async function drawRouteToUser(targetLng, targetLat) {
@@ -452,9 +508,16 @@ export default function EmergencyPage() {
       }
 
       if (!hasCenteredRef.current) {
-        mapRef.current.flyTo({ center: [lng, lat], zoom: 15 });
+        mapRef.current.jumpTo({
+          center: [lng, lat],
+          zoom: 17,
+          pitch: 65,
+          bearing: 0,
+        });
         hasCenteredRef.current = true;
       }
+
+      updateDrivingCamera(lat, lng);
     }
 
     const res = await fetch("/api/emergency", {
@@ -526,7 +589,7 @@ export default function EmergencyPage() {
 
         {error && <p style={{ color: "#ffb4b4", margin: 0 }}>{error}</p>}
 
-        <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+        <div style={{ display: "flex", gap: "10px", marginTop: "4px", flexWrap: "wrap" }}>
           <button
             onClick={handleEmergency}
             style={{
@@ -557,6 +620,22 @@ export default function EmergencyPage() {
             }}
           >
             Clear Route
+          </button>
+
+          <button
+            onClick={() => setFollowMode((prev) => !prev)}
+            style={{
+              padding: "15px 25px",
+              borderRadius: "10px",
+              border: "none",
+              backgroundColor: followMode ? "#16a34a" : "#444",
+              color: "#fff",
+              fontSize: "1rem",
+              fontWeight: "bold",
+              cursor: "pointer",
+            }}
+          >
+            {followMode ? "Following You" : "Follow Off"}
           </button>
         </div>
 
