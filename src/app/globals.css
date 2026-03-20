@@ -40,3 +40,12 @@ a {
     color-scheme: dark;
   }
 }
+
+.mapboxgl-popup-content {
+  color: black;
+  font-size: 14px;
+}
+
+.mapboxgl-popup-tip {
+  border-top-color: white;
+}
