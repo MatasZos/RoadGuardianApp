@@ -8,7 +8,13 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
+  function goTo(path) {
+    router.push(path);
+    setOpen(false);
+  }
+
   async function logout() {
+    setOpen(false);
     await signOut({ callbackUrl: "/login" });
   }
 
@@ -28,7 +34,10 @@ export default function Navbar() {
             style={{ ...styles.logo, cursor: "pointer" }}
             onClick={() => router.push("/home")}
           />
-          <span style={{ cursor: "pointer" }} onClick={() => router.push("/home")}>
+          <span
+            style={{ cursor: "pointer" }}
+            onClick={() => router.push("/home")}
+          >
             RoadGuardian
           </span>
         </div>
@@ -43,14 +52,20 @@ export default function Navbar() {
 
       {open && (
         <div style={styles.dropdown}>
-          <div style={styles.item} onClick={() => router.push("/profile")}>
+          <div style={styles.item} onClick={() => goTo("/profile")}>
             My Profile
           </div>
-          <div style={styles.item}>My Bike</div>
-          <div style={styles.item}>Settings</div>
-          <div style={styles.item}>Support</div>
+          <div style={styles.item} onClick={() => goTo("/mybike")}>
+            My Bike
+          </div>
+          <div style={styles.item} onClick={() => goTo("/settings")}>
+            Settings
+          </div>
+          <div style={styles.item} onClick={() => goTo("/support")}>
+            Support
+          </div>
           <div style={styles.divider}></div>
-          <div style={{ ...styles.item, color: "#e74c3c" }} onClick={logout}>
+          <div style={{ ...styles.item, ...styles.signOutItem }} onClick={logout}>
             Sign Out
           </div>
         </div>
@@ -121,6 +136,10 @@ const styles = {
     cursor: "pointer",
     fontSize: "0.9rem",
     borderBottom: "1px solid #1e1e1e",
+  },
+  signOutItem: {
+    color: "#e74c3c",
+    borderBottom: "none",
   },
   divider: {
     height: "1px",
