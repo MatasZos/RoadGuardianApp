@@ -46,12 +46,36 @@ export default function Navbar() {
           <div style={styles.item} onClick={() => router.push("/profile")}>
             My Profile
           </div>
+<<<<<<< HEAD
           <div style={styles.item} onClick={() => router.push("/messages")}>
             Messages
           </div>
           <div style={styles.item}>My Bike</div>
           <div style={styles.item}>Settings</div>
           <div style={styles.item}>Support</div>
+=======
+         <div
+          style={styles.item}
+          onClick={() => {
+            router.push("/mybike");
+            setOpen(false);
+          }}  
+        >
+          My Bike
+        </div>
+          <div style={styles.item} onClick={() => { router.push("/settings"); setOpen(false); }}>
+            Settings
+        </div>
+         <div
+          style={styles.item}
+          onClick={() => {
+            router.push("/support");
+            setOpen(false);
+          }}
+        >
+          Support
+        </div>
+>>>>>>> 06d70bcb7be988034ece2aed498da8eb3a91678f
           <div style={styles.divider}></div>
           <div style={{ ...styles.item, color: "#e74c3c" }} onClick={logout}>
             Sign Out
