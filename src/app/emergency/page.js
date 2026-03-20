@@ -87,6 +87,39 @@ export default function EmergencyPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!email) return;
+    if (!("geolocation" in navigator)) return;
+    if (watchIdRef.current !== null) return;
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setCoords({ lat, lng });
+
+        if (markerRef.current && emergencyCalled) {
+          markerRef.current.setLngLat([lng, lat]);
+        }
+      },
+      (err) => {
+        console.error("Location watch error:", err);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    };
+  }, [email, emergencyCalled]);
+
   async function drawRouteToUser(targetLng, targetLat) {
     if (!mapRef.current) return;
 
@@ -359,7 +392,7 @@ export default function EmergencyPage() {
     await loadMessages(String(selectedConversation._id));
   }
 
-  const handleEmergency = () => {
+  const handleEmergency = async () => {
     setEmergencyCalled(true);
     setError("");
 
@@ -368,62 +401,43 @@ export default function EmergencyPage() {
       return;
     }
 
-    if (!("geolocation" in navigator)) {
-      setError("Geolocation not supported by this browser.");
+    if (!coords?.lat || !coords?.lng) {
+      setError("Current location is not available yet.");
       return;
     }
 
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
+    const { lat, lng } = coords;
+
+    if (mapRef.current) {
+      if (!markerRef.current) {
+        markerRef.current = new mapboxgl.Marker({ color: "#e74c3c" })
+          .setLngLat([lng, lat])
+          .setPopup(
+            new mapboxgl.Popup().setHTML(
+              `<div style="color:black;"><strong>${fullName || "You"}</strong><br/>Your emergency location</div>`
+            )
+          )
+          .addTo(mapRef.current);
+      } else {
+        markerRef.current.setLngLat([lng, lat]);
+      }
+
+      if (!hasCenteredRef.current) {
+        mapRef.current.flyTo({ center: [lng, lat], zoom: 15 });
+        hasCenteredRef.current = true;
+      }
     }
 
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        setCoords({ lat, lng });
+    const res = await fetch("/api/emergency", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lat, lng }),
+    });
 
-        if (mapRef.current) {
-          if (!markerRef.current) {
-            markerRef.current = new mapboxgl.Marker({ color: "#e74c3c" })
-              .setLngLat([lng, lat])
-              .setPopup(
-                new mapboxgl.Popup().setHTML(
-                  `<div style="color:black;"><strong>${fullName || "You"}</strong><br/>Your emergency location</div>`
-                )
-              )
-              .addTo(mapRef.current);
-          } else {
-            markerRef.current.setLngLat([lng, lat]);
-          }
-
-          if (!hasCenteredRef.current) {
-            mapRef.current.flyTo({ center: [lng, lat], zoom: 15 });
-            hasCenteredRef.current = true;
-          }
-        }
-
-        const res = await fetch("/api/emergency", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lat, lng }),
-        });
-
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          setError(data.error || "Could not save emergency.");
-        }
-      },
-      (err) => {
-        setError(err.message || "Could not get your location.");
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      }
-    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error || "Could not save emergency.");
+    }
   };
 
   if (status === "loading") {
