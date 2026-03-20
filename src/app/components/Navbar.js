@@ -2,36 +2,35 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
-  function logout() {
-    localStorage.clear();
-    router.push("/login");
+  async function logout() {
+    await signOut({ callbackUrl: "/login" });
   }
 
   return (
     <div style={styles.navbar}>
       <div style={styles.left}>
-        <div
-          style={styles.hamburger}
-          onClick={() => setOpen(!open)}
-        >
+        <div style={styles.hamburger} onClick={() => setOpen(!open)}>
           <div style={styles.line}></div>
           <div style={styles.line}></div>
           <div style={styles.line}></div>
         </div>
 
         <div style={styles.brand}>
-          <img 
-          src="/logo.png" 
-          alt="RoadGuardian" 
-          style={{ ...styles.logo, cursor: "pointer" }}
-          onClick={() => router.push("/home")}
+          <img
+            src="/logo.png"
+            alt="RoadGuardian"
+            style={{ ...styles.logo, cursor: "pointer" }}
+            onClick={() => router.push("/home")}
           />
-          <span style={{ cursor: "pointer" }} onClick={() => router.push("/home")}>RoadGuardian</span>
+          <span style={{ cursor: "pointer" }} onClick={() => router.push("/home")}>
+            RoadGuardian
+          </span>
         </div>
       </div>
 
@@ -47,15 +46,12 @@ export default function Navbar() {
           <div style={styles.item} onClick={() => router.push("/profile")}>
             My Profile
           </div>
-          <div style={styles.item}>
-            My Bike
+          <div style={styles.item} onClick={() => router.push("/messages")}>
+            Messages
           </div>
-          <div style={styles.item}>
-            Settings
-          </div>
-          <div style={styles.item}>
-            Support
-          </div>
+          <div style={styles.item}>My Bike</div>
+          <div style={styles.item}>Settings</div>
+          <div style={styles.item}>Support</div>
           <div style={styles.divider}></div>
           <div style={{ ...styles.item, color: "#e74c3c" }} onClick={logout}>
             Sign Out

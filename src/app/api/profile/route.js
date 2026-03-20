@@ -1,9 +1,14 @@
 import clientPromise from "../../../lib/mongodb";
 import { NextResponse } from "next/server";
 
+function cleanString(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
 export async function GET(req) {
-  
-  const email = req.headers.get("x-user-email");
+  const email = cleanString(req.headers.get("x-user-email"))?.toLowerCase();
 
   if (!email) {
     return NextResponse.json({ error: "Email missing" }, { status: 400 });
@@ -20,13 +25,11 @@ export async function GET(req) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    
     return NextResponse.json({
       fullName: user.fullName || "",
       email: user.email || "",
       phone: user.phone || "",
-      password: user.password || "",
-      motorbike: user.motorbike || "", 
+      motorbike: user.motorbike || "",
     });
   } catch (err) {
     console.error("Profile GET error:", err);
