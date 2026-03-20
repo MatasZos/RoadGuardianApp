@@ -75,10 +75,93 @@ export default function EmergencyPage() {
         watchIdRef.current = null;
       }
 
+      if (mapRef.current?.getLayer("route")) {
+        mapRef.current.removeLayer("route");
+      }
+      if (mapRef.current?.getSource("route")) {
+        mapRef.current.removeSource("route");
+      }
+
       mapRef.current?.remove();
       mapRef.current = null;
     };
   }, []);
+
+  async function drawRouteToUser(targetLng, targetLat) {
+    if (!mapRef.current) return;
+
+    if (!coords?.lat || !coords?.lng) {
+      setError("Your current location is not available yet.");
+      return;
+    }
+
+    try {
+      const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+      const url =
+        `https://api.mapbox.com/directions/v5/mapbox/driving/` +
+        `${coords.lng},${coords.lat};${targetLng},${targetLat}` +
+        `?geometries=geojson&overview=full&access_token=${token}`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+
+      const route = data?.routes?.[0]?.geometry;
+      if (!route) {
+        setError("Could not generate route.");
+        return;
+      }
+
+      const routeGeoJSON = {
+        type: "Feature",
+        properties: {},
+        geometry: route,
+      };
+
+      if (mapRef.current.getSource("route")) {
+        mapRef.current.getSource("route").setData(routeGeoJSON);
+      } else {
+        mapRef.current.addSource("route", {
+          type: "geojson",
+          data: routeGeoJSON,
+        });
+
+        mapRef.current.addLayer({
+          id: "route",
+          type: "line",
+          source: "route",
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": "#38bdf8",
+            "line-width": 5,
+            "line-opacity": 0.9,
+          },
+        });
+      }
+
+      const bounds = new mapboxgl.LngLatBounds();
+      route.coordinates.forEach((coord) => bounds.extend(coord));
+      mapRef.current.fitBounds(bounds, { padding: 50 });
+    } catch (err) {
+      console.error("Route error:", err);
+      setError("Could not load route.");
+    }
+  }
+
+  function clearRoute() {
+    if (!mapRef.current) return;
+
+    if (mapRef.current.getLayer("route")) {
+      mapRef.current.removeLayer("route");
+    }
+
+    if (mapRef.current.getSource("route")) {
+      mapRef.current.removeSource("route");
+    }
+  }
 
   useEffect(() => {
     if (!email) return;
@@ -107,14 +190,51 @@ export default function EmergencyPage() {
           seen.add(id);
 
           if (!otherMarkersRef.current[id]) {
-            otherMarkersRef.current[id] = new mapboxgl.Marker({ color: "#3b82f6" })
+            const popupHtml = `
+              <div style="color:black; min-width:160px;">
+                <strong>${user.userName || "Rider"}</strong><br/>
+                <span>${user.userEmail || ""}</span><br/><br/>
+                <button
+                  type="button"
+                  class="route-btn"
+                  data-lng="${user.lng}"
+                  data-lat="${user.lat}"
+                  style="
+                    background:#2563eb;
+                    color:white;
+                    border:none;
+                    border-radius:6px;
+                    padding:8px 10px;
+                    cursor:pointer;
+                    font-weight:bold;
+                  "
+                >
+                  Route to rider
+                </button>
+              </div>
+            `;
+
+            const popup = new mapboxgl.Popup().setHTML(popupHtml);
+
+            const marker = new mapboxgl.Marker({ color: "#3b82f6" })
               .setLngLat([user.lng, user.lat])
-              .setPopup(
-                new mapboxgl.Popup().setHTML(
-                  `<strong>${user.userName || "Rider"}</strong><br/>${user.userEmail || ""}`
-                )
-              )
+              .setPopup(popup)
               .addTo(mapRef.current);
+
+            popup.on("open", () => {
+              setTimeout(() => {
+                const btn = document.querySelector(".route-btn");
+                if (!btn) return;
+
+                btn.onclick = () => {
+                  const lng = Number(btn.getAttribute("data-lng"));
+                  const lat = Number(btn.getAttribute("data-lat"));
+                  drawRouteToUser(lng, lat);
+                };
+              }, 0);
+            });
+
+            otherMarkersRef.current[id] = marker;
           } else {
             otherMarkersRef.current[id].setLngLat([user.lng, user.lat]);
           }
@@ -135,7 +255,7 @@ export default function EmergencyPage() {
     const interval = setInterval(fetchEmergencies, 5000);
 
     return () => clearInterval(interval);
-  }, [email]);
+  }, [email, coords]);
 
   async function loadConversations() {
     if (!email) return;
@@ -270,7 +390,7 @@ export default function EmergencyPage() {
               .setLngLat([lng, lat])
               .setPopup(
                 new mapboxgl.Popup().setHTML(
-                  `<strong>${fullName || "You"}</strong><br/>Your emergency location`
+                  `<div style="color:black;"><strong>${fullName || "You"}</strong><br/>Your emergency location</div>`
                 )
               )
               .addTo(mapRef.current);
@@ -279,9 +399,9 @@ export default function EmergencyPage() {
           }
 
           if (!hasCenteredRef.current) {
-  mapRef.current.flyTo({ center: [lng, lat], zoom: 15 });
-  hasCenteredRef.current = true;
-}
+            mapRef.current.flyTo({ center: [lng, lat], zoom: 15 });
+            hasCenteredRef.current = true;
+          }
         }
 
         const res = await fetch("/api/emergency", {
@@ -363,22 +483,39 @@ export default function EmergencyPage() {
 
         {error && <p style={{ color: "#ffb4b4", margin: 0 }}>{error}</p>}
 
-        <button
-          onClick={handleEmergency}
-          style={{
-            padding: "15px 25px",
-            borderRadius: "10px",
-            border: "none",
-            backgroundColor: "#e74c3c",
-            color: "#fff",
-            fontSize: "1.1rem",
-            fontWeight: "bold",
-            cursor: "pointer",
-            marginTop: "4px",
-          }}
-        >
-          Call for Help
-        </button>
+        <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+          <button
+            onClick={handleEmergency}
+            style={{
+              padding: "15px 25px",
+              borderRadius: "10px",
+              border: "none",
+              backgroundColor: "#e74c3c",
+              color: "#fff",
+              fontSize: "1.1rem",
+              fontWeight: "bold",
+              cursor: "pointer",
+            }}
+          >
+            Call for Help
+          </button>
+
+          <button
+            onClick={clearRoute}
+            style={{
+              padding: "15px 25px",
+              borderRadius: "10px",
+              border: "none",
+              backgroundColor: "#2563eb",
+              color: "#fff",
+              fontSize: "1rem",
+              fontWeight: "bold",
+              cursor: "pointer",
+            }}
+          >
+            Clear Route
+          </button>
+        </div>
 
         {emergencyCalled && (
           <div
