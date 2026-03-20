@@ -15,6 +15,7 @@ import {
   Divider,
   Alert,
 } from "@mui/material";
+
 export default function ProfilePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -33,6 +34,7 @@ export default function ProfilePage() {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
   useEffect(() => {
     if (status === "loading") return;
 
@@ -41,8 +43,13 @@ export default function ProfilePage() {
       return;
     }
 
-    setEmail(session?.user?.email || "");
-    setFullName(session?.user?.name || "");
+    const sessionName = session?.user?.name || "";
+    const sessionEmail = session?.user?.email || "";
+
+    setFullName(sessionName);
+    setEmail(sessionEmail);
+
+    setEditName(sessionName);
   }, [status, session, router]);
 
   useEffect(() => {
@@ -50,13 +57,14 @@ export default function ProfilePage() {
 
     (async () => {
       try {
-        setError("");
         const res = await fetch("/api/profile", {
-          headers: { "x-user-email": email },
+          headers: {
+            "x-user-email": email,
+          },
           cache: "no-store",
         });
 
-        const data = await res.json().catch(() => ({}));
+        const data = await res.json();
 
         if (!res.ok) {
           setError(data?.error || "Failed to load profile");
@@ -70,8 +78,6 @@ export default function ProfilePage() {
         setEditName(data.fullName || session?.user?.name || "");
         setEditMotorbike(data.motorbike || "");
         setEditPhone(data.phone || "");
-        setEditPassword("");
-        setConfirmPassword("");
       } catch (err) {
         setError("Server error loading profile");
       }
@@ -152,7 +158,7 @@ export default function ProfilePage() {
       }),
     });
 
-    const data = await res.json().catch(() => ({}));
+    const data = await res.json();
 
     if (!res.ok) {
       setError(data?.error || "Update failed");
@@ -168,6 +174,7 @@ export default function ProfilePage() {
     setConfirmPassword("");
     setSuccess("Profile updated successfully.");
   };
+
   const maskedPassword = "••••••••••••";
 
   const shownEmail = email || "Not set yet";
@@ -179,14 +186,13 @@ export default function ProfilePage() {
       <Box
         sx={{
           minHeight: "100vh",
+          p: 3,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          bgcolor: "#111",
-          color: "#fff",
         }}
       >
-        Loading...
+        <Typography>Loading...</Typography>
       </Box>
     );
   }
