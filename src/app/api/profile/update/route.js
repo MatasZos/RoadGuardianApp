@@ -1,51 +1,31 @@
 import clientPromise from "../../../../lib/mongodb";
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-
-function cleanString(value) {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed ? trimmed : null;
-}
 
 export async function POST(req) {
   try {
     const body = await req.json();
+    const { email, fullName, password, motorbike, phone } = body; 
 
-    const email = cleanString(body.email)?.toLowerCase();
-    const fullName = cleanString(body.fullName);
-    const motorbike = cleanString(body.motorbike);
-    const phone = cleanString(body.phone);
-    const password = cleanString(body.password);
-
-    if (!email) {
+    if (!email || typeof email !== "string") {
       return NextResponse.json({ error: "Missing email" }, { status: 400 });
     }
 
     const updateDoc = {};
 
-    if (fullName) {
-      updateDoc.fullName = fullName;
+    if (typeof fullName === "string" && fullName.trim()) {
+      updateDoc.fullName = fullName.trim();
     }
 
-    if (motorbike) {
-      updateDoc.motorbike = motorbike;
+    if (typeof motorbike === "string" && motorbike.trim()) {
+      updateDoc.motorbike = motorbike.trim();
     }
 
-    if (phone) {
-      updateDoc.phone = phone;
+    if (typeof phone === "string" && phone.trim()) {
+      updateDoc.phone = phone.trim();
     }
 
-    if (password) {
-      if (password.length < 6) {
-        return NextResponse.json(
-          { error: "Password must be at least 6 characters" },
-          { status: 400 }
-        );
-      }
-
-      const saltRounds = 10;
-      updateDoc.passwordHash = await bcrypt.hash(password, saltRounds);
+    if (typeof password === "string" && password.trim().length >= 6) {
+      updateDoc.password = password;
     }
 
     if (Object.keys(updateDoc).length === 0) {
@@ -57,7 +37,7 @@ export async function POST(req) {
     const userCollection = db.collection("user");
 
     const result = await userCollection.updateOne(
-      { email },
+      { email: email.trim() },
       { $set: updateDoc }
     );
 
@@ -65,15 +45,7 @@ export async function POST(req) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json({
-      message: "Profile updated",
-      updated: {
-        fullName: updateDoc.fullName || undefined,
-        motorbike: updateDoc.motorbike || undefined,
-        phone: updateDoc.phone || undefined,
-        passwordChanged: Boolean(updateDoc.passwordHash),
-      },
-    });
+    return NextResponse.json({ message: "Profile updated", updated: updateDoc });
   } catch (err) {
     console.error("Profile update error:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

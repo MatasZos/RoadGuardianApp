@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
 import Navbar from "../components/Navbar";
 import {
   Box,
@@ -18,48 +17,48 @@ import {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [motorbike, setMotorbike] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(""); 
 
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [editMotorbike, setEditMotorbike] = useState("");
-  const [editPhone, setEditPhone] = useState("");
+  const [editPhone, setEditPhone] = useState(""); 
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    if (status === "loading") return;
+    const nameLS = localStorage.getItem("userFullName");
+    const emailLS = localStorage.getItem("userEmail") || "";
+    const phoneLS = localStorage.getItem("userPhone") || ""; 
 
-    if (status === "unauthenticated") {
+    if (!nameLS || !emailLS) {
       router.push("/login");
       return;
     }
 
-    const sessionName = session?.user?.name || "";
-    const sessionEmail = session?.user?.email || "";
+    setFullName(nameLS);
+    setEmail(emailLS);
 
-    setFullName(sessionName);
-    setEmail(sessionEmail);
+    setPhone(phoneLS); 
 
-    setEditName(sessionName);
-  }, [status, session, router]);
-
-  useEffect(() => {
-    if (!email) return;
+    setEditName(nameLS);
+    setEditPassword("");
+    setConfirmPassword("");
+    setEditPhone(phoneLS); 
 
     (async () => {
       try {
         const res = await fetch("/api/profile", {
           headers: {
-            "x-user-email": email,
+            "x-user-email": emailLS,
           },
           cache: "no-store",
         });
@@ -71,21 +70,32 @@ export default function ProfilePage() {
           return;
         }
 
-        setFullName(data.fullName || session?.user?.name || "");
+        setFullName(data.fullName || "");
+        setPassword(data.password || "");
         setMotorbike(data.motorbike || "");
-        setPhone(data.phone || "");
+        setPhone(data.phone || ""); 
 
-        setEditName(data.fullName || session?.user?.name || "");
+        localStorage.setItem("userFullName", data.fullName || "");
+        localStorage.setItem("userPassword", data.password || "");
+        localStorage.setItem("userMotorbike", data.motorbike || "");
+        localStorage.setItem("userPhone", data.phone || ""); 
+
+        setEditName(data.fullName || "");
         setEditMotorbike(data.motorbike || "");
-        setEditPhone(data.phone || "");
+        setEditPhone(data.phone || ""); 
       } catch (err) {
         setError("Server error loading profile");
       }
     })();
-  }, [email, session]);
+  }, [router]);
 
-  const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/login" });
+  const handleSignOut = () => {
+    localStorage.removeItem("userFullName");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userPassword");
+    localStorage.removeItem("userMotorbike");
+    localStorage.removeItem("userPhone"); 
+    router.push("/login");
   };
 
   const startEditing = () => {
@@ -96,7 +106,7 @@ export default function ProfilePage() {
     setEditPassword("");
     setConfirmPassword("");
     setEditMotorbike(motorbike);
-    setEditPhone(phone);
+    setEditPhone(phone); 
   };
 
   const cancelEditing = () => {
@@ -107,7 +117,7 @@ export default function ProfilePage() {
     setEditPassword("");
     setConfirmPassword("");
     setEditMotorbike(motorbike);
-    setEditPhone(phone);
+    setEditPhone(phone); 
   };
 
   const handleSave = async () => {
@@ -126,7 +136,7 @@ export default function ProfilePage() {
       return;
     }
 
-    const trimmedPhone = editPhone.trim();
+    const trimmedPhone = editPhone.trim(); 
     if (!trimmedPhone) {
       setError("Phone number cannot be empty.");
       return;
@@ -153,7 +163,7 @@ export default function ProfilePage() {
         email,
         fullName: trimmedName,
         motorbike: trimmedBike,
-        phone: trimmedPhone,
+        phone: trimmedPhone, 
         password: wantsPasswordChange ? editPassword : "",
       }),
     });
@@ -165,9 +175,18 @@ export default function ProfilePage() {
       return;
     }
 
+    localStorage.setItem("userFullName", trimmedName);
+    localStorage.setItem("userMotorbike", trimmedBike);
+    localStorage.setItem("userPhone", trimmedPhone); 
+
     setFullName(trimmedName);
     setMotorbike(trimmedBike);
-    setPhone(trimmedPhone);
+    setPhone(trimmedPhone); 
+
+    if (wantsPasswordChange) {
+      localStorage.setItem("userPassword", editPassword);
+      setPassword(editPassword);
+    }
 
     setIsEditing(false);
     setEditPassword("");
@@ -175,27 +194,13 @@ export default function ProfilePage() {
     setSuccess("Profile updated successfully.");
   };
 
-  const maskedPassword = "••••••••••••";
+  const maskedPassword = password
+    ? "•".repeat(Math.min(password.length, 12))
+    : "";
 
   const shownEmail = email || "Not set yet";
   const shownBike = motorbike || "Not set yet";
-  const shownPhone = phone || "Not set yet";
-
-  if (status === "loading") {
-    return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          p: 3,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Typography>Loading...</Typography>
-      </Box>
-    );
-  }
+  const shownPhone = phone || "Not set yet"; 
 
   return (
     <Box sx={{ minHeight: "100vh", p: 3 }}>
@@ -260,7 +265,7 @@ export default function ProfilePage() {
                     size="small"
                     value={editPhone}
                     onChange={(e) => setEditPhone(e.target.value)}
-                    placeholder="e.g. 08XXXXXXXX"
+                    placeholder="e.g. +353 87 123 4567"
                   />
                 )}
               </Box>
