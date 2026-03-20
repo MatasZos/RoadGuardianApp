@@ -1,6 +1,6 @@
 import clientPromise from "../../../lib/mongodb";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
 export async function POST(req) {
@@ -14,7 +14,10 @@ export async function POST(req) {
     const { lat, lng } = await req.json();
 
     if (typeof lat !== "number" || typeof lng !== "number") {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing or invalid coordinates" },
+        { status: 400 }
+      );
     }
 
     const client = await clientPromise;
@@ -22,20 +25,23 @@ export async function POST(req) {
     const emergencies = db.collection("emergencies");
 
     await emergencies.updateOne(
-  { userEmail: session.user.email },
-  {
-    $set: {
-      userId: session.user.id,
-      userEmail: session.user.email,
-      userName: session.user.name || "User",
-      lat,
-      lng,
-      status: "DISPATCHED",
-      createdAt: new Date(),
-    },
-  },
-  { upsert: true }
-);
+      { userEmail: session.user.email },
+      {
+        $set: {
+          userId: session.user.id,
+          userEmail: session.user.email,
+          userName: session.user.name || "User",
+          lat,
+          lng,
+          status: "DISPATCHED",
+          updatedAt: new Date(),
+        },
+        $setOnInsert: {
+          createdAt: new Date(),
+        },
+      },
+      { upsert: true }
+    );
 
     return NextResponse.json({ message: "Emergency saved" }, { status: 200 });
   } catch (e) {
@@ -53,8 +59,8 @@ export async function GET() {
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
 
     const active = await emergencies
-      .find({ createdAt: { $gte: thirtyMinutesAgo } })
-      .sort({ createdAt: -1 })
+      .find({ updatedAt: { $gte: thirtyMinutesAgo } })
+      .sort({ updatedAt: -1 })
       .toArray();
 
     return NextResponse.json({ emergencies: active }, { status: 200 });
