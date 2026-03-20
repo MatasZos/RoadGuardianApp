@@ -46,9 +46,6 @@ export default function Navbar() {
           <div style={styles.item} onClick={() => router.push("/profile")}>
             My Profile
           </div>
-          <div style={styles.item} onClick={() => router.push("/messages")}>
-            Messages
-          </div>
           <div style={styles.item}>My Bike</div>
           <div style={styles.item}>Settings</div>
           <div style={styles.item}>Support</div>
