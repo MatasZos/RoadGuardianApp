@@ -29,6 +29,7 @@ export default function EmergencyPage() {
   const markerRef = useRef(null);
   const otherMarkersRef = useRef({});
   const watchIdRef = useRef(null);
+  const hasCenteredRef = useRef(false);
 
   const email = session?.user?.email || null;
 
@@ -277,7 +278,10 @@ export default function EmergencyPage() {
             markerRef.current.setLngLat([lng, lat]);
           }
 
-          mapRef.current.flyTo({ center: [lng, lat], zoom: 15 });
+          if (!hasCenteredRef.current) {
+  mapRef.current.flyTo({ center: [lng, lat], zoom: 15 });
+  hasCenteredRef.current = true;
+}
         }
 
         const res = await fetch("/api/emergency", {
