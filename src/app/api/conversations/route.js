@@ -7,6 +7,13 @@ function cleanString(value) {
   return trimmed ? trimmed : null;
 }
 
+function serializeConversation(doc) {
+  return {
+    ...doc,
+    _id: String(doc._id),
+  };
+}
+
 export async function GET(req) {
   try {
     const email = cleanString(req.headers.get("x-user-email"))?.toLowerCase();
@@ -24,7 +31,7 @@ export async function GET(req) {
       .sort({ updatedAt: -1, _id: -1 })
       .toArray();
 
-    return NextResponse.json(items);
+    return NextResponse.json(items.map(serializeConversation));
   } catch (err) {
     console.error("CONVERSATIONS GET ERROR:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -38,9 +45,16 @@ export async function POST(req) {
     const userEmail = cleanString(body.userEmail)?.toLowerCase();
     const otherUserEmail = cleanString(body.otherUserEmail)?.toLowerCase();
 
-    if (!userEmail || !otherUserEmail) {
+    if (!userEmail) {
       return NextResponse.json(
-        { error: "Missing users" },
+        { error: "Missing logged-in user email" },
+        { status: 400 }
+      );
+    }
+
+    if (!otherUserEmail) {
+      return NextResponse.json(
+        { error: "Missing target email" },
         { status: 400 }
       );
     }
@@ -72,7 +86,7 @@ export async function POST(req) {
       conversation = { ...doc, _id: result.insertedId };
     }
 
-    return NextResponse.json(conversation);
+    return NextResponse.json(serializeConversation(conversation));
   } catch (err) {
     console.error("CONVERSATIONS POST ERROR:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
