@@ -1107,4 +1107,4 @@ const styles = {
     cursor: "pointer",
     fontWeight: "700",
   },
-};.
+};
