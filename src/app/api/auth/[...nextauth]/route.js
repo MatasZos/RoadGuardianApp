@@ -1,25 +1,6 @@
-import { NextResponse } from "next/server";
-import Ably from "ably";
-import { getServerSession } from "next-auth";
+import NextAuth from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function GET() {
-  try {
-    const session = await getServerSession(authOptions);
+const handler = NextAuth(authOptions);
 
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const client = new Ably.Rest(process.env.ABLY_API_KEY);
-
-    const tokenRequest = await client.auth.createTokenRequest({
-      clientId: session.user.email,
-    });
-
-    return NextResponse.json(tokenRequest);
-  } catch (err) {
-    console.error("ABLY AUTH ERROR:", err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
-  }
-}
+export { handler as GET, handler as POST };
