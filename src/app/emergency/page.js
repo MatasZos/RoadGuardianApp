@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import Navbar from "../components/Navbar";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { getAblyClient } from "../../lib/ablyClient";
 
 export default function EmergencyPage() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function EmergencyPage() {
   const [chatText, setChatText] = useState("");
   const [newChatEmail, setNewChatEmail] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState("");
 
   const [followMode, setFollowMode] = useState(true);
 
@@ -34,6 +36,12 @@ export default function EmergencyPage() {
   const hasCenteredRef = useRef(false);
   const lastCoordsRef = useRef(null);
   const followModeRef = useRef(true);
+
+  const ablyRef = useRef(null);
+  const userChannelRef = useRef(null);
+  const conversationChannelRef = useRef(null);
+  const userSubscriptionRef = useRef(null);
+  const conversationSubscriptionRef = useRef(null);
 
   const email = session?.user?.email || null;
 
@@ -403,20 +411,73 @@ export default function EmergencyPage() {
   }
 
   useEffect(() => {
+    if (!email) return;
+
+    const ably = getAblyClient();
+    ablyRef.current = ably;
+
+    const userChannel = ably.channels.get(`user:${email}`);
+    userChannelRef.current = userChannel;
+
+    const handler = async (message) => {
+      if (message?.name === "conversation-updated" || message?.name === "new-conversation") {
+        await loadConversations();
+      }
+    };
+
+    userSubscriptionRef.current = handler;
+    userChannel.subscribe(handler);
+
+    return () => {
+      if (userSubscriptionRef.current) {
+        userChannel.unsubscribe(userSubscriptionRef.current);
+      }
+    };
+  }, [email]);
+
+  useEffect(() => {
+    if (!selectedConversation?._id || !email) return;
+
+    const ably = ablyRef.current || getAblyClient();
+    const channelName = `conversation:${selectedConversation._id}`;
+    const conversationChannel = ably.channels.get(channelName);
+    conversationChannelRef.current = conversationChannel;
+
+    const handler = async (message) => {
+      if (message?.name === "new-message") {
+        await loadMessages(selectedConversation._id);
+        await loadConversations();
+      }
+    };
+
+    conversationSubscriptionRef.current = handler;
+    conversationChannel.subscribe(handler);
+
+    return () => {
+      if (conversationSubscriptionRef.current) {
+        conversationChannel.unsubscribe(conversationSubscriptionRef.current);
+      }
+    };
+  }, [selectedConversation?._id, email]);
+
+  useEffect(() => {
     if (!chatOpen || !email) return;
     loadConversations();
   }, [chatOpen, email]);
 
   async function handleStartChat() {
+    setChatError("");
     const otherUserEmail = newChatEmail.trim().toLowerCase();
 
     if (!email) return;
+
     if (!otherUserEmail) {
-      alert("Enter an email address to start a chat.");
+      setChatError("Enter an email address to start a chat.");
       return;
     }
+
     if (otherUserEmail === email) {
-      alert("You cannot message yourself.");
+      setChatError("You cannot message yourself.");
       return;
     }
 
@@ -429,7 +490,7 @@ export default function EmergencyPage() {
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-      alert(data.error || "Could not start chat.");
+      setChatError(data.error || "Could not start chat.");
       return;
     }
 
@@ -437,11 +498,29 @@ export default function EmergencyPage() {
     setSelectedConversation(data);
     setNewChatEmail("");
     await loadMessages(String(data._id));
+
+    try {
+      const ably = ablyRef.current || getAblyClient();
+      const otherUserChannel = ably.channels.get(`user:${otherUserEmail}`);
+      const myUserChannel = ably.channels.get(`user:${email}`);
+
+      await otherUserChannel.publish("new-conversation", {
+        conversationId: String(data._id),
+        with: email,
+      });
+
+      await myUserChannel.publish("conversation-updated", {
+        conversationId: String(data._id),
+      });
+    } catch (err) {
+      console.error("ABLY start chat publish error:", err);
+    }
   }
 
   async function handleSelectConversation(conversation) {
     setSelectedConversation(conversation);
     await loadMessages(String(conversation._id));
+    setChatError("");
   }
 
   async function handleSendMessage() {
@@ -449,9 +528,13 @@ export default function EmergencyPage() {
     if (!text || !selectedConversation || !email) return;
 
     const otherUser = selectedConversation.participants.find((p) => p !== email);
-    if (!otherUser) return;
+    if (!otherUser) {
+      setChatError("Could not determine who to send this message to.");
+      return;
+    }
 
     setChatLoading(true);
+    setChatError("");
 
     const res = await fetch("/api/messages", {
       method: "POST",
@@ -468,13 +551,41 @@ export default function EmergencyPage() {
     setChatLoading(false);
 
     if (!res.ok) {
-      alert(data.error || "Could not send message.");
+      setChatError(data.error || "Could not send message.");
       return;
     }
 
     setChatText("");
     await loadConversations();
     await loadMessages(String(selectedConversation._id));
+
+    try {
+      const ably = ablyRef.current || getAblyClient();
+
+      const conversationChannel = ably.channels.get(
+        `conversation:${selectedConversation._id}`
+      );
+
+      const senderUserChannel = ably.channels.get(`user:${email}`);
+      const receiverUserChannel = ably.channels.get(`user:${otherUser}`);
+
+      await conversationChannel.publish("new-message", {
+        conversationId: String(selectedConversation._id),
+        senderEmail: email,
+        receiverEmail: otherUser,
+        text,
+      });
+
+      await senderUserChannel.publish("conversation-updated", {
+        conversationId: String(selectedConversation._id),
+      });
+
+      await receiverUserChannel.publish("conversation-updated", {
+        conversationId: String(selectedConversation._id),
+      });
+    } catch (err) {
+      console.error("ABLY send publish error:", err);
+    }
   }
 
   const handleEmergency = async () => {
@@ -589,50 +700,27 @@ export default function EmergencyPage() {
 
         {error && <p style={{ color: "#ffb4b4", margin: 0 }}>{error}</p>}
 
-        <div style={{ display: "flex", gap: "10px", marginTop: "4px", flexWrap: "wrap" }}>
-          <button
-            onClick={handleEmergency}
-            style={{
-              padding: "15px 25px",
-              borderRadius: "10px",
-              border: "none",
-              backgroundColor: "#e74c3c",
-              color: "#fff",
-              fontSize: "1.1rem",
-              fontWeight: "bold",
-              cursor: "pointer",
-            }}
-          >
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            marginTop: "4px",
+            flexWrap: "wrap",
+          }}
+        >
+          <button onClick={handleEmergency} style={styles.emergencyBtn}>
             Call for Help
           </button>
 
-          <button
-            onClick={clearRoute}
-            style={{
-              padding: "15px 25px",
-              borderRadius: "10px",
-              border: "none",
-              backgroundColor: "#2563eb",
-              color: "#fff",
-              fontSize: "1rem",
-              fontWeight: "bold",
-              cursor: "pointer",
-            }}
-          >
+          <button onClick={clearRoute} style={styles.secondaryBtn}>
             Clear Route
           </button>
 
           <button
             onClick={() => setFollowMode((prev) => !prev)}
             style={{
-              padding: "15px 25px",
-              borderRadius: "10px",
-              border: "none",
-              backgroundColor: followMode ? "#16a34a" : "#444",
-              color: "#fff",
-              fontSize: "1rem",
-              fontWeight: "bold",
-              cursor: "pointer",
+              ...styles.secondaryBtn,
+              background: followMode ? "#16a34a" : "#374151",
             }}
           >
             {followMode ? "Following You" : "Follow Off"}
@@ -640,19 +728,7 @@ export default function EmergencyPage() {
         </div>
 
         {emergencyCalled && (
-          <div
-            style={{
-              marginTop: "10px",
-              padding: "20px",
-              borderRadius: "12px",
-              boxShadow: "0 8px 20px rgba(0,0,0,0.5)",
-              backgroundColor: "#fff",
-              color: "#111",
-              width: "90%",
-              maxWidth: "400px",
-              textAlign: "center",
-            }}
-          >
+          <div style={styles.emergencyCard}>
             <h2 style={{ marginBottom: "10px", color: "#e74c3c" }}>
               Emergency Team Dispatched!
             </h2>
@@ -672,10 +748,7 @@ export default function EmergencyPage() {
         )}
       </div>
 
-      <button
-        onClick={() => setChatOpen((prev) => !prev)}
-        style={styles.chatButton}
-      >
+      <button onClick={() => setChatOpen((prev) => !prev)} style={styles.chatButton}>
         💬
       </button>
 
@@ -704,10 +777,12 @@ export default function EmergencyPage() {
           </button>
         </div>
 
+        {chatError && <div style={styles.chatError}>{chatError}</div>}
+
         <div style={styles.chatBody}>
           <div style={styles.chatList}>
             {conversations.length === 0 ? (
-              <p style={{ color: "#aaa", fontSize: "0.9rem" }}>
+              <p style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
                 No conversations yet
               </p>
             ) : (
@@ -720,17 +795,25 @@ export default function EmergencyPage() {
                     key={String(conv._id)}
                     style={{
                       ...styles.chatListItem,
-                      background:
-                        String(selectedConversation?._id) === String(conv._id)
-                          ? "#1f2937"
-                          : "#111",
+                      ...(String(selectedConversation?._id) === String(conv._id)
+                        ? styles.chatListItemActive
+                        : {}),
                     }}
                     onClick={() => handleSelectConversation(conv)}
                   >
-                    <div style={{ fontWeight: "bold", color: "#fff" }}>
+                    <div style={{ fontWeight: "700", color: "#fff" }}>
                       {otherUser}
                     </div>
-                    <div style={{ color: "#aaa", fontSize: "0.85rem" }}>
+                    <div
+                      style={{
+                        color: "#94a3b8",
+                        fontSize: "0.8rem",
+                        marginTop: "4px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
                       {conv.lastMessage || "No messages yet"}
                     </div>
                   </button>
@@ -746,7 +829,7 @@ export default function EmergencyPage() {
               <>
                 <div style={styles.messagesArea}>
                   {messages.length === 0 ? (
-                    <p style={{ color: "#aaa" }}>No messages yet</p>
+                    <p style={{ color: "#94a3b8" }}>No messages yet</p>
                   ) : (
                     messages.map((msg, i) => {
                       const isMine = msg.senderEmail === email;
@@ -755,12 +838,26 @@ export default function EmergencyPage() {
                         <div
                           key={i}
                           style={{
-                            ...styles.messageBubble,
-                            alignSelf: isMine ? "flex-end" : "flex-start",
-                            background: isMine ? "#2563eb" : "#1f2937",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: isMine ? "flex-end" : "flex-start",
+                            gap: "4px",
                           }}
                         >
-                          {msg.text}
+                          <div
+                            style={{
+                              ...styles.messageBubble,
+                              ...(isMine
+                                ? styles.myMessageBubble
+                                : styles.otherMessageBubble),
+                            }}
+                          >
+                            {msg.text}
+                          </div>
+
+                          <span style={styles.messageMeta}>
+                            {isMine ? "You" : msg.senderEmail}
+                          </span>
                         </div>
                       );
                     })
@@ -795,124 +892,219 @@ export default function EmergencyPage() {
 }
 
 const styles = {
+  emergencyBtn: {
+    padding: "15px 25px",
+    borderRadius: "10px",
+    border: "none",
+    backgroundColor: "#e74c3c",
+    color: "#fff",
+    fontSize: "1.1rem",
+    fontWeight: "bold",
+    cursor: "pointer",
+  },
+  secondaryBtn: {
+    padding: "15px 25px",
+    borderRadius: "10px",
+    border: "none",
+    backgroundColor: "#2563eb",
+    color: "#fff",
+    fontSize: "1rem",
+    fontWeight: "bold",
+    cursor: "pointer",
+  },
+  emergencyCard: {
+    marginTop: "10px",
+    padding: "20px",
+    borderRadius: "12px",
+    boxShadow: "0 8px 20px rgba(0,0,0,0.5)",
+    backgroundColor: "#fff",
+    color: "#111",
+    width: "90%",
+    maxWidth: "400px",
+    textAlign: "center",
+  },
+
   chatButton: {
     position: "fixed",
     right: "20px",
     bottom: "20px",
-    width: "56px",
-    height: "56px",
-    borderRadius: "50%",
-    border: "none",
-    background: "#2563eb",
+    width: "58px",
+    height: "58px",
+    borderRadius: "16px",
+    border: "1px solid rgba(255,255,255,0.08)",
+    background: "linear-gradient(180deg, #2563eb, #1d4ed8)",
     color: "#fff",
-    fontSize: "1.4rem",
+    fontSize: "1.35rem",
     cursor: "pointer",
-    boxShadow: "0 8px 20px rgba(0,0,0,0.4)",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
     zIndex: 200,
   },
+
   chatSidebar: {
     position: "fixed",
     top: "60px",
     right: 0,
-    width: "420px",
+    width: "430px",
     maxWidth: "100%",
     height: "calc(100vh - 60px)",
-    background: "#0b0b0b",
-    borderLeft: "1px solid #1e1e1e",
-    transition: "transform 0.25s ease",
+    background: "#0a0f18",
+    borderLeft: "1px solid rgba(255,255,255,0.06)",
+    transition: "transform 0.28s ease",
     zIndex: 199,
     display: "flex",
     flexDirection: "column",
+    boxShadow: "-12px 0 32px rgba(0,0,0,0.35)",
   },
+
   chatHeader: {
-    padding: "14px 16px",
-    borderBottom: "1px solid #1e1e1e",
+    padding: "16px 18px",
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     color: "#fff",
+    background: "#0d1320",
+    fontSize: "1rem",
+    fontWeight: "700",
   },
+
   closeBtn: {
     background: "transparent",
     border: "none",
-    color: "#fff",
+    color: "#cbd5e1",
     cursor: "pointer",
     fontSize: "1rem",
   },
+
   newChatBox: {
     padding: "12px",
-    borderBottom: "1px solid #1e1e1e",
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
     display: "flex",
     gap: "8px",
+    background: "#0b111b",
   },
+
+  chatError: {
+    padding: "10px 12px",
+    color: "#fca5a5",
+    background: "rgba(127,29,29,0.22)",
+    borderBottom: "1px solid rgba(255,255,255,0.04)",
+    fontSize: "0.85rem",
+  },
+
   chatBody: {
     display: "grid",
-    gridTemplateColumns: "150px 1fr",
+    gridTemplateColumns: "165px 1fr",
     flex: 1,
     minHeight: 0,
   },
+
   chatList: {
-    borderRight: "1px solid #1e1e1e",
+    borderRight: "1px solid rgba(255,255,255,0.06)",
     overflowY: "auto",
-    padding: "8px",
+    padding: "10px",
+    background: "#0a0f18",
   },
+
   chatListItem: {
     width: "100%",
     textAlign: "left",
-    padding: "10px",
-    borderRadius: "8px",
-    border: "1px solid #1e1e1e",
+    padding: "12px",
+    borderRadius: "12px",
+    border: "1px solid rgba(255,255,255,0.05)",
     marginBottom: "8px",
     cursor: "pointer",
+    background: "#0f1724",
+    transition: "0.2s ease",
   },
+
+  chatListItemActive: {
+    background: "#162033",
+    border: "1px solid rgba(59,130,246,0.35)",
+    boxShadow: "0 0 0 1px rgba(59,130,246,0.08) inset",
+  },
+
   chatPanel: {
     display: "flex",
     flexDirection: "column",
     minHeight: 0,
+    background: "#0b111b",
   },
+
   emptyChat: {
     flex: 1,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#aaa",
+    color: "#94a3b8",
+    fontSize: "0.95rem",
   },
+
   messagesArea: {
     flex: 1,
     overflowY: "auto",
-    padding: "12px",
+    padding: "16px",
     display: "flex",
     flexDirection: "column",
-    gap: "8px",
+    gap: "12px",
+    background:
+      "linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0))",
   },
+
   messageBubble: {
-    maxWidth: "80%",
-    padding: "10px 12px",
-    borderRadius: "12px",
+    maxWidth: "78%",
+    padding: "12px 14px",
+    borderRadius: "10px",
     color: "#fff",
     wordBreak: "break-word",
+    lineHeight: "1.4",
+    fontSize: "0.95rem",
+    border: "1px solid rgba(255,255,255,0.06)",
   },
+
+  myMessageBubble: {
+    background: "#1d4ed8",
+    borderTopRightRadius: "4px",
+    boxShadow: "0 6px 16px rgba(37,99,235,0.18)",
+  },
+
+  otherMessageBubble: {
+    background: "#151c28",
+    borderTopLeftRadius: "4px",
+    color: "#e5e7eb",
+  },
+
+  messageMeta: {
+    fontSize: "0.72rem",
+    color: "#94a3b8",
+    padding: "0 4px",
+  },
+
   messageInputRow: {
     padding: "12px",
-    borderTop: "1px solid #1e1e1e",
+    borderTop: "1px solid rgba(255,255,255,0.06)",
     display: "flex",
     gap: "8px",
+    background: "#0d1320",
   },
+
   chatInput: {
     flex: 1,
-    padding: "10px",
-    borderRadius: "8px",
-    border: "1px solid #1e1e1e",
-    background: "#111",
+    padding: "11px 12px",
+    borderRadius: "10px",
+    border: "1px solid rgba(255,255,255,0.08)",
+    background: "#111827",
     color: "#fff",
+    outline: "none",
   },
+
   startBtn: {
     padding: "10px 14px",
-    borderRadius: "8px",
-    border: "none",
-    background: "#2563eb",
+    borderRadius: "10px",
+    border: "1px solid rgba(255,255,255,0.06)",
+    background: "linear-gradient(180deg, #2563eb, #1d4ed8)",
     color: "#fff",
     cursor: "pointer",
-    fontWeight: "bold",
+    fontWeight: "700",
   },
-};
+};.
