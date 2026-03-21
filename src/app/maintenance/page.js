@@ -28,6 +28,187 @@ const serviceIntervals = {
   "Brake Disc Replacement": 30000,
 };
 
+const maintenanceTypes = [
+  "Oil Change",
+  "Oil Filter Replacement",
+  "Air Filter Replacement",
+  "Chain Clean & Lube",
+  "Chain Adjustment",
+  "Chain & Sprocket Kit Replacement",
+  "Brake Pads Replacement",
+  "Brake Fluid Change",
+  "Tire Replacement",
+  "Tire Pressure Check",
+  "Spark Plug Replacement",
+  "Battery Replacement",
+  "Clutch Cable Adjustment",
+  "Throttle Cable Adjustment",
+  "Fuel Filter Replacement",
+  "Suspension Service",
+  "Wheel Bearings Check",
+  "Headlight Bulb Replacement",
+  "Indicator Bulb Replacement",
+  "Brake Disc Replacement",
+];
+
+function safeDate(value) {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatDisplayDate(value) {
+  const d = safeDate(value);
+  if (!d) return String(value || "");
+  return d.toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function monthYearLabel(value) {
+  const d = safeDate(value);
+  if (!d) return "Unknown date";
+  return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+}
+
+function groupByMonth(recs) {
+  const groups = {};
+  for (const r of recs) {
+    const key = monthYearLabel(r.date || r.createdAt);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(r);
+  }
+  return groups;
+}
+
+function getTaskStatus(remainingKm) {
+  if (!Number.isFinite(remainingKm)) {
+    return { label: "Unknown", color: "#94a3b8" };
+  }
+  if (remainingKm < 0) {
+    return { label: "Overdue", color: "#ef4444" };
+  }
+  if (remainingKm <= 500) {
+    return { label: "Urgent", color: "#dc2626" };
+  }
+  if (remainingKm <= 1500) {
+    return { label: "Due soon", color: "#f59e0b" };
+  }
+  return { label: "Healthy", color: "#22c55e" };
+}
+
+function getPreviewFromForm(types, km) {
+  const numericKm = Number(km);
+  if (!Array.isArray(types) || types.length === 0 || !Number.isFinite(numericKm)) {
+    return [];
+  }
+
+  return types
+    .map((type) => {
+      const intervalKm = serviceIntervals[type];
+      if (!Number.isFinite(intervalKm)) return null;
+      return {
+        type,
+        intervalKm,
+        nextDueKm: numericKm + intervalKm,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.nextDueKm - b.nextDueKm);
+}
+
+function buildBikeTaskSummary(records) {
+  const bikes = {};
+
+  for (const record of records) {
+    const bike = record.motorbike || "Unknown bike";
+    const km = Number(record.km);
+
+    if (!bikes[bike]) {
+      bikes[bike] = {
+        bike,
+        currentKm: Number.isFinite(km) ? km : 0,
+        tasks: {},
+        records: [],
+      };
+    }
+
+    bikes[bike].records.push(record);
+
+    if (Number.isFinite(km) && km > bikes[bike].currentKm) {
+      bikes[bike].currentKm = km;
+    }
+
+    const taskList = Array.isArray(record.type) ? record.type : [];
+    for (const task of taskList) {
+      const existing = bikes[bike].tasks[task];
+
+      const recordDate = safeDate(record.date || record.createdAt);
+      const existingDate = existing ? safeDate(existing.date || existing.createdAt) : null;
+
+      const shouldReplace =
+        !existing ||
+        (Number.isFinite(km) && Number(record.km) > Number(existing.km)) ||
+        (recordDate && existingDate && recordDate > existingDate);
+
+      if (shouldReplace) {
+        bikes[bike].tasks[task] = {
+          type: task,
+          motorbike: bike,
+          lastServiceKm: km,
+          date: record.date,
+          notes: record.notes || "",
+          advisories: record.advisories || "",
+          intervalKm: serviceIntervals[task] || null,
+          sourceRecordId: record._id,
+          createdAt: record.createdAt,
+        };
+      }
+    }
+  }
+
+  return Object.values(bikes).map((bikeData) => {
+    const taskItems = Object.values(bikeData.tasks)
+      .map((task) => {
+        const nextDueKm = Number.isFinite(task.lastServiceKm) && Number.isFinite(task.intervalKm)
+          ? task.lastServiceKm + task.intervalKm
+          : null;
+
+        const remainingKm =
+          Number.isFinite(nextDueKm) && Number.isFinite(bikeData.currentKm)
+            ? nextDueKm - bikeData.currentKm
+            : null;
+
+        return {
+          ...task,
+          nextDueKm,
+          currentBikeKm: bikeData.currentKm,
+          remainingKm,
+          status: getTaskStatus(remainingKm),
+        };
+      })
+      .sort((a, b) => {
+        const aVal = Number.isFinite(a.nextDueKm) ? a.nextDueKm : Number.MAX_SAFE_INTEGER;
+        const bVal = Number.isFinite(b.nextDueKm) ? b.nextDueKm : Number.MAX_SAFE_INTEGER;
+        return aVal - bVal;
+      });
+
+    return {
+      bike: bikeData.bike,
+      currentKm: bikeData.currentKm,
+      tasks: taskItems,
+      overdue: taskItems.filter((t) => Number.isFinite(t.remainingKm) && t.remainingKm < 0),
+      dueSoon: taskItems.filter(
+        (t) => Number.isFinite(t.remainingKm) && t.remainingKm >= 0 && t.remainingKm <= 1500
+      ),
+      upcoming: taskItems.filter(
+        (t) => Number.isFinite(t.remainingKm) && t.remainingKm > 1500
+      ),
+    };
+  });
+}
+
 export default function MaintenancePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -54,117 +235,20 @@ export default function MaintenancePage() {
   const [bikeLoading, setBikeLoading] = useState(false);
   const [selectedBike, setSelectedBike] = useState("");
 
-  function safeDate(value) {
-    const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? null : d;
-  }
-
-  function formatDisplayDate(value) {
-    const d = safeDate(value);
-    if (!d) return String(value || "");
-    return d.toLocaleDateString(undefined, {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  }
-
-  function monthYearLabel(value) {
-    const d = safeDate(value);
-    if (!d) return "Unknown date";
-    return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
-  }
-
-  function groupByMonth(recs) {
-    const groups = {};
-    for (const r of recs) {
-      const key = monthYearLabel(r.date || r.createdAt);
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(r);
-    }
-    return groups;
-  }
-
-  function getStatusFromRemaining(remainingKm) {
-    if (remainingKm == null) return { label: "Unknown", color: "#94a3b8" };
-    if (remainingKm < 0) return { label: "Overdue", color: "#ef4444" };
-    if (remainingKm <= 1000) return { label: "Due soon", color: "#f59e0b" };
-    return { label: "Healthy", color: "#22c55e" };
-  }
-
-  function getNextServicePreview(types, km) {
-    const intervals = (Array.isArray(types) ? types : [])
-      .map((type) => ({
-        type,
-        intervalKm: serviceIntervals[type] || null,
-      }))
-      .filter((item) => typeof item.intervalKm === "number");
-
-    if (!intervals.length || !Number.isFinite(Number(km))) {
-      return {
-        serviceIntervalKm: null,
-        nextDueKm: null,
-        nextServiceType: "",
-      };
-    }
-
-    const soonest = intervals.reduce((lowest, current) =>
-      current.intervalKm < lowest.intervalKm ? current : lowest
-    );
-
-    return {
-      serviceIntervalKm: soonest.intervalKm,
-      nextDueKm: Number(km) + soonest.intervalKm,
-      nextServiceType: soonest.type,
-    };
-  }
-
   const grouped = groupByMonth(records);
   const monthSections = Object.entries(grouped);
 
-  const preview = useMemo(
-    () => getNextServicePreview(form.type, form.km),
+  const previewList = useMemo(
+    () => getPreviewFromForm(form.type, form.km),
     [form.type, form.km]
   );
 
-  const latestByType = useMemo(() => {
-    const map = {};
-    for (const record of records) {
-      const types = Array.isArray(record.type) ? record.type : [];
-      for (const type of types) {
-        if (!map[type]) map[type] = record;
-      }
-    }
-    return map;
-  }, [records]);
+  const bikeSummaries = useMemo(() => buildBikeTaskSummary(records), [records]);
 
-  const nextServices = useMemo(() => {
-    const items = Object.entries(latestByType)
-      .map(([type, record]) => {
-        const intervalKm = serviceIntervals[type];
-        const baseKm = Number(record.km);
-
-        if (!Number.isFinite(intervalKm) || !Number.isFinite(baseKm)) return null;
-
-        const nextDueKm = baseKm + intervalKm;
-        const remainingKm = nextDueKm - baseKm;
-        return {
-          type,
-          motorbike: record.motorbike || "",
-          lastServiceKm: baseKm,
-          nextDueKm,
-          remainingFromLastService: remainingKm,
-          advisories: record.advisories || "",
-          date: record.date,
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.nextDueKm - b.nextDueKm);
-
-    return items;
-  }, [latestByType]);
-
-  const topNextService = nextServices[0] || null;
+  const selectedBikeSummary = useMemo(() => {
+    if (!selectedBike) return null;
+    return bikeSummaries.find((b) => b.bike === selectedBike) || null;
+  }, [bikeSummaries, selectedBike]);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -182,6 +266,22 @@ export default function MaintenancePage() {
       date: prev.date || new Date().toISOString().slice(0, 10),
     }));
   }, []);
+
+  async function fetchRecords() {
+    if (!email) return;
+
+    const res = await fetch("/api/maintenance", {
+      headers: { "x-user-email": email },
+      cache: "no-store",
+    });
+
+    const data = await res.json();
+    setRecords(Array.isArray(data) ? data : []);
+  }
+
+  useEffect(() => {
+    fetchRecords();
+  }, [email]);
 
   async function handleBikeSearch() {
     setBikeResults([]);
@@ -228,45 +328,6 @@ export default function MaintenancePage() {
     setBikeResults([]);
   }
 
-  const maintenanceTypes = [
-    "Oil Change",
-    "Oil Filter Replacement",
-    "Air Filter Replacement",
-    "Chain Clean & Lube",
-    "Chain Adjustment",
-    "Chain & Sprocket Kit Replacement",
-    "Brake Pads Replacement",
-    "Brake Fluid Change",
-    "Tire Replacement",
-    "Tire Pressure Check",
-    "Spark Plug Replacement",
-    "Battery Replacement",
-    "Clutch Cable Adjustment",
-    "Throttle Cable Adjustment",
-    "Fuel Filter Replacement",
-    "Suspension Service",
-    "Wheel Bearings Check",
-    "Headlight Bulb Replacement",
-    "Indicator Bulb Replacement",
-    "Brake Disc Replacement",
-  ];
-
-  useEffect(() => {
-    if (!email) return;
-
-    async function fetchRecords() {
-      const res = await fetch("/api/maintenance", {
-        headers: { "x-user-email": email },
-        cache: "no-store",
-      });
-
-      const data = await res.json();
-      setRecords(Array.isArray(data) ? data : []);
-    }
-
-    fetchRecords();
-  }, [email]);
-
   function toggleTask(task) {
     setForm((prev) => {
       const exists = prev.type.includes(task);
@@ -310,12 +371,7 @@ export default function MaintenancePage() {
     });
     setEditingId(null);
 
-    const res = await fetch("/api/maintenance", {
-      headers: { "x-user-email": email },
-      cache: "no-store",
-    });
-    const data = await res.json();
-    setRecords(Array.isArray(data) ? data : []);
+    await fetchRecords();
   }
 
   function startEdit(record) {
@@ -337,7 +393,7 @@ export default function MaintenancePage() {
       body: JSON.stringify({ _id: id }),
     });
 
-    setRecords(records.filter((r) => r._id !== id));
+    setRecords((prev) => prev.filter((r) => r._id !== id));
   }
 
   if (status === "loading") {
@@ -364,55 +420,118 @@ export default function MaintenancePage() {
       <div style={styles.container}>
         <h1 style={styles.title}>Maintenance Records</h1>
 
-        <div style={styles.summaryGrid}>
-          <div style={styles.summaryCard}>
-            <h2 style={styles.summaryTitle}>Next Service Estimate</h2>
-            {!topNextService ? (
-              <p style={styles.summaryMuted}>No service estimate yet</p>
-            ) : (
-              <>
-                <p style={styles.summaryMain}>
-                  <strong>{topNextService.type}</strong>
+        {selectedBikeSummary && (
+          <div style={styles.statusBoard}>
+            <div style={styles.statusBoardHeader}>
+              <div>
+                <h2 style={styles.statusBoardTitle}>Bike Service Intelligence</h2>
+                <p style={styles.statusBoardSubtitle}>
+                  {selectedBikeSummary.bike} · Estimated current km:{" "}
+                  <strong>{selectedBikeSummary.currentKm.toLocaleString()}</strong>
                 </p>
-                <p style={styles.summaryText}>
-                  <strong>Bike:</strong> {topNextService.motorbike || "Not set"}
-                </p>
-                <p style={styles.summaryText}>
-                  <strong>Next due:</strong> {topNextService.nextDueKm.toLocaleString()} km
-                </p>
-                <p style={styles.summaryText}>
-                  <strong>Last service:</strong> {topNextService.lastServiceKm.toLocaleString()} km
-                </p>
-                {topNextService.advisories && (
-                  <p style={styles.summaryAdvisory}>
-                    <strong>Advisories:</strong> {topNextService.advisories}
-                  </p>
-                )}
-              </>
-            )}
-          </div>
+              </div>
+            </div>
 
-          <div style={styles.summaryCard}>
-            <h2 style={styles.summaryTitle}>Current Entry Preview</h2>
-            {preview.nextDueKm ? (
-              <>
-                <p style={styles.summaryMain}>
-                  <strong>{preview.nextServiceType}</strong>
-                </p>
-                <p style={styles.summaryText}>
-                  <strong>Interval:</strong> {preview.serviceIntervalKm.toLocaleString()} km
-                </p>
-                <p style={styles.summaryText}>
-                  <strong>Next due:</strong> {preview.nextDueKm.toLocaleString()} km
-                </p>
-              </>
-            ) : (
-              <p style={styles.summaryMuted}>
-                Select one or more tasks and enter current km to preview the next due service.
-              </p>
-            )}
+            <div style={styles.statusColumns}>
+              <div style={styles.statusColumn}>
+                <h3 style={{ ...styles.columnTitle, color: "#ef4444" }}>
+                  Overdue
+                </h3>
+                {selectedBikeSummary.overdue.length === 0 ? (
+                  <p style={styles.emptyText}>No overdue tasks</p>
+                ) : (
+                  selectedBikeSummary.overdue.map((task) => (
+                    <div key={task.type} style={styles.taskCard}>
+                      <div style={styles.taskCardTop}>
+                        <strong>{task.type}</strong>
+                        <span style={{ ...styles.statusPill, background: task.status.color }}>
+                          {task.status.label}
+                        </span>
+                      </div>
+                      <p style={styles.taskCardText}>
+                        Last service: {task.lastServiceKm.toLocaleString()} km
+                      </p>
+                      <p style={styles.taskCardText}>
+                        Next due: {task.nextDueKm.toLocaleString()} km
+                      </p>
+                      <p style={styles.taskCardUrgent}>
+                        Please get this checked ASAP.
+                      </p>
+                      {task.advisories && (
+                        <div style={styles.advisoryBox}>
+                          <strong>Advisories:</strong> {task.advisories}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div style={styles.statusColumn}>
+                <h3 style={{ ...styles.columnTitle, color: "#f59e0b" }}>
+                  Due Soon
+                </h3>
+                {selectedBikeSummary.dueSoon.length === 0 ? (
+                  <p style={styles.emptyText}>Nothing due soon</p>
+                ) : (
+                  selectedBikeSummary.dueSoon.map((task) => (
+                    <div key={task.type} style={styles.taskCard}>
+                      <div style={styles.taskCardTop}>
+                        <strong>{task.type}</strong>
+                        <span style={{ ...styles.statusPill, background: task.status.color }}>
+                          {task.status.label}
+                        </span>
+                      </div>
+                      <p style={styles.taskCardText}>
+                        Last service: {task.lastServiceKm.toLocaleString()} km
+                      </p>
+                      <p style={styles.taskCardText}>
+                        Next due: {task.nextDueKm.toLocaleString()} km
+                      </p>
+                      <p style={styles.taskCardText}>
+                        Remaining: {task.remainingKm.toLocaleString()} km
+                      </p>
+                      {task.advisories && (
+                        <div style={styles.advisoryBox}>
+                          <strong>Advisories:</strong> {task.advisories}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div style={styles.statusColumn}>
+                <h3 style={{ ...styles.columnTitle, color: "#22c55e" }}>
+                  Upcoming
+                </h3>
+                {selectedBikeSummary.upcoming.length === 0 ? (
+                  <p style={styles.emptyText}>No upcoming tasks yet</p>
+                ) : (
+                  selectedBikeSummary.upcoming.slice(0, 6).map((task) => (
+                    <div key={task.type} style={styles.taskCard}>
+                      <div style={styles.taskCardTop}>
+                        <strong>{task.type}</strong>
+                        <span style={{ ...styles.statusPill, background: task.status.color }}>
+                          {task.status.label}
+                        </span>
+                      </div>
+                      <p style={styles.taskCardText}>
+                        Last service: {task.lastServiceKm.toLocaleString()} km
+                      </p>
+                      <p style={styles.taskCardText}>
+                        Next due: {task.nextDueKm.toLocaleString()} km
+                      </p>
+                      <p style={styles.taskCardText}>
+                        Remaining: {task.remainingKm.toLocaleString()} km
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
         <div style={styles.bikeCard}>
           <h2 style={styles.bikeTitle}>Your Motorbike</h2>
@@ -538,17 +657,15 @@ export default function MaintenancePage() {
             onChange={(e) => setForm({ ...form, advisories: e.target.value })}
           />
 
-          {preview.nextDueKm && (
+          {previewList.length > 0 && (
             <div style={styles.previewBox}>
-              <p style={styles.previewText}>
-                <strong>Estimated next service:</strong> {preview.nextServiceType}
-              </p>
-              <p style={styles.previewText}>
-                <strong>Estimated next due:</strong> {preview.nextDueKm.toLocaleString()} km
-              </p>
-              <p style={styles.previewText}>
-                <strong>Interval used:</strong> {preview.serviceIntervalKm.toLocaleString()} km
-              </p>
+              <h3 style={styles.previewTitle}>Task Due Preview</h3>
+              {previewList.map((item) => (
+                <p key={item.type} style={styles.previewText}>
+                  <strong>{item.type}</strong> → next due at{" "}
+                  {item.nextDueKm.toLocaleString()} km ({item.intervalKm.toLocaleString()} km interval)
+                </p>
+              ))}
             </div>
           )}
 
@@ -567,99 +684,62 @@ export default function MaintenancePage() {
               <h2 style={styles.monthTitle}>{month}</h2>
 
               <div style={styles.timelineList}>
-                {items.map((r, idx) => {
-                  const remainingKm =
-                    typeof r.nextDueKm === "number" && typeof r.km === "number"
-                      ? r.nextDueKm - r.km
-                      : null;
-                  const statusInfo = getStatusFromRemaining(remainingKm);
+                {items.map((r, idx) => (
+                  <div key={r._id} style={styles.timelineItem}>
+                    <div style={styles.timelineLeft}>
+                      <div style={styles.dot} />
+                      {idx !== items.length - 1 ? (
+                        <div style={styles.line} />
+                      ) : (
+                        <div style={styles.lineEnd} />
+                      )}
+                    </div>
 
-                  return (
-                    <div key={r._id} style={styles.timelineItem}>
-                      <div style={styles.timelineLeft}>
-                        <div style={styles.dot} />
-                        {idx !== items.length - 1 ? (
-                          <div style={styles.line} />
-                        ) : (
-                          <div style={styles.lineEnd} />
-                        )}
-                      </div>
+                    <div style={styles.timelineCard}>
+                      <h3 style={styles.cardTitle}>
+                        {Array.isArray(r.type) ? r.type.join(", ") : r.type}
+                      </h3>
 
-                      <div style={styles.timelineCard}>
-                        <div style={styles.cardTopRow}>
-                          <h3 style={styles.cardTitle}>
-                            {Array.isArray(r.type) ? r.type.join(", ") : r.type}
-                          </h3>
-
-                          <span
-                            style={{
-                              ...styles.statusPill,
-                              background: statusInfo.color,
-                            }}
-                          >
-                            {statusInfo.label}
-                          </span>
-                        </div>
-
-                        {r.motorbike && (
-                          <p style={styles.cardText}>
-                            <strong>Bike:</strong> {r.motorbike}
-                          </p>
-                        )}
-
+                      {r.motorbike && (
                         <p style={styles.cardText}>
-                          <strong>Date:</strong> {formatDisplayDate(r.date)}
+                          <strong>Bike:</strong> {r.motorbike}
                         </p>
+                      )}
 
-                        <p style={styles.cardText}>
-                          <strong>KM serviced at:</strong> {Number(r.km).toLocaleString()}
-                        </p>
+                      <p style={styles.cardText}>
+                        <strong>Date:</strong> {formatDisplayDate(r.date)}
+                      </p>
 
-                        {r.nextServiceType && (
-                          <p style={styles.cardText}>
-                            <strong>Next service estimate:</strong> {r.nextServiceType}
-                          </p>
-                        )}
+                      <p style={styles.cardText}>
+                        <strong>KM serviced at:</strong> {Number(r.km).toLocaleString()}
+                      </p>
 
-                        {typeof r.nextDueKm === "number" && (
-                          <p style={styles.cardText}>
-                            <strong>Next due km:</strong> {r.nextDueKm.toLocaleString()}
-                          </p>
-                        )}
+                      {r.notes && <p style={styles.cardNotes}>{r.notes}</p>}
 
-                        {typeof r.serviceIntervalKm === "number" && (
-                          <p style={styles.cardText}>
-                            <strong>Estimated interval:</strong> {r.serviceIntervalKm.toLocaleString()} km
-                          </p>
-                        )}
-
-                        {r.notes && <p style={styles.cardNotes}>{r.notes}</p>}
-
-                        {r.advisories && (
-                          <div style={styles.advisoryBox}>
-                            <strong>Advisories:</strong> {r.advisories}
-                          </div>
-                        )}
-
-                        <div style={styles.cardActions}>
-                          <button
-                            style={styles.editBtn}
-                            onClick={() => startEdit(r)}
-                          >
-                            Edit
-                          </button>
-
-                          <button
-                            style={styles.deleteBtn}
-                            onClick={() => deleteRecord(r._id)}
-                          >
-                            Delete
-                          </button>
+                      {r.advisories && (
+                        <div style={styles.advisoryBox}>
+                          <strong>Advisories:</strong> {r.advisories}
                         </div>
+                      )}
+
+                      <div style={styles.cardActions}>
+                        <button
+                          style={styles.editBtn}
+                          onClick={() => startEdit(r)}
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          style={styles.deleteBtn}
+                          onClick={() => deleteRecord(r._id)}
+                        >
+                          Delete
+                        </button>
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             </div>
           ))}
@@ -683,38 +763,68 @@ const styles = {
     fontWeight: "bold",
   },
 
-  summaryGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-    gap: "16px",
-    marginBottom: "24px",
-  },
-  summaryCard: {
+  statusBoard: {
     background: "#111",
-    padding: "18px",
-    borderRadius: "12px",
+    borderRadius: "14px",
+    padding: "20px",
+    marginBottom: "24px",
     borderLeft: "5px solid #ff8c00",
   },
-  summaryTitle: {
-    margin: "0 0 12px 0",
-    fontSize: "1.1rem",
+  statusBoardHeader: {
+    marginBottom: "16px",
   },
-  summaryMain: {
-    margin: "0 0 8px 0",
-    fontSize: "1rem",
+  statusBoardTitle: {
+    margin: 0,
+    fontSize: "1.35rem",
     color: "#fff",
   },
-  summaryText: {
-    margin: "0 0 6px 0",
-    color: "#ccc",
+  statusBoardSubtitle: {
+    margin: "6px 0 0 0",
+    color: "#aaa",
   },
-  summaryMuted: {
+  statusColumns: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+    gap: "16px",
+  },
+  statusColumn: {
+    background: "#161616",
+    borderRadius: "12px",
+    padding: "14px",
+    border: "1px solid #222",
+  },
+  columnTitle: {
+    margin: "0 0 12px 0",
+    fontSize: "1rem",
+  },
+  emptyText: {
     margin: 0,
     color: "#94a3b8",
   },
-  summaryAdvisory: {
-    marginTop: "10px",
-    color: "#fcd34d",
+  taskCard: {
+    background: "#1b1b1b",
+    borderRadius: "10px",
+    padding: "12px",
+    marginBottom: "10px",
+    border: "1px solid #252525",
+  },
+  taskCardTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "10px",
+    alignItems: "center",
+    marginBottom: "8px",
+    flexWrap: "wrap",
+  },
+  taskCardText: {
+    margin: "0 0 5px 0",
+    color: "#d1d5db",
+    fontSize: "0.9rem",
+  },
+  taskCardUrgent: {
+    margin: "8px 0 0 0",
+    color: "#fca5a5",
+    fontWeight: "bold",
   },
 
   bikeCard: {
@@ -766,7 +876,7 @@ const styles = {
     background: "#111",
     padding: "20px",
     borderRadius: "12px",
-    maxWidth: "600px",
+    maxWidth: "650px",
     display: "flex",
     flexDirection: "column",
     gap: "12px",
@@ -808,6 +918,11 @@ const styles = {
     border: "1px solid #2a2a2a",
     borderRadius: "10px",
     padding: "14px",
+  },
+  previewTitle: {
+    margin: "0 0 10px 0",
+    color: "#fff",
+    fontSize: "1rem",
   },
   previewText: {
     margin: "0 0 6px 0",
@@ -877,24 +992,9 @@ const styles = {
     borderRadius: "10px",
     borderLeft: "5px solid #ff8c00",
   },
-  cardTopRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "10px",
-    flexWrap: "wrap",
-    marginBottom: "8px",
-  },
   cardTitle: {
-    marginBottom: "0",
+    marginBottom: "6px",
     fontSize: "1.2rem",
-  },
-  statusPill: {
-    padding: "5px 10px",
-    borderRadius: "999px",
-    color: "#fff",
-    fontSize: "0.75rem",
-    fontWeight: "bold",
   },
   cardText: {
     marginBottom: "4px",
@@ -912,6 +1012,13 @@ const styles = {
     background: "rgba(245, 158, 11, 0.12)",
     border: "1px solid rgba(245, 158, 11, 0.3)",
     color: "#fcd34d",
+  },
+  statusPill: {
+    padding: "5px 10px",
+    borderRadius: "999px",
+    color: "#fff",
+    fontSize: "0.75rem",
+    fontWeight: "bold",
   },
   cardActions: {
     marginTop: "10px",
