@@ -1,9 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+
+const serviceIntervals = {
+  "Oil Change": 5000,
+  "Oil Filter Replacement": 5000,
+  "Air Filter Replacement": 12000,
+  "Chain Clean & Lube": 800,
+  "Chain Adjustment": 1500,
+  "Chain & Sprocket Kit Replacement": 20000,
+  "Brake Pads Replacement": 15000,
+  "Brake Fluid Change": 20000,
+  "Tire Replacement": 12000,
+  "Tire Pressure Check": 500,
+  "Spark Plug Replacement": 12000,
+  "Battery Replacement": 30000,
+  "Clutch Cable Adjustment": 8000,
+  "Throttle Cable Adjustment": 8000,
+  "Fuel Filter Replacement": 15000,
+  "Suspension Service": 25000,
+  "Wheel Bearings Check": 12000,
+  "Headlight Bulb Replacement": 20000,
+  "Indicator Bulb Replacement": 20000,
+  "Brake Disc Replacement": 30000,
+};
 
 export default function MaintenancePage() {
   const router = useRouter();
@@ -17,6 +40,7 @@ export default function MaintenancePage() {
     date: "",
     km: "",
     notes: "",
+    advisories: "",
   });
 
   const email = session?.user?.email || null;
@@ -61,8 +85,86 @@ export default function MaintenancePage() {
     return groups;
   }
 
+  function getStatusFromRemaining(remainingKm) {
+    if (remainingKm == null) return { label: "Unknown", color: "#94a3b8" };
+    if (remainingKm < 0) return { label: "Overdue", color: "#ef4444" };
+    if (remainingKm <= 1000) return { label: "Due soon", color: "#f59e0b" };
+    return { label: "Healthy", color: "#22c55e" };
+  }
+
+  function getNextServicePreview(types, km) {
+    const intervals = (Array.isArray(types) ? types : [])
+      .map((type) => ({
+        type,
+        intervalKm: serviceIntervals[type] || null,
+      }))
+      .filter((item) => typeof item.intervalKm === "number");
+
+    if (!intervals.length || !Number.isFinite(Number(km))) {
+      return {
+        serviceIntervalKm: null,
+        nextDueKm: null,
+        nextServiceType: "",
+      };
+    }
+
+    const soonest = intervals.reduce((lowest, current) =>
+      current.intervalKm < lowest.intervalKm ? current : lowest
+    );
+
+    return {
+      serviceIntervalKm: soonest.intervalKm,
+      nextDueKm: Number(km) + soonest.intervalKm,
+      nextServiceType: soonest.type,
+    };
+  }
+
   const grouped = groupByMonth(records);
   const monthSections = Object.entries(grouped);
+
+  const preview = useMemo(
+    () => getNextServicePreview(form.type, form.km),
+    [form.type, form.km]
+  );
+
+  const latestByType = useMemo(() => {
+    const map = {};
+    for (const record of records) {
+      const types = Array.isArray(record.type) ? record.type : [];
+      for (const type of types) {
+        if (!map[type]) map[type] = record;
+      }
+    }
+    return map;
+  }, [records]);
+
+  const nextServices = useMemo(() => {
+    const items = Object.entries(latestByType)
+      .map(([type, record]) => {
+        const intervalKm = serviceIntervals[type];
+        const baseKm = Number(record.km);
+
+        if (!Number.isFinite(intervalKm) || !Number.isFinite(baseKm)) return null;
+
+        const nextDueKm = baseKm + intervalKm;
+        const remainingKm = nextDueKm - baseKm;
+        return {
+          type,
+          motorbike: record.motorbike || "",
+          lastServiceKm: baseKm,
+          nextDueKm,
+          remainingFromLastService: remainingKm,
+          advisories: record.advisories || "",
+          date: record.date,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.nextDueKm - b.nextDueKm);
+
+    return items;
+  }, [latestByType]);
+
+  const topNextService = nextServices[0] || null;
 
   useEffect(() => {
     if (status === "loading") return;
@@ -70,7 +172,6 @@ export default function MaintenancePage() {
   }, [status, router]);
 
   useEffect(() => {
-    // preference only (not auth)
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("userMotorbike") || "";
       setSelectedBike(saved);
@@ -194,7 +295,7 @@ export default function MaintenancePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         userEmail: email,
-        motorbike: selectedBike, // ✅ saved with the record
+        motorbike: selectedBike,
         _id: editingId,
         ...form,
       }),
@@ -205,6 +306,7 @@ export default function MaintenancePage() {
       date: new Date().toISOString().slice(0, 10),
       km: "",
       notes: "",
+      advisories: "",
     });
     setEditingId(null);
 
@@ -218,12 +320,13 @@ export default function MaintenancePage() {
 
   function startEdit(record) {
     setEditingId(record._id);
-    setSelectedBike(record.motorbike || ""); // ✅ load bike for that record
+    setSelectedBike(record.motorbike || "");
     setForm({
       type: Array.isArray(record.type) ? record.type : [record.type],
       date: record.date || "",
       km: record.km ?? "",
       notes: record.notes || "",
+      advisories: record.advisories || "",
     });
   }
 
@@ -260,6 +363,56 @@ export default function MaintenancePage() {
 
       <div style={styles.container}>
         <h1 style={styles.title}>Maintenance Records</h1>
+
+        <div style={styles.summaryGrid}>
+          <div style={styles.summaryCard}>
+            <h2 style={styles.summaryTitle}>Next Service Estimate</h2>
+            {!topNextService ? (
+              <p style={styles.summaryMuted}>No service estimate yet</p>
+            ) : (
+              <>
+                <p style={styles.summaryMain}>
+                  <strong>{topNextService.type}</strong>
+                </p>
+                <p style={styles.summaryText}>
+                  <strong>Bike:</strong> {topNextService.motorbike || "Not set"}
+                </p>
+                <p style={styles.summaryText}>
+                  <strong>Next due:</strong> {topNextService.nextDueKm.toLocaleString()} km
+                </p>
+                <p style={styles.summaryText}>
+                  <strong>Last service:</strong> {topNextService.lastServiceKm.toLocaleString()} km
+                </p>
+                {topNextService.advisories && (
+                  <p style={styles.summaryAdvisory}>
+                    <strong>Advisories:</strong> {topNextService.advisories}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+
+          <div style={styles.summaryCard}>
+            <h2 style={styles.summaryTitle}>Current Entry Preview</h2>
+            {preview.nextDueKm ? (
+              <>
+                <p style={styles.summaryMain}>
+                  <strong>{preview.nextServiceType}</strong>
+                </p>
+                <p style={styles.summaryText}>
+                  <strong>Interval:</strong> {preview.serviceIntervalKm.toLocaleString()} km
+                </p>
+                <p style={styles.summaryText}>
+                  <strong>Next due:</strong> {preview.nextDueKm.toLocaleString()} km
+                </p>
+              </>
+            ) : (
+              <p style={styles.summaryMuted}>
+                Select one or more tasks and enter current km to preview the next due service.
+              </p>
+            )}
+          </div>
+        </div>
 
         <div style={styles.bikeCard}>
           <h2 style={styles.bikeTitle}>Your Motorbike</h2>
@@ -373,10 +526,31 @@ export default function MaintenancePage() {
 
           <textarea
             style={styles.textarea}
-            placeholder="Notes / advisories for next service"
+            placeholder="General notes"
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
           />
+
+          <textarea
+            style={styles.textarea}
+            placeholder="Advisories for next service (e.g. brake pads wearing low, inspect chain soon)"
+            value={form.advisories}
+            onChange={(e) => setForm({ ...form, advisories: e.target.value })}
+          />
+
+          {preview.nextDueKm && (
+            <div style={styles.previewBox}>
+              <p style={styles.previewText}>
+                <strong>Estimated next service:</strong> {preview.nextServiceType}
+              </p>
+              <p style={styles.previewText}>
+                <strong>Estimated next due:</strong> {preview.nextDueKm.toLocaleString()} km
+              </p>
+              <p style={styles.previewText}>
+                <strong>Interval used:</strong> {preview.serviceIntervalKm.toLocaleString()} km
+              </p>
+            </div>
+          )}
 
           <button style={styles.button}>
             {editingId ? "Save Changes" : "Add Record"}
@@ -393,57 +567,99 @@ export default function MaintenancePage() {
               <h2 style={styles.monthTitle}>{month}</h2>
 
               <div style={styles.timelineList}>
-                {items.map((r, idx) => (
-                  <div key={r._id} style={styles.timelineItem}>
-                    <div style={styles.timelineLeft}>
-                      <div style={styles.dot} />
-                      {idx !== items.length - 1 ? (
-                        <div style={styles.line} />
-                      ) : (
-                        <div style={styles.lineEnd} />
-                      )}
-                    </div>
+                {items.map((r, idx) => {
+                  const remainingKm =
+                    typeof r.nextDueKm === "number" && typeof r.km === "number"
+                      ? r.nextDueKm - r.km
+                      : null;
+                  const statusInfo = getStatusFromRemaining(remainingKm);
 
-                    <div style={styles.timelineCard}>
-                      <h3 style={styles.cardTitle}>
-                        {Array.isArray(r.type) ? r.type.join(", ") : r.type}
-                      </h3>
+                  return (
+                    <div key={r._id} style={styles.timelineItem}>
+                      <div style={styles.timelineLeft}>
+                        <div style={styles.dot} />
+                        {idx !== items.length - 1 ? (
+                          <div style={styles.line} />
+                        ) : (
+                          <div style={styles.lineEnd} />
+                        )}
+                      </div>
 
-                      {/* ✅ show the bike for THIS record */}
-                      {r.motorbike && (
+                      <div style={styles.timelineCard}>
+                        <div style={styles.cardTopRow}>
+                          <h3 style={styles.cardTitle}>
+                            {Array.isArray(r.type) ? r.type.join(", ") : r.type}
+                          </h3>
+
+                          <span
+                            style={{
+                              ...styles.statusPill,
+                              background: statusInfo.color,
+                            }}
+                          >
+                            {statusInfo.label}
+                          </span>
+                        </div>
+
+                        {r.motorbike && (
+                          <p style={styles.cardText}>
+                            <strong>Bike:</strong> {r.motorbike}
+                          </p>
+                        )}
+
                         <p style={styles.cardText}>
-                          <strong>Bike:</strong> {r.motorbike}
+                          <strong>Date:</strong> {formatDisplayDate(r.date)}
                         </p>
-                      )}
 
-                      <p style={styles.cardText}>
-                        <strong>Date:</strong> {formatDisplayDate(r.date)}
-                      </p>
+                        <p style={styles.cardText}>
+                          <strong>KM serviced at:</strong> {Number(r.km).toLocaleString()}
+                        </p>
 
-                      <p style={styles.cardText}>
-                        <strong>KM:</strong> {r.km}
-                      </p>
+                        {r.nextServiceType && (
+                          <p style={styles.cardText}>
+                            <strong>Next service estimate:</strong> {r.nextServiceType}
+                          </p>
+                        )}
 
-                      {r.notes && <p style={styles.cardNotes}>{r.notes}</p>}
+                        {typeof r.nextDueKm === "number" && (
+                          <p style={styles.cardText}>
+                            <strong>Next due km:</strong> {r.nextDueKm.toLocaleString()}
+                          </p>
+                        )}
 
-                      <div style={styles.cardActions}>
-                        <button
-                          style={styles.editBtn}
-                          onClick={() => startEdit(r)}
-                        >
-                          Edit
-                        </button>
+                        {typeof r.serviceIntervalKm === "number" && (
+                          <p style={styles.cardText}>
+                            <strong>Estimated interval:</strong> {r.serviceIntervalKm.toLocaleString()} km
+                          </p>
+                        )}
 
-                        <button
-                          style={styles.deleteBtn}
-                          onClick={() => deleteRecord(r._id)}
-                        >
-                          Delete
-                        </button>
+                        {r.notes && <p style={styles.cardNotes}>{r.notes}</p>}
+
+                        {r.advisories && (
+                          <div style={styles.advisoryBox}>
+                            <strong>Advisories:</strong> {r.advisories}
+                          </div>
+                        )}
+
+                        <div style={styles.cardActions}>
+                          <button
+                            style={styles.editBtn}
+                            onClick={() => startEdit(r)}
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            style={styles.deleteBtn}
+                            onClick={() => deleteRecord(r._id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -465,6 +681,40 @@ const styles = {
     marginBottom: "20px",
     fontSize: "2rem",
     fontWeight: "bold",
+  },
+
+  summaryGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "16px",
+    marginBottom: "24px",
+  },
+  summaryCard: {
+    background: "#111",
+    padding: "18px",
+    borderRadius: "12px",
+    borderLeft: "5px solid #ff8c00",
+  },
+  summaryTitle: {
+    margin: "0 0 12px 0",
+    fontSize: "1.1rem",
+  },
+  summaryMain: {
+    margin: "0 0 8px 0",
+    fontSize: "1rem",
+    color: "#fff",
+  },
+  summaryText: {
+    margin: "0 0 6px 0",
+    color: "#ccc",
+  },
+  summaryMuted: {
+    margin: 0,
+    color: "#94a3b8",
+  },
+  summaryAdvisory: {
+    marginTop: "10px",
+    color: "#fcd34d",
   },
 
   bikeCard: {
@@ -516,7 +766,7 @@ const styles = {
     background: "#111",
     padding: "20px",
     borderRadius: "12px",
-    maxWidth: "500px",
+    maxWidth: "600px",
     display: "flex",
     flexDirection: "column",
     gap: "12px",
@@ -552,6 +802,16 @@ const styles = {
     background: "#1a1a1a",
     color: "#fff",
     minHeight: "60px",
+  },
+  previewBox: {
+    background: "#1a1a1a",
+    border: "1px solid #2a2a2a",
+    borderRadius: "10px",
+    padding: "14px",
+  },
+  previewText: {
+    margin: "0 0 6px 0",
+    color: "#ddd",
   },
   button: {
     padding: "12px",
@@ -617,10 +877,24 @@ const styles = {
     borderRadius: "10px",
     borderLeft: "5px solid #ff8c00",
   },
-
+  cardTopRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "10px",
+    flexWrap: "wrap",
+    marginBottom: "8px",
+  },
   cardTitle: {
-    marginBottom: "6px",
+    marginBottom: "0",
     fontSize: "1.2rem",
+  },
+  statusPill: {
+    padding: "5px 10px",
+    borderRadius: "999px",
+    color: "#fff",
+    fontSize: "0.75rem",
+    fontWeight: "bold",
   },
   cardText: {
     marginBottom: "4px",
@@ -629,6 +903,15 @@ const styles = {
   cardNotes: {
     color: "#aaa",
     fontStyle: "italic",
+    marginTop: "8px",
+  },
+  advisoryBox: {
+    marginTop: "10px",
+    padding: "10px 12px",
+    borderRadius: "8px",
+    background: "rgba(245, 158, 11, 0.12)",
+    border: "1px solid rgba(245, 158, 11, 0.3)",
+    color: "#fcd34d",
   },
   cardActions: {
     marginTop: "10px",
