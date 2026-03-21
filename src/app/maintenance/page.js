@@ -455,7 +455,7 @@ export default function MaintenancePage() {
                         Next due: {task.nextDueKm.toLocaleString()} km
                       </p>
                       <p style={styles.taskCardUrgent}>
-                        Please get this checked ASAP.
+                        Get checked immediately.
                       </p>
                       {task.advisories && (
                         <div style={styles.advisoryBox}>
