@@ -1,6 +1,7 @@
 import clientPromise from "../../../lib/mongodb";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
+import { getAblyRest } from "@/lib/ablyServer";
 
 function cleanString(value) {
   if (typeof value !== "string") return null;
@@ -88,6 +89,7 @@ export async function POST(req) {
     const db = client.db("login");
     const conversations = db.collection("conversations");
     const messages = db.collection("messages");
+    const notifications = db.collection("notifications");
 
     const conversation = await conversations.findOne({
       _id: new ObjectId(conversationId),
@@ -121,6 +123,36 @@ export async function POST(req) {
         },
       }
     );
+
+    const notificationDoc = {
+      userEmail: receiverEmail,
+      title: "New message",
+      text: `${senderEmail} sent you a message: "${
+        text.length > 60 ? text.slice(0, 60) + "..." : text
+      }"`,
+      type: "message",
+      read: false,
+      sourceType: "message",
+      sourceId: String(result.insertedId),
+      conversationId,
+      createdAt: new Date(),
+    };
+
+    const notificationResult = await notifications.insertOne(notificationDoc);
+
+    const notificationPayload = {
+      ...notificationDoc,
+      _id: String(notificationResult.insertedId),
+    };
+
+    try {
+      const ably = getAblyRest();
+      await ably
+        .channels.get(`user:${receiverEmail}`)
+        .publish("notification-created", notificationPayload);
+    } catch (ablyErr) {
+      console.error("ABLY notification publish error:", ablyErr);
+    }
 
     return NextResponse.json({
       success: true,

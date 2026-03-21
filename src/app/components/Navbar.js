@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { getAblyClient } from "../../lib/ablyClient";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -35,7 +36,7 @@ export default function Navbar() {
     setNotifOpen(false);
   }
 
-  async function toggleNotifications() {
+  function toggleNotifications() {
     setNotifOpen((prev) => !prev);
     setOpen(false);
   }
@@ -52,7 +53,6 @@ export default function Navbar() {
     if (!dateValue) return "";
     const d = new Date(dateValue);
     if (Number.isNaN(d.getTime())) return "";
-
     return d.toLocaleString(undefined, {
       day: "2-digit",
       month: "short",
@@ -152,11 +152,28 @@ export default function Navbar() {
 
     loadNotifications();
 
-    const interval = setInterval(() => {
-      loadNotifications();
-    }, 15000);
+    const ably = getAblyClient();
+    const channel = ably.channels.get(`user:${email}`);
 
-    return () => clearInterval(interval);
+    const handler = async (msg) => {
+      if (msg.name === "notification-created") {
+        setNotifications((prev) => {
+          const exists = prev.some((n) => n._id === msg.data?._id);
+          if (exists) return prev;
+          return [msg.data, ...prev];
+        });
+      }
+
+      if (msg.name === "notification-refresh") {
+        await loadNotifications();
+      }
+    };
+
+    channel.subscribe(handler);
+
+    return () => {
+      channel.unsubscribe(handler);
+    };
   }, [email]);
 
   return (
@@ -189,7 +206,6 @@ export default function Navbar() {
           <button style={styles.bellButton} onClick={toggleNotifications}>
             🔔
           </button>
-
           {unreadCount > 0 && <div style={styles.badge}>{unreadCount}</div>}
         </div>
 
@@ -292,32 +308,27 @@ const styles = {
     borderBottom: "1px solid #1e1e1e",
     zIndex: 300,
   },
-
   left: {
     display: "flex",
     alignItems: "center",
     gap: "15px",
   },
-
   right: {
     display: "flex",
     alignItems: "center",
     gap: "14px",
   },
-
   hamburger: {
     display: "flex",
     flexDirection: "column",
     gap: "4px",
     cursor: "pointer",
   },
-
   line: {
     width: "22px",
     height: "2px",
     background: "#fff",
   },
-
   brand: {
     display: "flex",
     alignItems: "center",
@@ -326,23 +337,19 @@ const styles = {
     fontWeight: "bold",
     fontSize: "1rem",
   },
-
   logo: {
     width: "28px",
     height: "28px",
   },
-
   profile: {
     width: "34px",
     height: "34px",
     borderRadius: "50%",
     cursor: "pointer",
   },
-
   bellWrapper: {
     position: "relative",
   },
-
   bellButton: {
     width: "36px",
     height: "36px",
@@ -353,7 +360,6 @@ const styles = {
     cursor: "pointer",
     fontSize: "1rem",
   },
-
   badge: {
     position: "absolute",
     top: "-6px",
@@ -371,7 +377,6 @@ const styles = {
     justifyContent: "center",
     border: "2px solid #0b0b0b",
   },
-
   dropdown: {
     position: "absolute",
     top: "60px",
@@ -383,7 +388,6 @@ const styles = {
     overflow: "hidden",
     zIndex: 310,
   },
-
   item: {
     padding: "12px 15px",
     color: "#fff",
@@ -391,17 +395,14 @@ const styles = {
     fontSize: "0.9rem",
     borderBottom: "1px solid #1e1e1e",
   },
-
   signOutItem: {
     color: "#e74c3c",
     borderBottom: "none",
   },
-
   divider: {
     height: "1px",
     background: "#1e1e1e",
   },
-
   notifPanel: {
     position: "absolute",
     top: "60px",
@@ -415,7 +416,6 @@ const styles = {
     overflow: "hidden",
     zIndex: 320,
   },
-
   notifHeader: {
     padding: "14px 16px",
     borderBottom: "1px solid #1e293b",
@@ -425,17 +425,14 @@ const styles = {
     gap: "10px",
     background: "#111827",
   },
-
   notifTitle: {
     color: "#fff",
     fontWeight: "700",
   },
-
   notifActions: {
     display: "flex",
     gap: "8px",
   },
-
   notifActionBtn: {
     border: "none",
     background: "#1f2937",
@@ -445,7 +442,6 @@ const styles = {
     cursor: "pointer",
     fontSize: "0.75rem",
   },
-
   notifList: {
     maxHeight: "420px",
     overflowY: "auto",
@@ -454,7 +450,6 @@ const styles = {
     flexDirection: "column",
     gap: "8px",
   },
-
   notifItem: {
     display: "flex",
     gap: "10px",
@@ -463,7 +458,6 @@ const styles = {
     border: "1px solid #1e293b",
     cursor: "pointer",
   },
-
   notifDot: {
     width: "10px",
     height: "10px",
@@ -471,38 +465,32 @@ const styles = {
     marginTop: "6px",
     flexShrink: 0,
   },
-
   notifContent: {
     flex: 1,
     minWidth: 0,
   },
-
   notifItemTop: {
     display: "flex",
     justifyContent: "space-between",
     gap: "10px",
     alignItems: "center",
   },
-
   notifItemTitle: {
     color: "#fff",
     fontWeight: "600",
     fontSize: "0.9rem",
   },
-
   notifTime: {
     color: "#94a3b8",
     fontSize: "0.72rem",
     whiteSpace: "nowrap",
   },
-
   notifText: {
     marginTop: "4px",
     color: "#cbd5e1",
     fontSize: "0.82rem",
     lineHeight: "1.35",
   },
-
   emptyNotif: {
     padding: "24px 16px",
     textAlign: "center",

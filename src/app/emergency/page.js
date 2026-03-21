@@ -40,8 +40,10 @@ export default function EmergencyPage() {
   const ablyRef = useRef(null);
   const userChannelRef = useRef(null);
   const conversationChannelRef = useRef(null);
+  const emergenciesChannelRef = useRef(null);
   const userSubscriptionRef = useRef(null);
   const conversationSubscriptionRef = useRef(null);
+  const emergenciesSubscriptionRef = useRef(null);
 
   const email = session?.user?.email || null;
 
@@ -409,10 +411,26 @@ export default function EmergencyPage() {
     };
 
     fetchEmergencies();
-    const interval = setInterval(fetchEmergencies, 5000);
 
-    return () => clearInterval(interval);
-  }, [email, coords]);
+    const ably = getAblyClient();
+    const channel = ably.channels.get("emergencies:live");
+    emergenciesChannelRef.current = channel;
+
+    const handler = async (msg) => {
+      if (msg.name === "emergency-updated") {
+        await fetchEmergencies();
+      }
+    };
+
+    emergenciesSubscriptionRef.current = handler;
+    channel.subscribe(handler);
+
+    return () => {
+      if (emergenciesSubscriptionRef.current) {
+        channel.unsubscribe(emergenciesSubscriptionRef.current);
+      }
+    };
+  }, [email]);
 
   async function loadConversations() {
     if (!email) return;
@@ -936,7 +954,6 @@ const styles = {
     fontWeight: "bold",
     cursor: "pointer",
   },
-
   secondaryBtn: {
     padding: "15px 25px",
     borderRadius: "10px",
@@ -947,7 +964,6 @@ const styles = {
     fontWeight: "bold",
     cursor: "pointer",
   },
-
   emergencyCard: {
     marginTop: "10px",
     padding: "20px",
@@ -959,7 +975,6 @@ const styles = {
     maxWidth: "400px",
     textAlign: "center",
   },
-
   chatButton: {
     position: "fixed",
     right: "20px",
@@ -975,7 +990,6 @@ const styles = {
     boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
     zIndex: 200,
   },
-
   chatSidebar: {
     position: "fixed",
     top: "60px",
@@ -991,7 +1005,6 @@ const styles = {
     flexDirection: "column",
     boxShadow: "-12px 0 32px rgba(0,0,0,0.35)",
   },
-
   chatHeader: {
     padding: "16px 18px",
     borderBottom: "1px solid rgba(255,255,255,0.06)",
@@ -1003,7 +1016,6 @@ const styles = {
     fontSize: "1rem",
     fontWeight: "700",
   },
-
   closeBtn: {
     background: "transparent",
     border: "none",
@@ -1011,7 +1023,6 @@ const styles = {
     cursor: "pointer",
     fontSize: "1rem",
   },
-
   newChatBox: {
     padding: "12px",
     borderBottom: "1px solid rgba(255,255,255,0.06)",
@@ -1019,7 +1030,6 @@ const styles = {
     gap: "8px",
     background: "#0b111b",
   },
-
   chatError: {
     padding: "10px 12px",
     color: "#fca5a5",
@@ -1027,21 +1037,18 @@ const styles = {
     borderBottom: "1px solid rgba(255,255,255,0.04)",
     fontSize: "0.85rem",
   },
-
   chatBody: {
     display: "grid",
     gridTemplateColumns: "165px 1fr",
     flex: 1,
     minHeight: 0,
   },
-
   chatList: {
     borderRight: "1px solid rgba(255,255,255,0.06)",
     overflowY: "auto",
     padding: "10px",
     background: "#0a0f18",
   },
-
   chatListItem: {
     width: "100%",
     textAlign: "left",
@@ -1053,20 +1060,17 @@ const styles = {
     background: "#0f1724",
     transition: "0.2s ease",
   },
-
   chatListItemActive: {
     background: "#162033",
     border: "1px solid rgba(59,130,246,0.35)",
     boxShadow: "0 0 0 1px rgba(59,130,246,0.08) inset",
   },
-
   chatPanel: {
     display: "flex",
     flexDirection: "column",
     minHeight: 0,
     background: "#0b111b",
   },
-
   emptyChat: {
     flex: 1,
     display: "flex",
@@ -1075,7 +1079,6 @@ const styles = {
     color: "#94a3b8",
     fontSize: "0.95rem",
   },
-
   messagesArea: {
     flex: 1,
     overflowY: "auto",
@@ -1086,7 +1089,6 @@ const styles = {
     background:
       "linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0))",
   },
-
   messageBubble: {
     maxWidth: "78%",
     padding: "12px 14px",
@@ -1097,25 +1099,21 @@ const styles = {
     fontSize: "0.95rem",
     border: "1px solid rgba(255,255,255,0.06)",
   },
-
   myMessageBubble: {
     background: "#1d4ed8",
     borderTopRightRadius: "4px",
     boxShadow: "0 6px 16px rgba(37,99,235,0.18)",
   },
-
   otherMessageBubble: {
     background: "#151c28",
     borderTopLeftRadius: "4px",
     color: "#e5e7eb",
   },
-
   messageMeta: {
     fontSize: "0.72rem",
     color: "#94a3b8",
     padding: "0 4px",
   },
-
   messageInputRow: {
     padding: "12px",
     borderTop: "1px solid rgba(255,255,255,0.06)",
@@ -1123,7 +1121,6 @@ const styles = {
     gap: "8px",
     background: "#0d1320",
   },
-
   chatInput: {
     flex: 1,
     padding: "11px 12px",
@@ -1133,7 +1130,6 @@ const styles = {
     color: "#fff",
     outline: "none",
   },
-
   startBtn: {
     padding: "10px 14px",
     borderRadius: "10px",

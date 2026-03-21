@@ -1,6 +1,7 @@
 import clientPromise from "../../../lib/mongodb";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
+import { getAblyRest } from "@/lib/ablyServer";
 
 function cleanString(value) {
   if (typeof value !== "string") return "";
@@ -24,13 +25,25 @@ async function upsertExpiryNotification(db, docId, userEmail, title, expiryDate)
   const notifications = db.collection("notifications");
   const daysLeft = daysUntil(expiryDate);
 
-  // Remove old notification if no expiry or no longer close enough
   if (daysLeft === null || daysLeft > 30) {
     await notifications.deleteMany({
       userEmail,
       sourceType: "documentExpiry",
       sourceId: String(docId),
     });
+
+    try {
+      const ably = getAblyRest();
+      await ably.channels
+        .get(`user:${userEmail}`)
+        .publish("notification-refresh", {
+          sourceType: "documentExpiry",
+          sourceId: String(docId),
+        });
+    } catch (ablyErr) {
+      console.error("ABLY document delete publish error:", ablyErr);
+    }
+
     return;
   }
 
@@ -59,6 +72,18 @@ async function upsertExpiryNotification(db, docId, userEmail, title, expiryDate)
     },
     { upsert: true }
   );
+
+  try {
+    const ably = getAblyRest();
+    await ably.channels
+      .get(`user:${userEmail}`)
+      .publish("notification-refresh", {
+        sourceType: "documentExpiry",
+        sourceId: String(docId),
+      });
+  } catch (ablyErr) {
+    console.error("ABLY document notification publish error:", ablyErr);
+  }
 }
 
 export async function GET(req) {
@@ -176,6 +201,18 @@ export async function DELETE(req) {
         sourceType: "documentExpiry",
         sourceId: String(existingDoc._id),
       });
+
+      try {
+        const ably = getAblyRest();
+        await ably.channels
+          .get(`user:${existingDoc.userEmail}`)
+          .publish("notification-refresh", {
+            sourceType: "documentExpiry",
+            sourceId: String(existingDoc._id),
+          });
+      } catch (ablyErr) {
+        console.error("ABLY document delete publish error:", ablyErr);
+      }
     }
 
     return NextResponse.json({ success: true });
