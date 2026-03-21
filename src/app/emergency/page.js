@@ -61,6 +61,10 @@ export default function EmergencyPage() {
   }, [status, session, router]);
 
   useEffect(() => {
+    if (status === "loading") return;
+    if (status === "unauthenticated") return;
+    if (!mapContainerRef.current) return;
+
     mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
     if (!mapboxgl.accessToken) {
@@ -68,23 +72,38 @@ export default function EmergencyPage() {
       return;
     }
 
-    if (!mapContainerRef.current || mapRef.current) return;
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
 
-    mapRef.current = new mapboxgl.Map({
+    const map = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: "mapbox://styles/mapbox/dark-v11",
       center: [-6.2603, 53.3498],
       zoom: 12,
     });
 
-    mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
+    map.addControl(new mapboxgl.NavigationControl(), "top-right");
 
-    mapRef.current.on("dragstart", () => {
+    map.on("load", () => {
+      map.resize();
+    });
+
+    map.on("dragstart", () => {
       followModeRef.current = false;
       setFollowMode(false);
     });
 
+    mapRef.current = map;
+
+    const resizeTimer = setTimeout(() => {
+      map.resize();
+    }, 300);
+
     return () => {
+      clearTimeout(resizeTimer);
+
       Object.values(otherMarkersRef.current).forEach((marker) => marker.remove());
       otherMarkersRef.current = {};
 
@@ -103,10 +122,22 @@ export default function EmergencyPage() {
         mapRef.current.removeSource("route");
       }
 
-      mapRef.current?.remove();
-      mapRef.current = null;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
     };
-  }, []);
+  }, [status]);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    const timer = setTimeout(() => {
+      mapRef.current?.resize();
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [chatOpen]);
 
   useEffect(() => {
     if (!email) return;
@@ -420,7 +451,10 @@ export default function EmergencyPage() {
     userChannelRef.current = userChannel;
 
     const handler = async (message) => {
-      if (message?.name === "conversation-updated" || message?.name === "new-conversation") {
+      if (
+        message?.name === "conversation-updated" ||
+        message?.name === "new-conversation"
+      ) {
         await loadConversations();
       }
     };
@@ -694,7 +728,7 @@ export default function EmergencyPage() {
         >
           <div
             ref={mapContainerRef}
-            style={{ width: "100%", height: "320px" }}
+            style={{ width: "100%", height: "320px", minHeight: "320px" }}
           />
         </div>
 
@@ -902,6 +936,7 @@ const styles = {
     fontWeight: "bold",
     cursor: "pointer",
   },
+
   secondaryBtn: {
     padding: "15px 25px",
     borderRadius: "10px",
@@ -912,6 +947,7 @@ const styles = {
     fontWeight: "bold",
     cursor: "pointer",
   },
+
   emergencyCard: {
     marginTop: "10px",
     padding: "20px",
