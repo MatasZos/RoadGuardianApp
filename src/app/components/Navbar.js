@@ -1,40 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
   const router = useRouter();
+  const { data: session } = useSession();
 
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: "New message",
-      text: "You received a new rider message.",
-      time: "Just now",
-      read: false,
-      type: "message",
-    },
-    {
-      id: 2,
-      title: "Document reminder",
-      text: "Your insurance document expires soon.",
-      time: "1 hour ago",
-      read: false,
-      type: "document",
-    },
-    {
-      id: 3,
-      title: "Emergency update",
-      text: "A nearby emergency alert was created.",
-      time: "Today",
-      read: true,
-      type: "emergency",
-    },
-  ]);
+  const email = session?.user?.email || null;
 
   const unreadCount = useMemo(
     () => notifications.filter((n) => !n.read).length,
@@ -58,27 +35,129 @@ export default function Navbar() {
     setNotifOpen(false);
   }
 
-  function toggleNotifications() {
+  async function toggleNotifications() {
     setNotifOpen((prev) => !prev);
     setOpen(false);
-  }
-
-  function markAllRead() {
-    setNotifications((prev) =>
-      prev.map((item) => ({ ...item, read: true }))
-    );
-  }
-
-  function clearNotifications() {
-    setNotifications([]);
   }
 
   function getDotColor(type) {
     if (type === "message") return "#2563eb";
     if (type === "document") return "#f59e0b";
     if (type === "emergency") return "#ef4444";
+    if (type === "maintenance") return "#22c55e";
     return "#94a3b8";
   }
+
+  function formatTime(dateValue) {
+    if (!dateValue) return "";
+    const d = new Date(dateValue);
+    if (Number.isNaN(d.getTime())) return "";
+
+    return d.toLocaleString(undefined, {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  async function loadNotifications() {
+    if (!email) return;
+
+    try {
+      const res = await fetch("/api/notifications", {
+        headers: { "x-user-email": email },
+        cache: "no-store",
+      });
+
+      const data = await res.json().catch(() => []);
+      setNotifications(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Navbar notifications load error:", err);
+    }
+  }
+
+  async function markAllRead() {
+    if (!email) return;
+
+    try {
+      const res = await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "markAllRead",
+          userEmail: email,
+        }),
+      });
+
+      if (res.ok) {
+        setNotifications((prev) =>
+          prev.map((item) => ({ ...item, read: true }))
+        );
+      }
+    } catch (err) {
+      console.error("Mark all read error:", err);
+    }
+  }
+
+  async function clearNotifications() {
+    if (!email) return;
+
+    try {
+      const res = await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "clearAll",
+          userEmail: email,
+        }),
+      });
+
+      if (res.ok) {
+        setNotifications([]);
+      }
+    } catch (err) {
+      console.error("Clear notifications error:", err);
+    }
+  }
+
+  async function markSingleRead(id) {
+    if (!email || !id) return;
+
+    try {
+      const res = await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "markRead",
+          id,
+          userEmail: email,
+        }),
+      });
+
+      if (res.ok) {
+        setNotifications((prev) =>
+          prev.map((item) =>
+            item._id === id ? { ...item, read: true } : item
+          )
+        );
+      }
+    } catch (err) {
+      console.error("Mark single read error:", err);
+    }
+  }
+
+  useEffect(() => {
+    if (!email) return;
+
+    loadNotifications();
+
+    const interval = setInterval(() => {
+      loadNotifications();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [email]);
 
   return (
     <div style={styles.navbar}>
@@ -137,7 +216,10 @@ export default function Navbar() {
             Support
           </div>
           <div style={styles.divider}></div>
-          <div style={{ ...styles.item, ...styles.signOutItem }} onClick={logout}>
+          <div
+            style={{ ...styles.item, ...styles.signOutItem }}
+            onClick={logout}
+          >
             Sign Out
           </div>
         </div>
@@ -164,11 +246,12 @@ export default function Navbar() {
             ) : (
               notifications.map((item) => (
                 <div
-                  key={item.id}
+                  key={item._id}
                   style={{
                     ...styles.notifItem,
                     background: item.read ? "#111827" : "#162033",
                   }}
+                  onClick={() => markSingleRead(item._id)}
                 >
                   <div
                     style={{
@@ -180,7 +263,9 @@ export default function Navbar() {
                   <div style={styles.notifContent}>
                     <div style={styles.notifItemTop}>
                       <span style={styles.notifItemTitle}>{item.title}</span>
-                      <span style={styles.notifTime}>{item.time}</span>
+                      <span style={styles.notifTime}>
+                        {formatTime(item.createdAt)}
+                      </span>
                     </div>
 
                     <div style={styles.notifText}>{item.text}</div>
@@ -376,6 +461,7 @@ const styles = {
     padding: "12px",
     borderRadius: "12px",
     border: "1px solid #1e293b",
+    cursor: "pointer",
   },
 
   notifDot: {
