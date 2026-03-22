@@ -4,29 +4,24 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getAblyRest } from "@/lib/ablyServer";
 
-function serialise(item) {
-  return {
-    ...item,
-    _id: String(item._id),
-  };
-}
-
 export async function GET() {
   try {
     const client = await clientPromise;
     const db = client.db("login");
-    const locations = db.collection("live_locations");
 
-    const items = await locations
-      .find({ enabled: true })
-      .sort({ updatedAt: -1, _id: -1 })
+    const riders = await db
+      .collection("live_locations")
+      .find({})
       .toArray();
 
     return NextResponse.json({
-      riders: items.map(serialise),
+      riders: riders.map((r) => ({
+        ...r,
+        _id: String(r._id),
+      })),
     });
-  } catch (e) {
-    console.error("LIVE LOCATION GET ERROR:", e);
+  } catch (err) {
+    console.error("LIVE LOCATION GET ERROR:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -39,45 +34,41 @@ export async function POST(req) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { lat, lng, enabled } = body || {};
+    const { lat, lng, enabled } = await req.json();
 
     const client = await clientPromise;
     const db = client.db("login");
-    const locations = db.collection("live_locations");
+    const collection = db.collection("live_locations");
 
-    const doc = {
-      userEmail: session.user.email,
-      userName: session.user.name || "Rider",
-      lat: typeof lat === "number" ? lat : null,
-      lng: typeof lng === "number" ? lng : null,
-      enabled: Boolean(enabled),
-      updatedAt: new Date(),
-    };
+    const now = new Date();
 
-    await locations.updateOne(
+    await collection.updateOne(
       { userEmail: session.user.email },
-      { $set: doc, $setOnInsert: { createdAt: new Date() } },
+      {
+        $set: {
+          userEmail: session.user.email,
+          userName: session.user.name || "Rider",
+          lat,
+          lng,
+          enabled: Boolean(enabled),
+          updatedAt: now,
+        },
+      },
       { upsert: true }
     );
-
-    const updated = await locations.findOne({ userEmail: session.user.email });
 
     try {
       const ably = getAblyRest();
       await ably.channels.get("riders:live").publish("live-location-updated", {
-        rider: serialise(updated),
+        userEmail: session.user.email,
       });
-    } catch (ablyErr) {
-      console.error("ABLY live location publish error:", ablyErr);
+    } catch (err) {
+      console.error("ABLY live location error:", err);
     }
 
-    return NextResponse.json({
-      message: "Live location updated",
-      rider: serialise(updated),
-    });
-  } catch (e) {
-    console.error("LIVE LOCATION POST ERROR:", e);
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("LIVE LOCATION POST ERROR:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

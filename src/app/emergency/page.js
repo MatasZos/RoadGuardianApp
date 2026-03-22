@@ -81,6 +81,18 @@ function haversineKm(a, b) {
   return R * c;
 }
 
+function popupBtnStyle(background) {
+  return `
+    background:${background};
+    color:white;
+    border:none;
+    border-radius:8px;
+    padding:8px 10px;
+    cursor:pointer;
+    font-weight:700;
+  `;
+}
+
 export default function EmergencyPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -102,6 +114,8 @@ export default function EmergencyPage() {
   const [shareLiveLocation, setShareLiveLocation] = useState(false);
 
   const [form, setForm] = useState({
+    reportMode: "self",
+    reportedForName: "",
     type: "breakdown",
     severity: "medium",
     description: "",
@@ -128,7 +142,9 @@ export default function EmergencyPage() {
   const hasCenteredRef = useRef(false);
   const lastCoordsRef = useRef(null);
   const followModeRef = useRef(true);
-  const lastLiveLocationPublishRef = useRef(0);
+
+  const lastEmergencyLocationUpdateRef = useRef(0);
+  const lastRiderLocationUpdateRef = useRef(0);
 
   const ablyRef = useRef(null);
   const userChannelRef = useRef(null);
@@ -142,7 +158,10 @@ export default function EmergencyPage() {
 
   const myActiveIncident = useMemo(() => {
     return incidents.find(
-      (item) => item.userEmail === email && !isClosedStatus(item.status)
+      (item) =>
+        item.userEmail === email &&
+        item.reportMode === "self" &&
+        !isClosedStatus(item.status)
     );
   }, [incidents, email]);
 
@@ -248,7 +267,7 @@ export default function EmergencyPage() {
 
         setCoords(nextCoords);
 
-        if (myMarkerRef.current && myActiveIncident) {
+        if (myMarkerRef.current) {
           myMarkerRef.current.setLngLat([lng, lat]);
         }
 
@@ -486,10 +505,10 @@ export default function EmergencyPage() {
 
   async function maybeSendEmergencyLocationUpdate(lat, lng) {
     if (!myActiveIncident?.shareLiveLocation) return;
-    const now = Date.now();
-    if (now - lastLiveLocationPublishRef.current < 5000) return;
 
-    lastLiveLocationPublishRef.current = now;
+    const now = Date.now();
+    if (now - lastEmergencyLocationUpdateRef.current < 5000) return;
+    lastEmergencyLocationUpdateRef.current = now;
 
     try {
       await fetch("/api/emergency", {
@@ -509,10 +528,10 @@ export default function EmergencyPage() {
 
   async function maybeSendLiveLocation(lat, lng) {
     if (!shareLiveLocation || !email) return;
-    const now = Date.now();
-    if (now - lastLiveLocationPublishRef.current < 5000) return;
 
-    lastLiveLocationPublishRef.current = now;
+    const now = Date.now();
+    if (now - lastRiderLocationUpdateRef.current < 5000) return;
+    lastRiderLocationUpdateRef.current = now;
 
     try {
       await fetch("/api/live-location", {
@@ -554,7 +573,7 @@ export default function EmergencyPage() {
         enabled: true,
       }),
     }).catch((err) => console.error(err));
-  }, [shareLiveLocation, email]);
+  }, [shareLiveLocation, email, coords]);
 
   async function startOrOpenConversation(otherUserEmail, presetText = "", incident = null) {
     if (!email || !otherUserEmail) return;
@@ -630,6 +649,16 @@ export default function EmergencyPage() {
           <div style="font-weight:800; font-size:15px; margin-bottom:6px;">
             ${incident.userName || "Rider"} • ${prettify(incident.type)}
           </div>
+          <div><strong>Report type:</strong> ${
+            incident.reportMode === "third_party"
+              ? "Reported by another rider"
+              : "Self reported"
+          }</div>
+          ${
+            incident.reportMode === "third_party" && incident.reportedForName
+              ? `<div><strong>Reported for:</strong> ${incident.reportedForName}</div>`
+              : ""
+          }
           <div><strong>Status:</strong> ${STATUS_LABELS[incident.status] || incident.status}</div>
           <div><strong>Severity:</strong> ${prettify(incident.severity)}</div>
           <div><strong>Injured:</strong> ${incident.injured ? "Yes" : "No"}</div>
@@ -875,7 +904,9 @@ export default function EmergencyPage() {
         if (incident?.userEmail) {
           await startOrOpenConversation(
             incident.userEmail,
-            action === "claim-help" ? "I’ve claimed your incident and I’m helping." : "I’m on the way.",
+            action === "claim-help"
+              ? "I’ve claimed your incident and I’m helping."
+              : "I’m on the way.",
             incident
           );
         }
@@ -894,6 +925,12 @@ export default function EmergencyPage() {
     setSubmitLoading(true);
     setError("");
 
+    if (!shareLiveLocation) {
+      setError("Live location must be enabled before sending an emergency.");
+      setSubmitLoading(false);
+      return;
+    }
+
     try {
       let currentCoords = coords;
       if (!currentCoords?.lat || !currentCoords?.lng) {
@@ -907,13 +944,15 @@ export default function EmergencyPage() {
         body: JSON.stringify({
           lat: currentCoords.lat,
           lng: currentCoords.lng,
+          reportMode: form.reportMode,
+          reportedForName: form.reportedForName,
           type: form.type,
           severity: form.severity,
           description: form.description,
           injured: form.injured,
           bikeRideable: form.bikeRideable,
           phone: form.phone,
-          shareLiveLocation,
+          shareLiveLocation: true,
         }),
       });
 
@@ -1141,11 +1180,7 @@ export default function EmergencyPage() {
   }
 
   if (status === "loading") {
-    return (
-      <div style={styles.loadingWrap}>
-        Loading...
-      </div>
-    );
+    return <div style={styles.loadingWrap}>Loading...</div>;
   }
 
   return (
@@ -1163,7 +1198,14 @@ export default function EmergencyPage() {
 
           <div style={styles.toggleRow}>
             <button
-              onClick={() => setShowEmergencyForm((prev) => !prev)}
+              onClick={() => {
+                if (!shareLiveLocation) {
+                  setError("You must enable live location before reporting an emergency.");
+                  return;
+                }
+                setError("");
+                setShowEmergencyForm((prev) => !prev);
+              }}
               style={styles.emergencyBtn}
               disabled={Boolean(myActiveIncident)}
             >
@@ -1193,7 +1235,7 @@ export default function EmergencyPage() {
               checked={shareLiveLocation}
               onChange={(e) => setShareLiveLocation(e.target.checked)}
             />
-            <span>Share live location temporarily</span>
+            <span>Enable live location for emergency reporting</span>
           </label>
 
           <div style={styles.legend}>
@@ -1215,6 +1257,34 @@ export default function EmergencyPage() {
             <h2 style={styles.panelTitle}>Create Emergency</h2>
 
             <div style={styles.formGrid}>
+              <label style={styles.field}>
+                <span>Emergency report type</span>
+                <select
+                  value={form.reportMode}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, reportMode: e.target.value }))
+                  }
+                  style={styles.input}
+                >
+                  <option value="self">I need help</option>
+                  <option value="third_party">I am reporting someone else</option>
+                </select>
+              </label>
+
+              {form.reportMode === "third_party" && (
+                <label style={styles.field}>
+                  <span>Who are you reporting for?</span>
+                  <input
+                    value={form.reportedForName}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, reportedForName: e.target.value }))
+                    }
+                    style={styles.input}
+                    placeholder="Rider name or short note"
+                  />
+                </label>
+              )}
+
               <label style={styles.field}>
                 <span>Incident type</span>
                 <select
@@ -1393,6 +1463,12 @@ export default function EmergencyPage() {
                   </div>
 
                   <div style={styles.listCardMeta}>
+                    <div>
+                      Report type: {incident.reportMode === "third_party" ? "Reported by another rider" : "Self reported"}
+                    </div>
+                    {incident.reportMode === "third_party" && incident.reportedForName ? (
+                      <div>Reported for: {incident.reportedForName}</div>
+                    ) : null}
                     <div>Severity: {prettify(incident.severity)}</div>
                     <div>Created: {formatTime(incident.createdAt)}</div>
                     <div>Helper: {incident.helperUserName || "None assigned"}</div>
@@ -1628,18 +1704,6 @@ export default function EmergencyPage() {
       </div>
     </div>
   );
-}
-
-function popupBtnStyle(background) {
-  return `
-    background:${background};
-    color:white;
-    border:none;
-    border-radius:8px;
-    padding:8px 10px;
-    cursor:pointer;
-    font-weight:700;
-  `;
 }
 
 const styles = {
