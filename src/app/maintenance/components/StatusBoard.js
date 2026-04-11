@@ -5,7 +5,7 @@ export default function StatusBoard({ summary }) {
 
   return (
     <div className={styles.statusBoard}>
-      <h2>Bike Service Intelligence</h2>
+      <h2>Bike Service</h2>
 
       <p>
         {summary.bike} · KM:{" "}
