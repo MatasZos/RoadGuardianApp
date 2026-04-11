@@ -11,9 +11,6 @@ import BikeSelector from "./components/BikeSelector";
 import MaintenanceForm from "./components/MaintenanceForm";
 import Timeline from "./components/Timeline";
 
-/* KEEP ALL YOUR ORIGINAL FUNCTIONS HERE (UNCHANGED) */
-// serviceIntervals, helpers, buildBikeTaskSummary etc.
-// 👉 literally paste them here unchanged
 
 export default function MaintenancePage() {
   const router = useRouter();
