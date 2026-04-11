@@ -10,6 +10,22 @@
   margin-bottom: 20px;
 }
 
+.loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* CARD */
+.card {
+  background: var(--card);
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+/* FORM */
 .form {
   display: flex;
   flex-direction: column;
@@ -17,10 +33,10 @@
   background: var(--card);
   padding: 20px;
   border-radius: 12px;
+  margin-bottom: 20px;
 }
 
-.input,
-.textarea {
+.input {
   padding: 12px;
   border-radius: 8px;
   background: #1a1a1a;
@@ -36,26 +52,31 @@
   font-weight: bold;
 }
 
-.checkboxContainer {
+/* STATUS */
+.statusBoard {
+  margin-bottom: 20px;
+}
+
+.statusGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.statusCard {
+  background: #111;
+  padding: 12px;
+  border-radius: 10px;
+}
+
+.statusPill {
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.75rem;
 }
 
 .timeline {
-  margin-top: 30px;
-}
-
-.card {
-  background: #111;
-  padding: 15px;
-  border-radius: 10px;
-  margin-bottom: 10px;
-}
-
-.loading {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  gap: 10px;
 }
