@@ -9,6 +9,7 @@ import styles from "./maintenance.module.css";
 import BikeSelector from "./components/BikeSelector";
 import MaintenanceForm from "./components/MaintenanceForm";
 import Timeline from "./components/Timeline";
+import StatusBoard from "./components/StatusBoard";
 
 /* ================= CONSTANTS ================= */
 
@@ -63,6 +64,73 @@ function groupByMonth(recs) {
   return groups;
 }
 
+function getTaskStatus(remainingKm) {
+  if (!Number.isFinite(remainingKm)) {
+    return { label: "Unknown", color: "#94a3b8" };
+  }
+  if (remainingKm < 0) {
+    return { label: "Overdue", color: "#ef4444" };
+  }
+  if (remainingKm <= 1500) {
+    return { label: "Due Soon", color: "#f59e0b" };
+  }
+  return { label: "Healthy", color: "#22c55e" };
+}
+
+function buildBikeTaskSummary(records) {
+  const bikes = {};
+
+  for (const record of records) {
+    const bike = record.motorbike || "Unknown bike";
+    const km = Number(record.km);
+
+    if (!bikes[bike]) {
+      bikes[bike] = {
+        bike,
+        currentKm: km || 0,
+        tasks: {},
+      };
+    }
+
+    if (km > bikes[bike].currentKm) {
+      bikes[bike].currentKm = km;
+    }
+
+    const tasks = Array.isArray(record.type) ? record.type : [];
+
+    for (const task of tasks) {
+      bikes[bike].tasks[task] = {
+        type: task,
+        lastServiceKm: km,
+        intervalKm: serviceIntervals[task],
+      };
+    }
+  }
+
+  return Object.values(bikes).map((bike) => {
+    const taskList = Object.values(bike.tasks).map((t) => {
+      const nextDueKm = t.lastServiceKm + t.intervalKm;
+      const remainingKm = nextDueKm - bike.currentKm;
+
+      return {
+        ...t,
+        nextDueKm,
+        remainingKm,
+        status: getTaskStatus(remainingKm),
+      };
+    });
+
+    return {
+      ...bike,
+      overdue: taskList.filter((t) => t.remainingKm < 0),
+      dueSoon: taskList.filter(
+        (t) => t.remainingKm >= 0 && t.remainingKm <= 1500
+      ),
+      upcoming: taskList.filter((t) => t.remainingKm > 1500),
+    };
+  });
+}
+
 /* ================= PAGE ================= */
 
 export default function MaintenancePage() {
@@ -95,6 +163,15 @@ export default function MaintenancePage() {
   const grouped = groupByMonth(records);
   const monthSections = Object.entries(grouped);
 
+  const bikeSummaries = useMemo(
+    () => buildBikeTaskSummary(records),
+    [records]
+  );
+
+  const selectedBikeSummary = useMemo(() => {
+    return bikeSummaries.find((b) => b.bike === selectedBike);
+  }, [bikeSummaries, selectedBike]);
+
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
   }, [status]);
@@ -122,44 +199,10 @@ export default function MaintenancePage() {
   }
 
   async function handleBikeSearch() {
-    setBikeResults([]);
-
-    const make = bikeSearch.make.trim();
-    const model = bikeSearch.model.trim();
-    const year = bikeSearch.year.trim();
-
-    if (!make && !model) {
-      alert("Enter a Make or Model");
-      return;
-    }
-
-    const qs = new URLSearchParams();
-    if (make) qs.set("make", make);
-    if (model) qs.set("model", model);
-    if (year) qs.set("year", year);
-
-    setBikeLoading(true);
-
-    try {
-      const res = await fetch(`/api/motorcycles?${qs.toString()}`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.error || "Search failed");
-        return;
-      }
-
-      setBikeResults(Array.isArray(data) ? data : []);
-
-      if (!data.length) {
-        alert("No bikes found");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Search error");
-    } finally {
-      setBikeLoading(false);
-    }
+    const qs = new URLSearchParams(bikeSearch);
+    const res = await fetch(`/api/motorcycles?${qs.toString()}`);
+    const data = await res.json();
+    setBikeResults(data || []);
   }
 
   function pickBike(bike) {
@@ -183,11 +226,6 @@ export default function MaintenancePage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-
-    if (!selectedBike) {
-      alert("Select a bike first");
-      return;
-    }
 
     await fetch("/api/maintenance", {
       method: editingId ? "PUT" : "POST",
@@ -255,6 +293,10 @@ export default function MaintenancePage() {
           handleBikeSearch={handleBikeSearch}
           pickBike={pickBike}
         />
+
+        {selectedBikeSummary && (
+          <StatusBoard summary={selectedBikeSummary} />
+        )}
 
         <MaintenanceForm
           form={form}
