@@ -1,17 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Navbar from "../components/Navbar";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import Navbar from "../components/Navbar";
 import styles from "./maintenance.module.css";
-
-import BikeSelector from "./components/BikeSelector";
-import MaintenanceForm from "./components/MaintenanceForm";
-import Timeline from "./components/Timeline";
-import StatusBoard from "./components/StatusBoard";
-
-/* ================= CONSTANTS ================= */
 
 const serviceIntervals = {
   "Oil Change": 5000,
@@ -38,50 +31,25 @@ const serviceIntervals = {
 
 const maintenanceTypes = Object.keys(serviceIntervals);
 
-/* ================= HELPERS ================= */
-
-function safeDate(value) {
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function monthYearLabel(value) {
-  const d = safeDate(value);
-  if (!d) return "Unknown date";
-  return d.toLocaleDateString(undefined, {
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function groupByMonth(recs) {
+function groupByMonth(records) {
   const groups = {};
-  for (const r of recs) {
-    const key = monthYearLabel(r.date || r.createdAt);
+  records.forEach((r) => {
+    const date = new Date(r.date || r.createdAt);
+    const key = date.toLocaleDateString(undefined, {
+      month: "long",
+      year: "numeric",
+    });
     if (!groups[key]) groups[key] = [];
     groups[key].push(r);
-  }
+  });
   return groups;
-}
-
-function getTaskStatus(remainingKm) {
-  if (!Number.isFinite(remainingKm)) {
-    return { label: "Unknown", color: "#94a3b8" };
-  }
-  if (remainingKm < 0) {
-    return { label: "Overdue", color: "#ef4444" };
-  }
-  if (remainingKm <= 1500) {
-    return { label: "Due Soon", color: "#f59e0b" };
-  }
-  return { label: "Healthy", color: "#22c55e" };
 }
 
 function buildBikeTaskSummary(records) {
   const bikes = {};
 
   for (const record of records) {
-    const bike = record.motorbike || "Unknown bike";
+    const bike = record.motorbike || "Unknown";
     const km = Number(record.km);
 
     if (!bikes[bike]) {
@@ -96,222 +64,189 @@ function buildBikeTaskSummary(records) {
       bikes[bike].currentKm = km;
     }
 
-    const tasks = Array.isArray(record.type) ? record.type : [];
+    const taskList = Array.isArray(record.type)
+      ? record.type
+      : [record.type];
 
-    for (const task of tasks) {
-      bikes[bike].tasks[task] = {
-        type: task,
-        lastServiceKm: km,
-        intervalKm: serviceIntervals[task],
-      };
+    for (const task of taskList) {
+      const existing = bikes[bike].tasks[task];
+
+      const shouldReplace =
+        !existing ||
+        (Number.isFinite(km) &&
+          Number.isFinite(existing?.lastServiceKm) &&
+          km > existing.lastServiceKm);
+
+      if (shouldReplace) {
+        bikes[bike].tasks[task] = {
+          type: task,
+          lastServiceKm: km,
+          intervalKm: serviceIntervals[task],
+        };
+      }
     }
   }
 
   return Object.values(bikes).map((bike) => {
-    const taskList = Object.values(bike.tasks).map((t) => {
-      const nextDueKm = t.lastServiceKm + t.intervalKm;
-      const remainingKm = nextDueKm - bike.currentKm;
+    const tasks = Object.values(bike.tasks).map((t) => {
+      const next = t.lastServiceKm + t.intervalKm;
+      const remaining = next - bike.currentKm;
 
       return {
         ...t,
-        nextDueKm,
-        remainingKm,
-        status: getTaskStatus(remainingKm),
+        remaining,
       };
     });
 
     return {
-      ...bike,
-      overdue: taskList.filter((t) => t.remainingKm < 0),
-      dueSoon: taskList.filter(
-        (t) => t.remainingKm >= 0 && t.remainingKm <= 1500
-      ),
-      upcoming: taskList.filter((t) => t.remainingKm > 1500),
+      bike: bike.bike,
+      currentKm: bike.currentKm,
+      overdue: tasks.filter((t) => t.remaining < 0),
+      dueSoon: tasks.filter((t) => t.remaining >= 0 && t.remaining <= 1500),
+      upcoming: tasks.filter((t) => t.remaining > 1500),
     };
   });
 }
-
-/* ================= PAGE ================= */
 
 export default function MaintenancePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
 
   const [records, setRecords] = useState([]);
-  const [editingId, setEditingId] = useState(null);
-  const [selectedBike, setSelectedBike] = useState("");
-
   const [form, setForm] = useState({
     type: [],
-    date: "",
     km: "",
-    notes: "",
-    advisories: "",
+    date: new Date().toISOString().slice(0, 10),
   });
 
-  const [bikeSearch, setBikeSearch] = useState({
-    make: "",
-    model: "",
-    year: "",
-  });
-
-  const [bikeResults, setBikeResults] = useState([]);
-  const [bikeLoading, setBikeLoading] = useState(false);
-
-  const email = session?.user?.email || null;
+  const email = session?.user?.email;
 
   const grouped = groupByMonth(records);
-  const monthSections = Object.entries(grouped);
-
-  const bikeSummaries = useMemo(
-    () => buildBikeTaskSummary(records),
+  const bikeSummary = useMemo(
+    () => buildBikeTaskSummary(records)[0],
     [records]
   );
-
-  const selectedBikeSummary = useMemo(() => {
-    return bikeSummaries.find((b) => b.bike === selectedBike);
-  }, [bikeSummaries, selectedBike]);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
   }, [status]);
 
   useEffect(() => {
-    fetchRecords();
-  }, [email]);
-
-  useEffect(() => {
-    setForm((prev) => ({
-      ...prev,
-      date: prev.date || new Date().toISOString().slice(0, 10),
-    }));
-  }, []);
-
-  async function fetchRecords() {
     if (!email) return;
 
-    const res = await fetch("/api/maintenance", {
+    fetch("/api/maintenance", {
       headers: { "x-user-email": email },
-    });
-
-    const data = await res.json();
-    setRecords(Array.isArray(data) ? data : []);
-  }
-
-  async function handleBikeSearch() {
-    const qs = new URLSearchParams(bikeSearch);
-    const res = await fetch(`/api/motorcycles?${qs.toString()}`);
-    const data = await res.json();
-    setBikeResults(data || []);
-  }
-
-  function pickBike(bike) {
-    const label = `${bike.make} ${bike.model} (${bike.year})`;
-    setSelectedBike(label);
-    localStorage.setItem("userMotorbike", label);
-    setBikeResults([]);
-  }
-
-  function toggleTask(task) {
-    setForm((prev) => {
-      const exists = prev.type.includes(task);
-      return {
-        ...prev,
-        type: exists
-          ? prev.type.filter((t) => t !== task)
-          : [...prev.type, task],
-      };
-    });
-  }
+    })
+      .then((res) => res.json())
+      .then(setRecords);
+  }, [email]);
 
   async function handleSubmit(e) {
     e.preventDefault();
 
     await fetch("/api/maintenance", {
-      method: editingId ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json" },
+      method: "POST",
       body: JSON.stringify({
-        userEmail: email,
-        motorbike: selectedBike,
-        _id: editingId,
         ...form,
+        userEmail: email,
       }),
     });
 
-    setForm({
-      type: [],
-      date: new Date().toISOString().slice(0, 10),
-      km: "",
-      notes: "",
-      advisories: "",
-    });
+    setForm({ type: [], km: "", date: form.date });
 
-    setEditingId(null);
-    fetchRecords();
-  }
-
-  function startEdit(record) {
-    setEditingId(record._id);
-    setSelectedBike(record.motorbike || "");
-
-    setForm({
-      type: Array.isArray(record.type) ? record.type : [record.type],
-      date: record.date || "",
-      km: record.km || "",
-      notes: record.notes || "",
-      advisories: record.advisories || "",
-    });
-  }
-
-  async function deleteRecord(id) {
-    await fetch("/api/maintenance", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ _id: id }),
-    });
-
-    setRecords((prev) => prev.filter((r) => r._id !== id));
-  }
-
-  if (status === "loading") {
-    return <div className={styles.loading}>Loading...</div>;
+    location.reload();
   }
 
   return (
-    <>
+    <div className={styles.wrapper}>
       <Navbar />
 
-      <div className={styles.container}>
-        <h1 className={styles.title}>Maintenance</h1>
+      <div className={styles.dashboard}>
+        {/* MAIN */}
+        <div className={styles.main}>
+          <h1 className={styles.title}>Maintenance</h1>
 
-        <BikeSelector
-          selectedBike={selectedBike}
-          bikeSearch={bikeSearch}
-          setBikeSearch={setBikeSearch}
-          bikeResults={bikeResults}
-          bikeLoading={bikeLoading}
-          handleBikeSearch={handleBikeSearch}
-          pickBike={pickBike}
-        />
+          {/* STATUS */}
+          {bikeSummary && (
+            <div className={styles.card}>
+              <div className={styles.statusHeader}>
+                Bike Service · {bikeSummary.currentKm} km
+              </div>
 
-        {selectedBikeSummary && (
-          <StatusBoard summary={selectedBikeSummary} />
-        )}
+              <div className={styles.statusGrid}>
+                <Status title="Overdue" items={bikeSummary.overdue} />
+                <Status title="Due Soon" items={bikeSummary.dueSoon} />
+                <Status title="Upcoming" items={bikeSummary.upcoming} />
+              </div>
+            </div>
+          )}
 
-        <MaintenanceForm
-          form={form}
-          setForm={setForm}
-          toggleTask={toggleTask}
-          handleSubmit={handleSubmit}
-          maintenanceTypes={maintenanceTypes}
-        />
+          {/* FORM */}
+          <form onSubmit={handleSubmit} className={styles.card}>
+            <div className={styles.form}>
+              <input
+                className={styles.input}
+                placeholder="KM"
+                value={form.km}
+                onChange={(e) =>
+                  setForm({ ...form, km: e.target.value })
+                }
+              />
 
-        <Timeline
-          monthSections={monthSections}
-          startEdit={startEdit}
-          deleteRecord={deleteRecord}
-        />
+              <button className={styles.button}>Add Record</button>
+            </div>
+          </form>
+
+          {/* TIMELINE */}
+          <div className={styles.timeline}>
+            {Object.entries(grouped).map(([month, items]) => (
+              <div key={month}>
+                <h3>{month}</h3>
+
+                {items.map((r) => (
+                  <div key={r._id} className={styles.timelineCard}>
+                    <div className={styles.cardTitle}>
+                      {Array.isArray(r.type)
+                        ? r.type.join(", ")
+                        : r.type}
+                    </div>
+
+                    <div className={styles.cardText}>
+                      KM: {r.km}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* SIDEBAR */}
+        <div className={styles.sidebar}>
+          <div className={styles.bikeCard}>
+            <h3>Your Bike</h3>
+            <p>{records[0]?.motorbike || "None"}</p>
+          </div>
+        </div>
       </div>
-    </>
+    </div>
+  );
+}
+
+function Status({ title, items }) {
+  return (
+    <div className={styles.statusCard}>
+      <div className={styles.statusLabel}>{title}</div>
+
+      {items.length === 0 ? (
+        <div className={styles.statusValue}>None</div>
+      ) : (
+        items.slice(0, 2).map((i) => (
+          <div key={i.type} className={styles.statusValue}>
+            {i.type} ({i.remaining} km)
+          </div>
+        ))
+      )}
+    </div>
   );
 }
