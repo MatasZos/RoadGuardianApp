@@ -1,17 +1,44 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Navbar from "../components/Navbar";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import Navbar from "../components/Navbar";
 import styles from "./maintenance.module.css";
 
+import BikeSelector from "./components/BikeSelector";
+import MaintenanceForm from "./components/MaintenanceForm";
+import Timeline from "./components/Timeline";
+import StatusBoard from "./components/StatusBoard";
+
+/* ================= CONSTANTS ================= */
 
 const serviceIntervals = {
   "Oil Change": 5000,
+  "Oil Filter Replacement": 5000,
   "Air Filter Replacement": 12000,
+  "Chain Clean & Lube": 800,
   "Chain Adjustment": 1500,
+  "Chain & Sprocket Kit Replacement": 20000,
+  "Brake Pads Replacement": 15000,
+  "Brake Fluid Change": 20000,
+  "Tire Replacement": 12000,
+  "Tire Pressure Check": 500,
+  "Spark Plug Replacement": 12000,
+  "Battery Replacement": 30000,
+  "Clutch Cable Adjustment": 8000,
+  "Throttle Cable Adjustment": 8000,
+  "Fuel Filter Replacement": 15000,
+  "Suspension Service": 25000,
+  "Wheel Bearings Check": 12000,
+  "Headlight Bulb Replacement": 20000,
+  "Indicator Bulb Replacement": 20000,
+  "Brake Disc Replacement": 30000,
 };
+
+const maintenanceTypes = Object.keys(serviceIntervals);
+
+/* ================= HELPERS ================= */
 
 function safeDate(value) {
   const d = new Date(value);
@@ -20,29 +47,99 @@ function safeDate(value) {
 
 function monthYearLabel(value) {
   const d = safeDate(value);
-  if (!d) return "Unknown";
+  if (!d) return "Unknown date";
   return d.toLocaleDateString(undefined, {
     month: "long",
     year: "numeric",
   });
 }
 
-function groupByMonth(records) {
+function groupByMonth(recs) {
   const groups = {};
-  for (const r of records) {
-    const key = monthYearLabel(r.date);
+  for (const r of recs) {
+    const key = monthYearLabel(r.date || r.createdAt);
     if (!groups[key]) groups[key] = [];
     groups[key].push(r);
   }
   return groups;
 }
 
+function getTaskStatus(remainingKm) {
+  if (!Number.isFinite(remainingKm)) {
+    return { label: "Unknown", color: "#94a3b8" };
+  }
+  if (remainingKm < 0) {
+    return { label: "Overdue", color: "#ef4444" };
+  }
+  if (remainingKm <= 1500) {
+    return { label: "Due Soon", color: "#f59e0b" };
+  }
+  return { label: "Healthy", color: "#22c55e" };
+}
+
+function buildBikeTaskSummary(records) {
+  const bikes = {};
+
+  for (const record of records) {
+    const bike = record.motorbike || "Unknown bike";
+    const km = Number(record.km);
+
+    if (!bikes[bike]) {
+      bikes[bike] = {
+        bike,
+        currentKm: km || 0,
+        tasks: {},
+      };
+    }
+
+    if (km > bikes[bike].currentKm) {
+      bikes[bike].currentKm = km;
+    }
+
+    const tasks = Array.isArray(record.type) ? record.type : [];
+
+    for (const task of tasks) {
+      bikes[bike].tasks[task] = {
+        type: task,
+        lastServiceKm: km,
+        intervalKm: serviceIntervals[task],
+      };
+    }
+  }
+
+  return Object.values(bikes).map((bike) => {
+    const taskList = Object.values(bike.tasks).map((t) => {
+      const nextDueKm = t.lastServiceKm + t.intervalKm;
+      const remainingKm = nextDueKm - bike.currentKm;
+
+      return {
+        ...t,
+        nextDueKm,
+        remainingKm,
+        status: getTaskStatus(remainingKm),
+      };
+    });
+
+    return {
+      ...bike,
+      overdue: taskList.filter((t) => t.remainingKm < 0),
+      dueSoon: taskList.filter(
+        (t) => t.remainingKm >= 0 && t.remainingKm <= 1500
+      ),
+      upcoming: taskList.filter((t) => t.remainingKm > 1500),
+    };
+  });
+}
+
+/* ================= PAGE ================= */
 
 export default function MaintenancePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
 
   const [records, setRecords] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [selectedBike, setSelectedBike] = useState("");
 
   const [form, setForm] = useState({
     type: [],
@@ -60,60 +157,52 @@ export default function MaintenancePage() {
 
   const [bikeResults, setBikeResults] = useState([]);
   const [bikeLoading, setBikeLoading] = useState(false);
-  const [selectedBike, setSelectedBike] = useState("");
 
+  const email = session?.user?.email || null;
 
-  useEffect(() => {
-    const saved = localStorage.getItem("userMotorbike") || "";
-    setSelectedBike(saved);
-  }, []);
+  const grouped = groupByMonth(records);
+  const monthSections = Object.entries(grouped);
 
+  const bikeSummaries = useMemo(
+    () => buildBikeTaskSummary(records),
+    [records]
+  );
+
+  const selectedBikeSummary = useMemo(() => {
+    return bikeSummaries.find((b) => b.bike === selectedBike);
+  }, [bikeSummaries, selectedBike]);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
   }, [status]);
 
+  useEffect(() => {
+    fetchRecords();
+  }, [email]);
+
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      date: prev.date || new Date().toISOString().slice(0, 10),
+    }));
+  }, []);
 
   async function fetchRecords() {
-    if (!session?.user?.email) return;
+    if (!email) return;
 
     const res = await fetch("/api/maintenance", {
-      headers: { "x-user-email": session.user.email },
+      headers: { "x-user-email": email },
     });
 
     const data = await res.json();
     setRecords(Array.isArray(data) ? data : []);
   }
 
-  useEffect(() => {
-    fetchRecords();
-  }, [session]);
-
-
   async function handleBikeSearch() {
-    const { make, model, year } = bikeSearch;
-
-    if (!make && !model) {
-      alert("Enter make or model");
-      return;
-    }
-
-    const qs = new URLSearchParams();
-    if (make) qs.set("make", make);
-    if (model) qs.set("model", model);
-    if (year) qs.set("year", year);
-
-    setBikeLoading(true);
-
-    try {
-      const res = await fetch(`/api/motorcycles?${qs}`);
-      const data = await res.json();
-      setBikeResults(Array.isArray(data) ? data : []);
-    } catch {
-      alert("Search failed");
-    } finally {
-      setBikeLoading(false);
-    }
+    const qs = new URLSearchParams(bikeSearch);
+    const res = await fetch(`/api/motorcycles?${qs.toString()}`);
+    const data = await res.json();
+    setBikeResults(data || []);
   }
 
   function pickBike(bike) {
@@ -123,78 +212,66 @@ export default function MaintenancePage() {
     setBikeResults([]);
   }
 
+  function toggleTask(task) {
+    setForm((prev) => {
+      const exists = prev.type.includes(task);
+      return {
+        ...prev,
+        type: exists
+          ? prev.type.filter((t) => t !== task)
+          : [...prev.type, task],
+      };
+    });
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!selectedBike) {
-      alert("Select a bike first");
-      return;
-    }
-
     await fetch("/api/maintenance", {
-      method: "POST",
+      method: editingId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...form,
+        userEmail: email,
         motorbike: selectedBike,
-        userEmail: session.user.email,
+        _id: editingId,
+        ...form,
       }),
     });
 
     setForm({
       type: [],
-      date: "",
+      date: new Date().toISOString().slice(0, 10),
       km: "",
       notes: "",
       advisories: "",
     });
 
+    setEditingId(null);
     fetchRecords();
   }
 
+  function startEdit(record) {
+    setEditingId(record._id);
+    setSelectedBike(record.motorbike || "");
 
-  const bikeSummary = useMemo(() => {
-    if (!selectedBike) return null;
+    setForm({
+      type: Array.isArray(record.type) ? record.type : [record.type],
+      date: record.date || "",
+      km: record.km || "",
+      notes: record.notes || "",
+      advisories: record.advisories || "",
+    });
+  }
 
-    const bikeRecords = records.filter(
-      (r) => r.motorbike === selectedBike
-    );
-
-    if (bikeRecords.length === 0) return null;
-
-    const latestKm = Math.max(...bikeRecords.map((r) => Number(r.km)));
-
-    const latestTasks = {};
-
-    for (const r of bikeRecords) {
-      const km = Number(r.km);
-      for (const t of r.type || []) {
-        if (!latestTasks[t] || km > latestTasks[t]) {
-          latestTasks[t] = km;
-        }
-      }
-    }
-
-    const tasks = Object.entries(latestTasks).map(([type, lastKm]) => {
-      const interval = serviceIntervals[type];
-      const nextDue = lastKm + interval;
-      const remaining = nextDue - latestKm;
-
-      return { type, remaining };
+  async function deleteRecord(id) {
+    await fetch("/api/maintenance", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ _id: id }),
     });
 
-    return {
-      overdue: tasks.filter((t) => t.remaining < 0),
-      dueSoon: tasks.filter((t) => t.remaining <= 1500 && t.remaining >= 0),
-      upcoming: tasks.filter((t) => t.remaining > 1500),
-      currentKm: latestKm,
-    };
-  }, [records, selectedBike]);
-
-
-  const grouped = groupByMonth(records);
-
+    setRecords((prev) => prev.filter((r) => r._id !== id));
+  }
 
   if (status === "loading") {
     return <div className={styles.loading}>Loading...</div>;
@@ -207,132 +284,33 @@ export default function MaintenancePage() {
       <div className={styles.container}>
         <h1 className={styles.title}>Maintenance</h1>
 
-        {/* BIKE CARD */}
-        <div className={styles.bikeCard}>
-          <h3>Your Bike</h3>
+        <BikeSelector
+          selectedBike={selectedBike}
+          bikeSearch={bikeSearch}
+          setBikeSearch={setBikeSearch}
+          bikeResults={bikeResults}
+          bikeLoading={bikeLoading}
+          handleBikeSearch={handleBikeSearch}
+          pickBike={pickBike}
+        />
 
-          <p className={styles.selectedBike}>
-            {selectedBike || "None selected"}
-          </p>
-
-          <div className={styles.bikeSearch}>
-            <input
-              className={styles.input}
-              placeholder="Make"
-              value={bikeSearch.make}
-              onChange={(e) =>
-                setBikeSearch({ ...bikeSearch, make: e.target.value })
-              }
-            />
-            <input
-              className={styles.input}
-              placeholder="Model"
-              value={bikeSearch.model}
-              onChange={(e) =>
-                setBikeSearch({ ...bikeSearch, model: e.target.value })
-              }
-            />
-            <input
-              className={styles.input}
-              placeholder="Year"
-              value={bikeSearch.year}
-              onChange={(e) =>
-                setBikeSearch({ ...bikeSearch, year: e.target.value })
-              }
-            />
-
-            <button
-              className={styles.button}
-              onClick={handleBikeSearch}
-            >
-              {bikeLoading ? "..." : "Search"}
-            </button>
-          </div>
-
-          {bikeResults.length > 0 && (
-            <div className={styles.bikeResults}>
-              {bikeResults.slice(0, 6).map((bike, i) => (
-                <div
-                  key={i}
-                  className={styles.bikeResultItem}
-                  onClick={() => pickBike(bike)}
-                >
-                  {bike.make} {bike.model} ({bike.year})
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* STATUS */}
-        {bikeSummary && (
-          <div className={styles.statusBoard}>
-            <h3>Bike Service · {bikeSummary.currentKm.toLocaleString()} km</h3>
-
-            <div className={styles.statusGrid}>
-              <div className={styles.statusCard}>
-                <strong>Overdue</strong>
-                {bikeSummary.overdue.length === 0
-                  ? "None"
-                  : bikeSummary.overdue.map((t) => (
-                      <p key={t.type}>{t.type}</p>
-                    ))}
-              </div>
-
-              <div className={styles.statusCard}>
-                <strong>Due Soon</strong>
-                {bikeSummary.dueSoon.length === 0
-                  ? "None"
-                  : bikeSummary.dueSoon.map((t) => (
-                      <p key={t.type}>{t.type}</p>
-                    ))}
-              </div>
-
-              <div className={styles.statusCard}>
-                <strong>Upcoming</strong>
-                {bikeSummary.upcoming.map((t) => (
-                  <p key={t.type}>{t.type}</p>
-                ))}
-              </div>
-            </div>
-          </div>
+        {selectedBikeSummary && (
+          <StatusBoard summary={selectedBikeSummary} />
         )}
 
-        {/* FORM */}
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <input
-            className={styles.input}
-            placeholder="KM"
-            value={form.km}
-            onChange={(e) =>
-              setForm({ ...form, km: e.target.value })
-            }
-          />
+        <MaintenanceForm
+          form={form}
+          setForm={setForm}
+          toggleTask={toggleTask}
+          handleSubmit={handleSubmit}
+          maintenanceTypes={maintenanceTypes}
+        />
 
-          <button className={styles.button}>
-            Add Record
-          </button>
-        </form>
-
-        {/* TIMELINE */}
-        <div className={styles.timeline}>
-          {Object.entries(grouped).map(([month, items]) => (
-            <div key={month}>
-              <h3>{month}</h3>
-
-              {items.map((r) => (
-                <div key={r._id} className={styles.card}>
-                  <strong>
-                    {Array.isArray(r.type)
-                      ? r.type.join(", ")
-                      : r.type}
-                  </strong>
-                  <p>KM: {r.km}</p>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
+        <Timeline
+          monthSections={monthSections}
+          startEdit={startEdit}
+          deleteRecord={deleteRecord}
+        />
       </div>
     </>
   );

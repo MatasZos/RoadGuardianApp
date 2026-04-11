@@ -22,15 +22,8 @@ export default function StatusBoard({ summary }) {
 }
 
 function Column({ title, items }) {
-  const typeClass =
-    title === "Overdue"
-      ? styles.statusOverdue
-      : title === "Due Soon"
-      ? styles.statusSoon
-      : styles.statusOk;
-
   return (
-    <div className={`${styles.statusCard} ${typeClass}`}>
+    <div className={styles.statusCard}>
       <h3>{title}</h3>
 
       {items.length === 0 ? (
