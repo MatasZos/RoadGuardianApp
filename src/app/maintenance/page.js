@@ -6,316 +6,334 @@ import { useSession } from "next-auth/react";
 import Navbar from "../components/Navbar";
 import styles from "./maintenance.module.css";
 
+
 const serviceIntervals = {
   "Oil Change": 5000,
-  "Oil Filter Replacement": 5000,
   "Air Filter Replacement": 12000,
-  "Chain Clean & Lube": 800,
   "Chain Adjustment": 1500,
-  "Chain & Sprocket Kit Replacement": 20000,
-  "Brake Pads Replacement": 15000,
-  "Brake Fluid Change": 20000,
-  "Tire Replacement": 12000,
-  "Tire Pressure Check": 500,
-  "Spark Plug Replacement": 12000,
-  "Battery Replacement": 30000,
-  "Clutch Cable Adjustment": 8000,
-  "Throttle Cable Adjustment": 8000,
-  "Fuel Filter Replacement": 15000,
-  "Suspension Service": 25000,
-  "Wheel Bearings Check": 12000,
-  "Headlight Bulb Replacement": 20000,
-  "Indicator Bulb Replacement": 20000,
-  "Brake Disc Replacement": 30000,
 };
 
-const maintenanceTypes = Object.keys(serviceIntervals);
+function safeDate(value) {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function monthYearLabel(value) {
+  const d = safeDate(value);
+  if (!d) return "Unknown";
+  return d.toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
+}
 
 function groupByMonth(records) {
   const groups = {};
-  records.forEach((r) => {
-    const date = new Date(r.date || r.createdAt);
-    const key = date.toLocaleDateString(undefined, {
-      month: "long",
-      year: "numeric",
-    });
+  for (const r of records) {
+    const key = monthYearLabel(r.date);
     if (!groups[key]) groups[key] = [];
     groups[key].push(r);
-  });
+  }
   return groups;
 }
 
-function buildBikeTaskSummary(records) {
-  const bikes = {};
-
-  for (const record of records) {
-    const bike = record.motorbike || "Unknown";
-    const km = Number(record.km);
-
-    if (!bikes[bike]) {
-      bikes[bike] = {
-        bike,
-        currentKm: km || 0,
-        tasks: {},
-      };
-    }
-
-    if (km > bikes[bike].currentKm) {
-      bikes[bike].currentKm = km;
-    }
-
-    const taskList = Array.isArray(record.type)
-      ? record.type
-      : [record.type];
-
-    for (const task of taskList) {
-      const existing = bikes[bike].tasks[task];
-
-      const shouldReplace =
-        !existing ||
-        (Number.isFinite(km) &&
-          Number.isFinite(existing?.lastServiceKm) &&
-          km > existing.lastServiceKm);
-
-      if (shouldReplace) {
-        bikes[bike].tasks[task] = {
-          type: task,
-          lastServiceKm: km,
-          intervalKm: serviceIntervals[task],
-        };
-      }
-    }
-  }
-
-  return Object.values(bikes).map((bike) => {
-    const tasks = Object.values(bike.tasks).map((t) => {
-      const next = t.lastServiceKm + t.intervalKm;
-      const remaining = next - bike.currentKm;
-
-      return { ...t, remaining };
-    });
-
-    return {
-      bike: bike.bike,
-      currentKm: bike.currentKm,
-      overdue: tasks.filter((t) => t.remaining < 0),
-      dueSoon: tasks.filter((t) => t.remaining >= 0 && t.remaining <= 1500),
-      upcoming: tasks.filter((t) => t.remaining > 1500),
-    };
-  });
-}
 
 export default function MaintenancePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
 
   const [records, setRecords] = useState([]);
+
   const [form, setForm] = useState({
     type: [],
+    date: "",
     km: "",
-    date: new Date().toISOString().slice(0, 10),
     notes: "",
     advisories: "",
   });
 
-  const email = session?.user?.email;
+  const [bikeSearch, setBikeSearch] = useState({
+    make: "",
+    model: "",
+    year: "",
+  });
 
-  const grouped = groupByMonth(records);
-  const bikeSummary = useMemo(
-    () => buildBikeTaskSummary(records)[0],
-    [records]
-  );
+  const [bikeResults, setBikeResults] = useState([]);
+  const [bikeLoading, setBikeLoading] = useState(false);
+  const [selectedBike, setSelectedBike] = useState("");
+
+
+  useEffect(() => {
+    const saved = localStorage.getItem("userMotorbike") || "";
+    setSelectedBike(saved);
+  }, []);
+
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
   }, [status]);
 
-  useEffect(() => {
-    if (!email) return;
 
-    fetch("/api/maintenance", {
-      headers: { "x-user-email": email },
-    })
-      .then((res) => res.json())
-      .then(setRecords);
-  }, [email]);
+  async function fetchRecords() {
+    if (!session?.user?.email) return;
+
+    const res = await fetch("/api/maintenance", {
+      headers: { "x-user-email": session.user.email },
+    });
+
+    const data = await res.json();
+    setRecords(Array.isArray(data) ? data : []);
+  }
+
+  useEffect(() => {
+    fetchRecords();
+  }, [session]);
+
+
+  async function handleBikeSearch() {
+    const { make, model, year } = bikeSearch;
+
+    if (!make && !model) {
+      alert("Enter make or model");
+      return;
+    }
+
+    const qs = new URLSearchParams();
+    if (make) qs.set("make", make);
+    if (model) qs.set("model", model);
+    if (year) qs.set("year", year);
+
+    setBikeLoading(true);
+
+    try {
+      const res = await fetch(`/api/motorcycles?${qs}`);
+      const data = await res.json();
+      setBikeResults(Array.isArray(data) ? data : []);
+    } catch {
+      alert("Search failed");
+    } finally {
+      setBikeLoading(false);
+    }
+  }
+
+  function pickBike(bike) {
+    const label = `${bike.make} ${bike.model} (${bike.year})`;
+    setSelectedBike(label);
+    localStorage.setItem("userMotorbike", label);
+    setBikeResults([]);
+  }
+
 
   async function handleSubmit(e) {
     e.preventDefault();
+
+    if (!selectedBike) {
+      alert("Select a bike first");
+      return;
+    }
 
     await fetch("/api/maintenance", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
-        userEmail: email,
+        motorbike: selectedBike,
+        userEmail: session.user.email,
       }),
     });
 
     setForm({
       type: [],
+      date: "",
       km: "",
-      date: form.date,
       notes: "",
       advisories: "",
     });
 
-    location.reload();
+    fetchRecords();
+  }
+
+
+  const bikeSummary = useMemo(() => {
+    if (!selectedBike) return null;
+
+    const bikeRecords = records.filter(
+      (r) => r.motorbike === selectedBike
+    );
+
+    if (bikeRecords.length === 0) return null;
+
+    const latestKm = Math.max(...bikeRecords.map((r) => Number(r.km)));
+
+    const latestTasks = {};
+
+    for (const r of bikeRecords) {
+      const km = Number(r.km);
+      for (const t of r.type || []) {
+        if (!latestTasks[t] || km > latestTasks[t]) {
+          latestTasks[t] = km;
+        }
+      }
+    }
+
+    const tasks = Object.entries(latestTasks).map(([type, lastKm]) => {
+      const interval = serviceIntervals[type];
+      const nextDue = lastKm + interval;
+      const remaining = nextDue - latestKm;
+
+      return { type, remaining };
+    });
+
+    return {
+      overdue: tasks.filter((t) => t.remaining < 0),
+      dueSoon: tasks.filter((t) => t.remaining <= 1500 && t.remaining >= 0),
+      upcoming: tasks.filter((t) => t.remaining > 1500),
+      currentKm: latestKm,
+    };
+  }, [records, selectedBike]);
+
+
+  const grouped = groupByMonth(records);
+
+
+  if (status === "loading") {
+    return <div className={styles.loading}>Loading...</div>;
   }
 
   return (
-    <div className={styles.wrapper}>
+    <>
       <Navbar />
 
-      <div className={styles.dashboard}>
-        {/* MAIN */}
-        <div className={styles.main}>
-          <h1 className={styles.title}>Maintenance</h1>
+      <div className={styles.container}>
+        <h1 className={styles.title}>Maintenance</h1>
 
-          {/* STATUS */}
-          {bikeSummary && (
-            <div className={styles.card}>
-              <div className={styles.statusHeader}>
-                Bike Service · {bikeSummary.currentKm.toLocaleString()} km
-              </div>
+        {/* BIKE CARD */}
+        <div className={styles.bikeCard}>
+          <h3>Your Bike</h3>
 
-              <div className={styles.statusGrid}>
-                <Status title="Overdue" items={bikeSummary.overdue} />
-                <Status title="Due Soon" items={bikeSummary.dueSoon} />
-                <Status title="Upcoming" items={bikeSummary.upcoming} />
-              </div>
+          <p className={styles.selectedBike}>
+            {selectedBike || "None selected"}
+          </p>
+
+          <div className={styles.bikeSearch}>
+            <input
+              className={styles.input}
+              placeholder="Make"
+              value={bikeSearch.make}
+              onChange={(e) =>
+                setBikeSearch({ ...bikeSearch, make: e.target.value })
+              }
+            />
+            <input
+              className={styles.input}
+              placeholder="Model"
+              value={bikeSearch.model}
+              onChange={(e) =>
+                setBikeSearch({ ...bikeSearch, model: e.target.value })
+              }
+            />
+            <input
+              className={styles.input}
+              placeholder="Year"
+              value={bikeSearch.year}
+              onChange={(e) =>
+                setBikeSearch({ ...bikeSearch, year: e.target.value })
+              }
+            />
+
+            <button
+              className={styles.button}
+              onClick={handleBikeSearch}
+            >
+              {bikeLoading ? "..." : "Search"}
+            </button>
+          </div>
+
+          {bikeResults.length > 0 && (
+            <div className={styles.bikeResults}>
+              {bikeResults.slice(0, 6).map((bike, i) => (
+                <div
+                  key={i}
+                  className={styles.bikeResultItem}
+                  onClick={() => pickBike(bike)}
+                >
+                  {bike.make} {bike.model} ({bike.year})
+                </div>
+              ))}
             </div>
           )}
-
-          {/* FORM */}
-          <form onSubmit={handleSubmit} className={styles.card}>
-            <div className={styles.form}>
-              <div className={styles.checkboxContainer}>
-                {maintenanceTypes.map((task) => (
-                  <label key={task} className={styles.checkboxLabel}>
-                    <input
-                      type="checkbox"
-                      checked={form.type.includes(task)}
-                      onChange={() =>
-                        setForm((prev) => ({
-                          ...prev,
-                          type: prev.type.includes(task)
-                            ? prev.type.filter((t) => t !== task)
-                            : [...prev.type, task],
-                        }))
-                      }
-                    />
-                    {task}
-                  </label>
-                ))}
-              </div>
-
-              <input
-                className={styles.input}
-                type="date"
-                value={form.date}
-                onChange={(e) =>
-                  setForm({ ...form, date: e.target.value })
-                }
-              />
-
-              <input
-                className={styles.input}
-                placeholder="KM"
-                value={form.km}
-                onChange={(e) =>
-                  setForm({ ...form, km: e.target.value })
-                }
-              />
-
-              <textarea
-                className={styles.textarea}
-                placeholder="Notes"
-                value={form.notes}
-                onChange={(e) =>
-                  setForm({ ...form, notes: e.target.value })
-                }
-              />
-
-              <textarea
-                className={styles.textarea}
-                placeholder="Advisories"
-                value={form.advisories}
-                onChange={(e) =>
-                  setForm({ ...form, advisories: e.target.value })
-                }
-              />
-
-              <button className={styles.button}>Add Record</button>
-            </div>
-          </form>
-
-          {/* TIMELINE */}
-          <div className={styles.timeline}>
-            {Object.entries(grouped).map(([month, items]) => (
-              <div key={month}>
-                <h3>{month}</h3>
-
-                {items.map((r) => (
-                  <div key={r._id} className={styles.timelineCard}>
-                    <div className={styles.cardTitle}>
-                      {Array.isArray(r.type)
-                        ? r.type.join(", ")
-                        : r.type}
-                    </div>
-
-                    {r.motorbike && (
-                      <div className={styles.cardText}>
-                        Bike: {r.motorbike}
-                      </div>
-                    )}
-
-                    <div className={styles.cardText}>
-                      KM: {Number(r.km).toLocaleString()}
-                    </div>
-
-                    {r.notes && (
-                      <div className={styles.cardText}>{r.notes}</div>
-                    )}
-
-                    {r.advisories && (
-                      <div className={styles.cardText}>
-                        ⚠ {r.advisories}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
         </div>
 
-        {/* SIDEBAR */}
-        <div className={styles.sidebar}>
-          <div className={styles.bikeCard}>
-            <h3>Your Bike</h3>
-            <p>{records[0]?.motorbike || "None selected"}</p>
+        {/* STATUS */}
+        {bikeSummary && (
+          <div className={styles.statusBoard}>
+            <h3>Bike Service · {bikeSummary.currentKm.toLocaleString()} km</h3>
+
+            <div className={styles.statusGrid}>
+              <div className={styles.statusCard}>
+                <strong>Overdue</strong>
+                {bikeSummary.overdue.length === 0
+                  ? "None"
+                  : bikeSummary.overdue.map((t) => (
+                      <p key={t.type}>{t.type}</p>
+                    ))}
+              </div>
+
+              <div className={styles.statusCard}>
+                <strong>Due Soon</strong>
+                {bikeSummary.dueSoon.length === 0
+                  ? "None"
+                  : bikeSummary.dueSoon.map((t) => (
+                      <p key={t.type}>{t.type}</p>
+                    ))}
+              </div>
+
+              <div className={styles.statusCard}>
+                <strong>Upcoming</strong>
+                {bikeSummary.upcoming.map((t) => (
+                  <p key={t.type}>{t.type}</p>
+                ))}
+              </div>
+            </div>
           </div>
+        )}
+
+        {/* FORM */}
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <input
+            className={styles.input}
+            placeholder="KM"
+            value={form.km}
+            onChange={(e) =>
+              setForm({ ...form, km: e.target.value })
+            }
+          />
+
+          <button className={styles.button}>
+            Add Record
+          </button>
+        </form>
+
+        {/* TIMELINE */}
+        <div className={styles.timeline}>
+          {Object.entries(grouped).map(([month, items]) => (
+            <div key={month}>
+              <h3>{month}</h3>
+
+              {items.map((r) => (
+                <div key={r._id} className={styles.card}>
+                  <strong>
+                    {Array.isArray(r.type)
+                      ? r.type.join(", ")
+                      : r.type}
+                  </strong>
+                  <p>KM: {r.km}</p>
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       </div>
-    </div>
-  );
-}
-
-function Status({ title, items }) {
-  return (
-    <div className={styles.statusCard}>
-      <div className={styles.statusLabel}>{title}</div>
-
-      {items.length === 0 ? (
-        <div className={styles.statusValue}>None</div>
-      ) : (
-        items.slice(0, 2).map((i) => (
-          <div key={i.type} className={styles.statusValue}>
-            {i.type} ({i.remaining.toLocaleString()} km)
-          </div>
-        ))
-      )}
-    </div>
+    </>
   );
 }
