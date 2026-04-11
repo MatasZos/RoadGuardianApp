@@ -92,10 +92,7 @@ function buildBikeTaskSummary(records) {
       const next = t.lastServiceKm + t.intervalKm;
       const remaining = next - bike.currentKm;
 
-      return {
-        ...t,
-        remaining,
-      };
+      return { ...t, remaining };
     });
 
     return {
@@ -117,6 +114,8 @@ export default function MaintenancePage() {
     type: [],
     km: "",
     date: new Date().toISOString().slice(0, 10),
+    notes: "",
+    advisories: "",
   });
 
   const email = session?.user?.email;
@@ -146,13 +145,20 @@ export default function MaintenancePage() {
 
     await fetch("/api/maintenance", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
         userEmail: email,
       }),
     });
 
-    setForm({ type: [], km: "", date: form.date });
+    setForm({
+      type: [],
+      km: "",
+      date: form.date,
+      notes: "",
+      advisories: "",
+    });
 
     location.reload();
   }
@@ -170,7 +176,7 @@ export default function MaintenancePage() {
           {bikeSummary && (
             <div className={styles.card}>
               <div className={styles.statusHeader}>
-                Bike Service · {bikeSummary.currentKm} km
+                Bike Service · {bikeSummary.currentKm.toLocaleString()} km
               </div>
 
               <div className={styles.statusGrid}>
@@ -184,12 +190,59 @@ export default function MaintenancePage() {
           {/* FORM */}
           <form onSubmit={handleSubmit} className={styles.card}>
             <div className={styles.form}>
+              <div className={styles.checkboxContainer}>
+                {maintenanceTypes.map((task) => (
+                  <label key={task} className={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={form.type.includes(task)}
+                      onChange={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          type: prev.type.includes(task)
+                            ? prev.type.filter((t) => t !== task)
+                            : [...prev.type, task],
+                        }))
+                      }
+                    />
+                    {task}
+                  </label>
+                ))}
+              </div>
+
+              <input
+                className={styles.input}
+                type="date"
+                value={form.date}
+                onChange={(e) =>
+                  setForm({ ...form, date: e.target.value })
+                }
+              />
+
               <input
                 className={styles.input}
                 placeholder="KM"
                 value={form.km}
                 onChange={(e) =>
                   setForm({ ...form, km: e.target.value })
+                }
+              />
+
+              <textarea
+                className={styles.textarea}
+                placeholder="Notes"
+                value={form.notes}
+                onChange={(e) =>
+                  setForm({ ...form, notes: e.target.value })
+                }
+              />
+
+              <textarea
+                className={styles.textarea}
+                placeholder="Advisories"
+                value={form.advisories}
+                onChange={(e) =>
+                  setForm({ ...form, advisories: e.target.value })
                 }
               />
 
@@ -211,9 +264,25 @@ export default function MaintenancePage() {
                         : r.type}
                     </div>
 
+                    {r.motorbike && (
+                      <div className={styles.cardText}>
+                        Bike: {r.motorbike}
+                      </div>
+                    )}
+
                     <div className={styles.cardText}>
-                      KM: {r.km}
+                      KM: {Number(r.km).toLocaleString()}
                     </div>
+
+                    {r.notes && (
+                      <div className={styles.cardText}>{r.notes}</div>
+                    )}
+
+                    {r.advisories && (
+                      <div className={styles.cardText}>
+                        ⚠ {r.advisories}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -225,7 +294,7 @@ export default function MaintenancePage() {
         <div className={styles.sidebar}>
           <div className={styles.bikeCard}>
             <h3>Your Bike</h3>
-            <p>{records[0]?.motorbike || "None"}</p>
+            <p>{records[0]?.motorbike || "None selected"}</p>
           </div>
         </div>
       </div>
@@ -243,7 +312,7 @@ function Status({ title, items }) {
       ) : (
         items.slice(0, 2).map((i) => (
           <div key={i.type} className={styles.statusValue}>
-            {i.type} ({i.remaining} km)
+            {i.type} ({i.remaining.toLocaleString()} km)
           </div>
         ))
       )}

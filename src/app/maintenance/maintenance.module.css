@@ -67,15 +67,16 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
-.input {
+.input,
+.textarea {
   padding: 12px;
   border-radius: 10px;
   background: #1a1a1a;
   border: 1px solid #222;
-  color: var(--text);
+  color: white;
 }
 
 .button {
@@ -85,6 +86,23 @@
   border: none;
   font-weight: bold;
   cursor: pointer;
+}
+
+.checkboxContainer {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #1a1a1a;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.checkboxLabel {
+  font-size: 0.85rem;
+  display: flex;
+  gap: 6px;
 }
 
 .timeline {
