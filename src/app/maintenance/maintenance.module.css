@@ -1,69 +1,139 @@
 
 .container {
   min-height: 100vh;
-  padding: 30px;
-  background: var(--bg);
+  padding: 40px 20px;
+  max-width: 1100px;
+  margin: 0 auto;
   color: var(--text);
 }
 
 .title {
+  font-size: 2.4rem;
+  font-weight: 700;
   color: var(--primary);
-  margin-bottom: 20px;
-  font-size: 2rem;
-  font-weight: bold;
-}
-
-.loading {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  margin-bottom: 30px;
 }
 
 
 .card {
-  background: var(--card);
+  background: linear-gradient(145deg, #121212, #0c0c0c);
+  border: 1px solid #1f1f1f;
+  border-radius: 16px;
   padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
 
 .bikeSelected {
-  color: #ccc;
-  margin-bottom: 10px;
+  color: #aaa;
+  margin-bottom: 12px;
 }
 
 .bikeSelected strong {
   color: var(--primary);
 }
 
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  background: var(--card);
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 20px;
+.bikeRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 10px;
 }
 
-.input {
-  padding: 12px;
-  border-radius: 8px;
+.bikeResults {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.bikeResultItem {
+  padding: 10px;
+  border-radius: 10px;
   background: #1a1a1a;
-  color: var(--text);
   border: 1px solid #222;
+  cursor: pointer;
+  transition: 0.2s;
 }
 
+.bikeResultItem:hover {
+  background: #222;
+}
+
+
+.input,
 .textarea {
+  width: 100%;
   padding: 12px;
-  border-radius: 8px;
-  background: #1a1a1a;
-  color: var(--text);
+  border-radius: 10px;
+  background: #161616;
   border: 1px solid #222;
-  min-height: 60px;
+  color: #fff;
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+
+.button {
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--primary);
+  color: #000;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(255, 140, 0, 0.3);
+}
+
+
+.statusBoard {
+  background: linear-gradient(145deg, #141414, #0e0e0e);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 24px;
+  border: 1px solid #222;
+}
+
+.statusHeader {
+  margin-bottom: 15px;
+}
+
+.statusTitle {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.statusGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.statusCard {
+  background: #1a1a1a;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #252525;
+}
+
+.statusOverdue {
+  border-left: 4px solid #ef4444;
+}
+
+.statusSoon {
+  border-left: 4px solid #f59e0b;
+}
+
+.statusOk {
+  border-left: 4px solid #22c55e;
 }
 
 
@@ -74,8 +144,8 @@
   max-height: 220px;
   overflow-y: auto;
   padding: 14px;
-  background: #1a1a1a;
-  border-radius: 10px;
+  background: #161616;
+  border-radius: 12px;
   border: 1px solid #222;
 }
 
@@ -84,125 +154,71 @@
   align-items: center;
   gap: 8px;
   font-size: 0.9rem;
-  color: #ddd;
 }
 
 
-.button {
-  padding: 12px;
-  background: var(--primary);
-  color: #000;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  border: none;
-}
-
-.button:hover {
-  opacity: 0.9;
-}
-
-
-.statusBoard {
-  background: #111;
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  border-left: 5px solid var(--primary);
-}
-
-.statusGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.statusCard {
-  background: #1a1a1a;
-  padding: 12px;
-  border-radius: 10px;
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 
 .timeline {
   display: grid;
-  gap: 16px;
-}
-
-.monthSection {
-  display: grid;
-  gap: 10px;
+  gap: 18px;
 }
 
 .monthTitle {
-  font-size: 1.1rem;
-  color: #fff;
-  opacity: 0.9;
+  font-size: 1.2rem;
+  color: #aaa;
 }
 
 .timelineCard {
-  background: #111;
+  background: linear-gradient(145deg, #141414, #0e0e0e);
+  border-radius: 14px;
   padding: 18px;
-  border-radius: 10px;
-  border-left: 5px solid var(--primary);
+  border-left: 4px solid var(--primary);
+  border: 1px solid #222;
+  transition: 0.2s;
 }
+
+.timelineCard:hover {
+  transform: translateY(-2px);
+}
+
 
 .cardTitle {
   font-size: 1.1rem;
+  font-weight: 600;
   margin-bottom: 6px;
 }
 
 .cardText {
   color: #bbb;
-  margin-bottom: 4px;
 }
 
 .cardNotes {
-  color: #aaa;
-  font-style: italic;
   margin-top: 8px;
-}
-
-
-.advisoryBox {
-  margin-top: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  color: #fcd34d;
+  color: #888;
+  font-style: italic;
 }
 
 
 .cardActions {
-  margin-top: 10px;
+  margin-top: 12px;
   display: flex;
   gap: 10px;
 }
 
 .editBtn {
-  padding: 6px 12px;
   background: #2563eb;
-  border: none;
+  padding: 6px 12px;
   border-radius: 6px;
-  color: #fff;
-  cursor: pointer;
 }
 
 .deleteBtn {
-  padding: 6px 12px;
   background: #dc2626;
-  border: none;
+  padding: 6px 12px;
   border-radius: 6px;
-  color: #fff;
-  cursor: pointer;
-}
-
-.editBtn:hover {
-  background: #1d4ed8;
-}
-
-.deleteBtn:hover {
-  background: #b91c1c;
 }
