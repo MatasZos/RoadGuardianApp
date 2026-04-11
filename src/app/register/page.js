@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import styles from "./register.module.css";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -37,55 +38,66 @@ export default function RegisterPage() {
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <img src="/logo.png" alt="RoadGuardian" style={styles.logo} />
+    <div className={styles.container}>
+      <div className={styles.card}>
+        <img src="/logo.png" alt="RoadGuardian" className={styles.logo} />
 
-        <h1 style={styles.title}>Create your account</h1>
+        <h1 className={styles.title}>Create your account</h1>
 
-        <form onSubmit={handleRegister} style={styles.form}>
+        <form onSubmit={handleRegister} className={styles.form}>
           <input
-            style={styles.input}
+            className={styles.input}
             placeholder="Full Name"
             value={form.fullName}
-            onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, fullName: e.target.value })
+            }
             required
           />
 
           <input
-            style={styles.input}
+            className={styles.input}
             placeholder="Email"
             type="email"
             value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, email: e.target.value })
+            }
             required
           />
 
           <input
-            style={styles.input}
+            className={styles.input}
             placeholder="Password"
             type="password"
             value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, password: e.target.value })
+            }
             required
           />
 
           <input
-            style={styles.input}
+            className={styles.input}
             placeholder="Phone Number"
             value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, phone: e.target.value })
+            }
             required
           />
 
-          <button style={styles.button}>Register</button>
+          <button className={styles.button}>Register</button>
         </form>
 
-        {message && <p style={styles.message}>{message}</p>}
+        {message && <p className={styles.message}>{message}</p>}
 
-        <p style={styles.loginText}>
+        <p className={styles.loginText}>
           Already have an account?{" "}
-          <span style={styles.loginLink} onClick={() => router.push("/login")}>
+          <span
+            className={styles.loginLink}
+            onClick={() => router.push("/login")}
+          >
             Login here
           </span>
         </p>
@@ -93,65 +105,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-
-const styles = {
-  container: {
-    minHeight: "100vh",
-    background: "radial-gradient(circle at top, #1a1a1a, #000)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  card: {
-    background: "#0f0f0f",
-    padding: "40px",
-    borderRadius: "16px",
-    width: "420px",
-    textAlign: "center",
-    boxShadow: "0 0 40px rgba(0,0,0,0.8)",
-  },
-  logo: {
-    width: "110px",
-    marginBottom: "15px",
-  },
-  title: {
-    color: "#fff",
-    marginBottom: "5px",
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
-  input: {
-    padding: "12px",
-    borderRadius: "8px",
-    border: "none",
-    background: "#1e1e1e",
-    color: "#fff",
-  },
-  button: {
-    marginTop: "10px",
-    padding: "12px",
-    borderRadius: "8px",
-    border: "none",
-    background: "#3498db",
-    color: "#fff",
-    fontWeight: "bold",
-    cursor: "pointer",
-  },
-  message: {
-    marginTop: "12px",
-    color: "#2ecc71",
-  },
-  loginText: {
-    marginTop: "22px",
-    color: "#aaa",
-    fontSize: "0.85rem",
-  },
-  loginLink: {
-    color: "#fff",
-    cursor: "pointer",
-    textDecoration: "underline",
-  },
-};
