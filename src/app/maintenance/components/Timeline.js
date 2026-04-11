@@ -1,27 +1,15 @@
 import styles from "../maintenance.module.css";
 
-export default function Timeline({
-  monthSections,
-  startEdit,
-  deleteRecord,
-}) {
+export default function Timeline({ monthSections }) {
   return (
     <div className={styles.timeline}>
       {monthSections.map(([month, items]) => (
         <div key={month}>
-          <h2>{month}</h2>
+          <h3>{month}</h3>
 
           {items.map((r) => (
-            <div key={r._id}>
-              <p>{r.type}</p>
-
-              <button onClick={() => startEdit(r)}>
-                Edit
-              </button>
-
-              <button onClick={() => deleteRecord(r._id)}>
-                Delete
-              </button>
+            <div key={r._id} className={styles.card}>
+              {r.type} - {r.km} km
             </div>
           ))}
         </div>

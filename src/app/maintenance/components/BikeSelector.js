@@ -25,18 +25,19 @@ export default function BikeSelector({
           }
         />
 
-        <button
-          onClick={handleBikeSearch}
-          className={styles.button}
-        >
+        <button onClick={handleBikeSearch} className={styles.button}>
           {bikeLoading ? "Searching..." : "Search"}
         </button>
       </div>
 
       {bikeResults.map((bike, i) => (
-        <button key={i} onClick={() => pickBike(bike)}>
+        <div
+          key={i}
+          className={styles.bikeResultItem}
+          onClick={() => pickBike(bike)}
+        >
           {bike.make} {bike.model}
-        </button>
+        </div>
       ))}
     </div>
   );

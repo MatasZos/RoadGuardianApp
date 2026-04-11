@@ -5,14 +5,13 @@ export default function MaintenanceForm({
   setForm,
   toggleTask,
   handleSubmit,
-  previewList,
-  editingId,
 }) {
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
       <input
         className={styles.input}
         type="number"
+        placeholder="KM"
         value={form.km}
         onChange={(e) =>
           setForm({ ...form, km: e.target.value })
@@ -20,7 +19,7 @@ export default function MaintenanceForm({
       />
 
       <button className={styles.button}>
-        {editingId ? "Save Changes" : "Add Record"}
+        Add Record
       </button>
     </form>
   );
