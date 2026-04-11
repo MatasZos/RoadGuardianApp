@@ -1,0 +1,61 @@
+.container {
+  min-height: 100vh;
+  padding: 30px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.title {
+  color: var(--primary);
+  margin-bottom: 20px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--card);
+  padding: 20px;
+  border-radius: 12px;
+}
+
+.input,
+.textarea {
+  padding: 12px;
+  border-radius: 8px;
+  background: #1a1a1a;
+  color: var(--text);
+  border: none;
+}
+
+.button {
+  padding: 12px;
+  background: var(--primary);
+  color: #000;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+.checkboxContainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.timeline {
+  margin-top: 30px;
+}
+
+.card {
+  background: #111;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
