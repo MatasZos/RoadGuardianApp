@@ -12,6 +12,158 @@ import MaintenanceForm from "./components/MaintenanceForm";
 import Timeline from "./components/Timeline";
 
 
+const serviceIntervals = {
+  "Oil Change": 5000,
+  "Oil Filter Replacement": 5000,
+  "Air Filter Replacement": 12000,
+  "Chain Clean & Lube": 800,
+  "Chain Adjustment": 1500,
+  "Chain & Sprocket Kit Replacement": 20000,
+  "Brake Pads Replacement": 15000,
+  "Brake Fluid Change": 20000,
+  "Tire Replacement": 12000,
+  "Tire Pressure Check": 500,
+  "Spark Plug Replacement": 12000,
+  "Battery Replacement": 30000,
+  "Clutch Cable Adjustment": 8000,
+  "Throttle Cable Adjustment": 8000,
+  "Fuel Filter Replacement": 15000,
+  "Suspension Service": 25000,
+  "Wheel Bearings Check": 12000,
+  "Headlight Bulb Replacement": 20000,
+  "Indicator Bulb Replacement": 20000,
+  "Brake Disc Replacement": 30000,
+};
+
+const maintenanceTypes = Object.keys(serviceIntervals);
+
+
+function safeDate(value) {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatDisplayDate(value) {
+  const d = safeDate(value);
+  if (!d) return String(value || "");
+  return d.toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function monthYearLabel(value) {
+  const d = safeDate(value);
+  if (!d) return "Unknown date";
+  return d.toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function groupByMonth(recs) {
+  const groups = {};
+  for (const r of recs) {
+    const key = monthYearLabel(r.date || r.createdAt);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(r);
+  }
+  return groups;
+}
+
+function getTaskStatus(remainingKm) {
+  if (!Number.isFinite(remainingKm)) {
+    return { label: "Unknown", color: "#94a3b8" };
+  }
+  if (remainingKm < 0) {
+    return { label: "Overdue", color: "#ef4444" };
+  }
+  if (remainingKm <= 500) {
+    return { label: "Urgent", color: "#dc2626" };
+  }
+  if (remainingKm <= 1500) {
+    return { label: "Due soon", color: "#f59e0b" };
+  }
+  return { label: "Healthy", color: "#22c55e" };
+}
+
+function getPreviewFromForm(types, km) {
+  const numericKm = Number(km);
+  if (!Array.isArray(types) || types.length === 0 || !Number.isFinite(numericKm)) {
+    return [];
+  }
+
+  return types
+    .map((type) => {
+      const intervalKm = serviceIntervals[type];
+      if (!Number.isFinite(intervalKm)) return null;
+      return {
+        type,
+        intervalKm,
+        nextDueKm: numericKm + intervalKm,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.nextDueKm - b.nextDueKm);
+}
+
+function buildBikeTaskSummary(records) {
+  const bikes = {};
+
+  for (const record of records) {
+    const bike = record.motorbike || "Unknown bike";
+    const km = Number(record.km);
+
+    if (!bikes[bike]) {
+      bikes[bike] = {
+        bike,
+        currentKm: Number.isFinite(km) ? km : 0,
+        tasks: {},
+      };
+    }
+
+    if (Number.isFinite(km) && km > bikes[bike].currentKm) {
+      bikes[bike].currentKm = km;
+    }
+
+    const taskList = Array.isArray(record.type) ? record.type : [];
+
+    for (const task of taskList) {
+      const existing = bikes[bike].tasks[task];
+
+      if (!existing || km > existing.lastServiceKm) {
+        bikes[bike].tasks[task] = {
+          type: task,
+          lastServiceKm: km,
+          intervalKm: serviceIntervals[task] || null,
+        };
+      }
+    }
+  }
+
+  return Object.values(bikes).map((bikeData) => {
+    const taskItems = Object.values(bikeData.tasks).map((task) => {
+      const nextDueKm = task.lastServiceKm + task.intervalKm;
+      const remainingKm = nextDueKm - bikeData.currentKm;
+
+      return {
+        ...task,
+        nextDueKm,
+        remainingKm,
+        status: getTaskStatus(remainingKm),
+      };
+    });
+
+    return {
+      bike: bikeData.bike,
+      currentKm: bikeData.currentKm,
+      tasks: taskItems,
+    };
+  });
+}
+
+
 export default function MaintenancePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -27,15 +179,6 @@ export default function MaintenancePage() {
     notes: "",
     advisories: "",
   });
-
-  const [bikeSearch, setBikeSearch] = useState({
-    make: "",
-    model: "",
-    year: "",
-  });
-
-  const [bikeResults, setBikeResults] = useState([]);
-  const [bikeLoading, setBikeLoading] = useState(false);
 
   const email = session?.user?.email;
 
@@ -70,7 +213,6 @@ export default function MaintenancePage() {
 
     const res = await fetch("/api/maintenance", {
       headers: { "x-user-email": email },
-      cache: "no-store",
     });
 
     const data = await res.json();
@@ -81,7 +223,7 @@ export default function MaintenancePage() {
     e.preventDefault();
 
     if (!selectedBike) {
-      alert("Please select a motorbike");
+      alert("Select a bike first");
       return;
     }
 
@@ -108,37 +250,6 @@ export default function MaintenancePage() {
     fetchRecords();
   }
 
-  function toggleTask(task) {
-    setForm((prev) => ({
-      ...prev,
-      type: prev.type.includes(task)
-        ? prev.type.filter((t) => t !== task)
-        : [...prev.type, task],
-    }));
-  }
-
-  function startEdit(record) {
-    setEditingId(record._id);
-    setSelectedBike(record.motorbike || "");
-    setForm({
-      type: Array.isArray(record.type) ? record.type : [record.type],
-      date: record.date || "",
-      km: record.km ?? "",
-      notes: record.notes || "",
-      advisories: record.advisories || "",
-    });
-  }
-
-  async function deleteRecord(id) {
-    await fetch("/api/maintenance", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ _id: id }),
-    });
-
-    setRecords((prev) => prev.filter((r) => r._id !== id));
-  }
-
   if (status === "loading") {
     return <div className={styles.loading}>Loading...</div>;
   }
@@ -154,18 +265,12 @@ export default function MaintenancePage() {
 
         <BikeSelector
           selectedBike={selectedBike}
-          bikeSearch={bikeSearch}
-          setBikeSearch={setBikeSearch}
-          bikeResults={bikeResults}
-          bikeLoading={bikeLoading}
-          handleBikeSearch={handleBikeSearch}
-          pickBike={pickBike}
+          setSelectedBike={setSelectedBike}
         />
 
         <MaintenanceForm
           form={form}
           setForm={setForm}
-          toggleTask={toggleTask}
           handleSubmit={handleSubmit}
           previewList={previewList}
           editingId={editingId}
@@ -174,8 +279,6 @@ export default function MaintenancePage() {
         <Timeline
           records={records}
           monthSections={monthSections}
-          startEdit={startEdit}
-          deleteRecord={deleteRecord}
         />
       </div>
     </>
