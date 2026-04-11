@@ -5,66 +5,51 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Navbar from "../components/Navbar";
 import AiChat from "../components/AiChat";
+import styles from "./home.module.css";
+
+const actions = [
+  { label: "Maintenance", path: "/maintenance", color: "#f39c12" },
+  { label: "Documents", path: "/documents", color: "#3498db" },
+  { label: "Emergency", path: "/emergency", color: "#e74c3c" },
+];
 
 export default function HomePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
 
   useEffect(() => {
-    if (status === "loading") return;
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
   if (status === "loading") {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "#111",
-          color: "#fff",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        Loading...
-      </div>
-    );
+    return <div className={styles.loading}>Loading...</div>;
   }
 
   const name = session?.user?.name || "";
 
   return (
-    <div style={{ minHeight: "100vh", background: "#111", color: "#fff" }}>
+    <div className={styles.page}>
       <Navbar />
 
-      <div style={{ padding: "30px" }}>
-        <div style={{ textAlign: "left", marginBottom: "30px" }}>
+      <div className={styles.container}>
+        <div className={styles.header}>
           <h1>Welcome, {name}</h1>
-          <p style={{ color: "#aaa" }}>Dashboard</p>
+          <p>Dashboard</p>
         </div>
 
-        <h2 style={{ textAlign: "center" }}>Quick Actions</h2>
+        <h2 className={styles.sectionTitle}>Quick Actions</h2>
 
-        <div style={styles.actions}>
-          <button
-            style={{ ...styles.btn, background: "#f39c12" }}
-            onClick={() => router.push("/maintenance")}
-          >
-            MAINTENANCE
-          </button>
-          <button
-            style={{ ...styles.btn, background: "#3498db" }}
-            onClick={() => router.push("/documents")}
-          >
-            DOCUMENTS
-          </button>
-          <button
-            style={{ ...styles.btn, background: "#e74c3c" }}
-            onClick={() => router.push("/emergency")}
-          >
-            EMERGENCY
-          </button>
+        <div className={styles.actions}>
+          {actions.map((action, i) => (
+            <button
+              key={i}
+              className={styles.button}
+              style={{ background: action.color }}
+              onClick={() => router.push(action.path)}
+            >
+              {action.label.toUpperCase()}
+            </button>
+          ))}
         </div>
 
         <AiChat />
@@ -72,21 +57,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-const styles = {
-  actions: {
-    display: "flex",
-    justifyContent: "center",
-    gap: "20px",
-    marginTop: "20px",
-    flexWrap: "wrap",
-  },
-  btn: {
-    padding: "15px 30px",
-    borderRadius: "12px",
-    border: "none",
-    color: "#fff",
-    fontWeight: "bold",
-    cursor: "pointer",
-  },
-};
