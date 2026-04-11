@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import styles from "./maintenance.module.css";
 
-import StatusBoard from "./components/StatusBoard";
 import BikeSelector from "./components/BikeSelector";
 import MaintenanceForm from "./components/MaintenanceForm";
 import Timeline from "./components/Timeline";
@@ -104,6 +103,13 @@ export default function MaintenancePage() {
     fetchRecords();
   }, [email]);
 
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      date: prev.date || new Date().toISOString().slice(0, 10),
+    }));
+  }, []);
+
   async function fetchRecords() {
     if (!email) return;
 
@@ -114,8 +120,6 @@ export default function MaintenancePage() {
     const data = await res.json();
     setRecords(Array.isArray(data) ? data : []);
   }
-
-  /* ================= FIXED SEARCH ================= */
 
   async function handleBikeSearch() {
     setBikeResults([]);
@@ -159,10 +163,10 @@ export default function MaintenancePage() {
   }
 
   function pickBike(bike) {
-    const label = `${bike.make} ${String(bike.model).trim()} (${bike.year})`;
+    const label = `${bike.make} ${bike.model} (${bike.year})`;
     setSelectedBike(label);
-    setBikeResults([]);
     localStorage.setItem("userMotorbike", label);
+    setBikeResults([]);
   }
 
   function toggleTask(task) {
@@ -208,6 +212,29 @@ export default function MaintenancePage() {
     fetchRecords();
   }
 
+  function startEdit(record) {
+    setEditingId(record._id);
+    setSelectedBike(record.motorbike || "");
+
+    setForm({
+      type: Array.isArray(record.type) ? record.type : [record.type],
+      date: record.date || "",
+      km: record.km || "",
+      notes: record.notes || "",
+      advisories: record.advisories || "",
+    });
+  }
+
+  async function deleteRecord(id) {
+    await fetch("/api/maintenance", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ _id: id }),
+    });
+
+    setRecords((prev) => prev.filter((r) => r._id !== id));
+  }
+
   if (status === "loading") {
     return <div className={styles.loading}>Loading...</div>;
   }
@@ -218,8 +245,6 @@ export default function MaintenancePage() {
 
       <div className={styles.container}>
         <h1 className={styles.title}>Maintenance</h1>
-
-        <StatusBoard />
 
         <BikeSelector
           selectedBike={selectedBike}
@@ -239,7 +264,11 @@ export default function MaintenancePage() {
           maintenanceTypes={maintenanceTypes}
         />
 
-        <Timeline records={records} monthSections={monthSections} />
+        <Timeline
+          monthSections={monthSections}
+          startEdit={startEdit}
+          deleteRecord={deleteRecord}
+        />
       </div>
     </>
   );
