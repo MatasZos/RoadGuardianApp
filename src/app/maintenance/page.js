@@ -15,53 +15,53 @@ import Timeline from "./components/Timeline";
 
 const serviceIntervals = {
   "Oil Change": 5000,
-  "Brake Pads Replacement": 15000,
+  "Oil Filter Replacement": 5000,
+  "Air Filter Replacement": 12000,
   "Chain Clean & Lube": 800,
+  "Chain Adjustment": 1500,
+  "Chain & Sprocket Kit Replacement": 20000,
+  "Brake Pads Replacement": 15000,
+  "Brake Fluid Change": 20000,
+  "Tire Replacement": 12000,
+  "Tire Pressure Check": 500,
+  "Spark Plug Replacement": 12000,
+  "Battery Replacement": 30000,
+  "Clutch Cable Adjustment": 8000,
+  "Throttle Cable Adjustment": 8000,
+  "Fuel Filter Replacement": 15000,
+  "Suspension Service": 25000,
+  "Wheel Bearings Check": 12000,
+  "Headlight Bulb Replacement": 20000,
+  "Indicator Bulb Replacement": 20000,
+  "Brake Disc Replacement": 30000,
 };
+
+const maintenanceTypes = Object.keys(serviceIntervals);
 
 /* ================= HELPERS ================= */
 
-function groupByMonth(records) {
-  const groups = {};
-  records.forEach((r) => {
-    const date = new Date(r.date || r.createdAt);
-    const key = date.toLocaleDateString(undefined, {
-      month: "long",
-      year: "numeric",
-    });
-
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(r);
-  });
-  return groups;
+function safeDate(value) {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function buildBikeTaskSummary(records) {
-  const bikes = {};
-
-  records.forEach((r) => {
-    const bike = r.motorbike || "Unknown";
-    const km = Number(r.km);
-
-    if (!bikes[bike]) {
-      bikes[bike] = { bike, currentKm: km, tasks: {} };
-    }
-
-    if (km > bikes[bike].currentKm) {
-      bikes[bike].currentKm = km;
-    }
-
-    const tasks = Array.isArray(r.type) ? r.type : [r.type];
-
-    tasks.forEach((task) => {
-      bikes[bike].tasks[task] = {
-        lastServiceKm: km,
-        interval: serviceIntervals[task] || 5000,
-      };
-    });
+function monthYearLabel(value) {
+  const d = safeDate(value);
+  if (!d) return "Unknown date";
+  return d.toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
   });
+}
 
-  return Object.values(bikes);
+function groupByMonth(recs) {
+  const groups = {};
+  for (const r of recs) {
+    const key = monthYearLabel(r.date || r.createdAt);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(r);
+  }
+  return groups;
 }
 
 /* ================= PAGE ================= */
@@ -71,13 +71,13 @@ export default function MaintenancePage() {
   const { data: session, status } = useSession();
 
   const [records, setRecords] = useState([]);
-  const [selectedBike, setSelectedBike] = useState("");
   const [editingId, setEditingId] = useState(null);
+  const [selectedBike, setSelectedBike] = useState("");
 
   const [form, setForm] = useState({
     type: [],
-    km: "",
     date: "",
+    km: "",
     notes: "",
     advisories: "",
   });
@@ -91,19 +91,10 @@ export default function MaintenancePage() {
   const [bikeResults, setBikeResults] = useState([]);
   const [bikeLoading, setBikeLoading] = useState(false);
 
-  const email = session?.user?.email;
+  const email = session?.user?.email || null;
 
   const grouped = groupByMonth(records);
   const monthSections = Object.entries(grouped);
-
-  const bikeSummaries = useMemo(
-    () => buildBikeTaskSummary(records),
-    [records]
-  );
-
-  const selectedBikeSummary = bikeSummaries.find(
-    (b) => b.bike === selectedBike
-  );
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -121,35 +112,78 @@ export default function MaintenancePage() {
     });
 
     const data = await res.json();
-    setRecords(data || []);
+    setRecords(Array.isArray(data) ? data : []);
   }
 
+  /* ================= FIXED SEARCH ================= */
+
   async function handleBikeSearch() {
+    setBikeResults([]);
+
+    const make = bikeSearch.make.trim();
+    const model = bikeSearch.model.trim();
+    const year = bikeSearch.year.trim();
+
+    if (!make && !model) {
+      alert("Enter a Make or Model");
+      return;
+    }
+
+    const qs = new URLSearchParams();
+    if (make) qs.set("make", make);
+    if (model) qs.set("model", model);
+    if (year) qs.set("year", year);
+
     setBikeLoading(true);
 
-    const res = await fetch("/api/motorcycles");
-    const data = await res.json();
+    try {
+      const res = await fetch(`/api/motorcycles?${qs.toString()}`);
+      const data = await res.json();
 
-    setBikeResults(data || []);
-    setBikeLoading(false);
+      if (!res.ok) {
+        alert(data.error || "Search failed");
+        return;
+      }
+
+      setBikeResults(Array.isArray(data) ? data : []);
+
+      if (!data.length) {
+        alert("No bikes found");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Search error");
+    } finally {
+      setBikeLoading(false);
+    }
   }
 
   function pickBike(bike) {
-    setSelectedBike(`${bike.make} ${bike.model}`);
+    const label = `${bike.make} ${String(bike.model).trim()} (${bike.year})`;
+    setSelectedBike(label);
     setBikeResults([]);
+    localStorage.setItem("userMotorbike", label);
   }
 
   function toggleTask(task) {
-    setForm((prev) => ({
-      ...prev,
-      type: prev.type.includes(task)
-        ? prev.type.filter((t) => t !== task)
-        : [...prev.type, task],
-    }));
+    setForm((prev) => {
+      const exists = prev.type.includes(task);
+      return {
+        ...prev,
+        type: exists
+          ? prev.type.filter((t) => t !== task)
+          : [...prev.type, task],
+      };
+    });
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
+
+    if (!selectedBike) {
+      alert("Select a bike first");
+      return;
+    }
 
     await fetch("/api/maintenance", {
       method: editingId ? "PUT" : "POST",
@@ -157,10 +191,20 @@ export default function MaintenancePage() {
       body: JSON.stringify({
         userEmail: email,
         motorbike: selectedBike,
+        _id: editingId,
         ...form,
       }),
     });
 
+    setForm({
+      type: [],
+      date: new Date().toISOString().slice(0, 10),
+      km: "",
+      notes: "",
+      advisories: "",
+    });
+
+    setEditingId(null);
     fetchRecords();
   }
 
@@ -175,7 +219,7 @@ export default function MaintenancePage() {
       <div className={styles.container}>
         <h1 className={styles.title}>Maintenance</h1>
 
-        <StatusBoard summary={selectedBikeSummary} />
+        <StatusBoard />
 
         <BikeSelector
           selectedBike={selectedBike}
@@ -192,12 +236,10 @@ export default function MaintenancePage() {
           setForm={setForm}
           toggleTask={toggleTask}
           handleSubmit={handleSubmit}
+          maintenanceTypes={maintenanceTypes}
         />
 
-        <Timeline
-          monthSections={monthSections}
-          records={records}
-        />
+        <Timeline records={records} monthSections={monthSections} />
       </div>
     </>
   );

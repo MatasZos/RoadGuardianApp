@@ -25,20 +25,45 @@ export default function BikeSelector({
           }
         />
 
+        <input
+          className={styles.input}
+          placeholder="Model"
+          value={bikeSearch.model}
+          onChange={(e) =>
+            setBikeSearch({ ...bikeSearch, model: e.target.value })
+          }
+        />
+
+        <input
+          className={styles.input}
+          placeholder="Year"
+          value={bikeSearch.year}
+          onChange={(e) =>
+            setBikeSearch({ ...bikeSearch, year: e.target.value })
+          }
+        />
+
         <button onClick={handleBikeSearch} className={styles.button}>
           {bikeLoading ? "Searching..." : "Search"}
         </button>
       </div>
 
-      {bikeResults.map((bike, i) => (
-        <div
-          key={i}
-          className={styles.bikeResultItem}
-          onClick={() => pickBike(bike)}
-        >
-          {bike.make} {bike.model}
+      {bikeResults.length > 0 && (
+        <div className={styles.bikeResults}>
+          {bikeResults.slice(0, 8).map((bike, idx) => (
+            <div
+              key={idx}
+              className={styles.bikeResultItem}
+              onClick={() => pickBike(bike)}
+            >
+              <strong>
+                {bike.make} {bike.model}
+              </strong>{" "}
+              ({bike.year})
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }
