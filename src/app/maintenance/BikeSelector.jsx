@@ -1,43 +1,48 @@
-import { styles } from "./styles";
+import s from "./maintenance.module.css";
 
 export default function BikeSelector({ selectedBike, bikeSearch, setBikeSearch, bikeResults, bikeLoading, onSearch, onPick }) {
   return (
-    <div style={styles.bikeCard}>
-      <h2 style={styles.bikeTitle}>Your Motorbike</h2>
-      <p style={styles.bikeSelected}>
-        <strong>Selected:</strong> {selectedBike || "None selected"}
+    <div className={s.bikeCard}>
+      <p className={s.sectionLabel}>Vehicle</p>
+      <h2 className={s.sectionTitle}>Your Motorbike</h2>
+      <p className={s.selectedBikeDisplay}>
+        Selected: <strong>{selectedBike || "None — search below"}</strong>
       </p>
 
-      <div style={styles.bikeRow}>
-        {["make", "model", "year"].map((field) => (
+      <div className={s.bikeSearchRow}>
+        {[
+          { field: "make",  placeholder: "Make (e.g. Kawasaki)" },
+          { field: "model", placeholder: "Model (e.g. Ninja)" },
+          { field: "year",  placeholder: "Year" },
+        ].map(({ field, placeholder }) => (
           <input
             key={field}
-            style={styles.input}
-            placeholder={field === "make" ? "Make (e.g. Kawasaki)" : field === "model" ? "Model (e.g. Ninja)" : "Year (optional)"}
+            className={s.formInput}
+            placeholder={placeholder}
             value={bikeSearch[field]}
             onChange={(e) => setBikeSearch({ ...bikeSearch, [field]: e.target.value })}
+            onKeyDown={(e) => e.key === "Enter" && onSearch()}
           />
         ))}
-        <button type="button" style={styles.bikeButton} onClick={onSearch} disabled={bikeLoading}>
-          {bikeLoading ? "Searching..." : "Search"}
+        <button className={s.btnSearch} type="button" onClick={onSearch} disabled={bikeLoading}>
+          {bikeLoading ? "Searching…" : "Search"}
         </button>
       </div>
 
       {bikeResults.length > 0 && (
-        <div style={styles.bikeResults}>
+        <div className={s.bikeResultsGrid}>
           {bikeResults.slice(0, 8).map((bike, idx) => (
             <button
               key={`${bike.make}-${bike.model}-${bike.year}-${idx}`}
               type="button"
-              style={styles.bikeResultItem}
+              className={s.bikeResultBtn}
               onClick={() => onPick(bike)}
             >
-              <div>
-                <strong>{bike.make} {String(bike.model).trim()}</strong>{" "}
-                <span style={{ color: "#aaa" }}>({bike.year})</span>
+              <div className={s.bikeResultName}>
+                {bike.make} {String(bike.model).trim()}
               </div>
-              <div style={{ color: "#aaa", fontSize: "0.85rem" }}>
-                {bike.type ? `Type: ${bike.type}` : "Tap to select"}
+              <div className={s.bikeResultYear}>
+                {bike.year}{bike.type ? ` · ${bike.type}` : ""}
               </div>
             </button>
           ))}

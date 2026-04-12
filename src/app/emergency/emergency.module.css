@@ -1,0 +1,796 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
+
+/* ── Keyframes ──────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.6); opacity: 0.4; }
+}
+@keyframes alertPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+  50%       { box-shadow: 0 0 0 8px rgba(239,68,68,0.15); }
+}
+@keyframes chatSlideIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes scanLine {
+  0%   { top: -2px; }
+  100% { top: 100%; }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  49%       { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ── Root & background ──────────────────────────────────────── */
+.root {
+  font-family: 'Syne', sans-serif;
+  min-height: 100vh;
+  background: #05090f;
+  color: #e2e8f0;
+  position: relative;
+  overflow-x: hidden;
+}
+.root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  padding: 24px 24px 100px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  animation: fadeUp 0.4s ease both;
+}
+.headerLeft {}
+.eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: #ef4444;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin: 0 0 6px;
+}
+.pageTitle {
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(1.5rem, 4vw, 2.4rem);
+  font-weight: 900;
+  color: #fff;
+  margin: 0;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+.pageSub {
+  font-size: 0.88rem;
+  color: #475569;
+  margin: 8px 0 0;
+}
+.headerBtns {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ── Controls bar ───────────────────────────────────────────── */
+.controlBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  animation: fadeUp 0.4s 0.05s ease both;
+}
+.liveToggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+  color: #94a3b8;
+  cursor: pointer;
+}
+.liveToggle input[type="checkbox"] {
+  accent-color: #ef4444;
+  width: 16px;
+  height: 16px;
+}
+.legend {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: #64748b;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.legendDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 5px;
+  animation: pulseDot 2s ease infinite;
+}
+
+/* ── Map ────────────────────────────────────────────────────── */
+.mapWrap {
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  margin-bottom: 20px;
+  position: relative;
+  animation: fadeUp 0.4s 0.1s ease both;
+}
+/* animated scan line over map */
+.mapWrap::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0,212,255,0.3), transparent);
+  animation: scanLine 4s linear infinite;
+  pointer-events: none;
+  z-index: 10;
+}
+.map {
+  width: 100%;
+  height: 440px;
+  display: block;
+}
+
+/* ── Error ──────────────────────────────────────────────────── */
+.errorBar {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.25);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #fca5a5;
+  font-size: 0.88rem;
+  margin-bottom: 16px;
+}
+
+/* ── Buttons ────────────────────────────────────────────────── */
+.btnEmergency {
+  padding: 13px 22px;
+  border-radius: 10px;
+  border: 1px solid rgba(239,68,68,0.5);
+  background: rgba(239,68,68,0.12);
+  color: #ef4444;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  animation: alertPulse 2.5s ease infinite;
+}
+.btnEmergency:hover:not(:disabled) {
+  background: rgba(239,68,68,0.22);
+  border-color: #ef4444;
+}
+.btnEmergency:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  animation: none;
+}
+.btnSecondary {
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  color: #94a3b8;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btnSecondary:hover { background: rgba(255,255,255,0.08); color: #e2e8f0; }
+.btnFollow {
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btnSuccess {
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(34,197,94,0.3);
+  background: rgba(34,197,94,0.1);
+  color: #4ade80;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btnSuccess:hover { background: rgba(34,197,94,0.2); }
+.btnDanger {
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(220,38,38,0.3);
+  background: rgba(220,38,38,0.08);
+  color: #f87171;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btnDanger:hover { background: rgba(220,38,38,0.18); }
+.btnOffer {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(34,197,94,0.25);
+  background: rgba(34,197,94,0.07);
+  color: #86efac;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btnOffer:hover { background: rgba(34,197,94,0.15); }
+.btnMsg {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(99,102,241,0.3);
+  background: rgba(99,102,241,0.07);
+  color: #a5b4fc;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btnMsg:hover { background: rgba(99,102,241,0.15); }
+.btnRoute {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(59,130,246,0.25);
+  background: rgba(59,130,246,0.07);
+  color: #93c5fd;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btnRoute:hover { background: rgba(59,130,246,0.15); }
+
+/* ── Panel ──────────────────────────────────────────────────── */
+.panel {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 20px;
+}
+.panelTitle {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #475569;
+  margin: 0 0 16px;
+}
+.panelInput {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  color: #f0f0f0;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+.panelInput:focus {
+  border-color: rgba(239,68,68,0.5);
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.08);
+}
+.panelSelect {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: #080f1a;
+  color: #f0f0f0;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.95rem;
+  outline: none;
+}
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.fieldLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #475569;
+}
+.fieldWide {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #475569;
+}
+.checkField {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  padding-top: 28px;
+}
+.checkField input { accent-color: #ef4444; width: 16px; height: 16px; }
+.actionRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ── Active incident card ───────────────────────────────────── */
+.activeCard {
+  background: linear-gradient(135deg, rgba(239,68,68,0.07), rgba(239,68,68,0.02));
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 14px;
+  padding: 20px;
+  animation: fadeUp 0.4s ease both;
+}
+.activeCardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.activeCardTitle {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ef4444;
+  margin: 0;
+}
+.activeCardStatus {
+  font-size: 0.88rem;
+  color: #94a3b8;
+  margin: 6px 0 0;
+}
+.severityBadge {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(239,68,68,0.12);
+  color: #fca5a5;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid rgba(239,68,68,0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-bottom: 16px;
+}
+.infoGrid strong { color: #cbd5e1; }
+
+/* ── Two column layout ──────────────────────────────────────── */
+.columns {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 16px;
+  animation: fadeUp 0.4s 0.15s ease both;
+}
+
+/* ── Incident list cards ────────────────────────────────────── */
+.listCard {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+.listCard:hover { border-color: rgba(255,255,255,0.1); }
+.listCardTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.listCardName {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #e2e8f0;
+}
+.statusChip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(59,130,246,0.1);
+  color: #93c5fd;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border: 1px solid rgba(59,130,246,0.2);
+}
+.listCardMeta {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78rem;
+  color: #475569;
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.historyItem {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.historyName {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+.historyMeta {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  color: #334155;
+  margin-top: 4px;
+}
+.muted { color: #334155; font-size: 0.88rem; margin: 0; font-family: 'IBM Plex Mono', monospace; }
+
+/* ── Chat button ────────────────────────────────────────────── */
+.chatBtn {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  border: 1px solid rgba(99,102,241,0.3);
+  background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(99,102,241,0.1));
+  color: #a5b4fc;
+  font-size: 1.4rem;
+  cursor: pointer;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,102,241,0.1) inset;
+  z-index: 200;
+  transition: all 0.2s;
+  backdrop-filter: blur(8px);
+}
+.chatBtn:hover {
+  background: linear-gradient(135deg, rgba(99,102,241,0.35), rgba(99,102,241,0.2));
+  transform: translateY(-2px);
+}
+
+/* ── Chat sidebar ───────────────────────────────────────────── */
+.chatSidebar {
+  position: fixed;
+  top: 60px;
+  right: 0;
+  width: 420px;
+  max-width: 100vw;
+  height: calc(100vh - 60px);
+  background: #060c16;
+  border-left: 1px solid rgba(255,255,255,0.06);
+  z-index: 199;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -20px 0 60px rgba(0,0,0,0.6);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(20px);
+}
+.chatSidebarOpen  { transform: translateX(0); }
+.chatSidebarClosed { transform: translateX(100%); }
+
+.chatHeader {
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255,255,255,0.02);
+}
+.chatHeaderTitle {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+.chatCloseBtn {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: #64748b;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.chatCloseBtn:hover { color: #e2e8f0; background: rgba(255,255,255,0.08); }
+
+.incidentChatBanner {
+  padding: 12px 16px;
+  background: rgba(239,68,68,0.05);
+  border-bottom: 1px solid rgba(239,68,68,0.1);
+}
+.incidentChatType {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ef4444;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.incidentChatSub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  color: #475569;
+  margin-top: 4px;
+}
+.quickReplies {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.quickReplyBtn {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.03);
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.78rem;
+  transition: all 0.2s;
+}
+.quickReplyBtn:hover { background: rgba(255,255,255,0.08); color: #e2e8f0; }
+
+.newChatRow {
+  padding: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  display: flex;
+  gap: 8px;
+  background: rgba(255,255,255,0.01);
+}
+.chatError {
+  padding: 10px 14px;
+  background: rgba(239,68,68,0.06);
+  border-bottom: 1px solid rgba(239,68,68,0.1);
+  color: #fca5a5;
+  font-size: 0.82rem;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.chatBody {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  flex: 1;
+  min-height: 0;
+}
+.convList {
+  border-right: 1px solid rgba(255,255,255,0.04);
+  overflow-y: auto;
+  padding: 8px;
+}
+.convItem {
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  margin-bottom: 6px;
+  cursor: pointer;
+  background: transparent;
+  transition: all 0.15s;
+}
+.convItem:hover { background: rgba(255,255,255,0.04); }
+.convItemActive {
+  background: rgba(99,102,241,0.08);
+  border-color: rgba(99,102,241,0.2);
+}
+.convName { font-weight: 700; font-size: 0.85rem; color: #e2e8f0; }
+.convSnippet {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: #334155;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chatPanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.emptyConv {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1e293b;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.82rem;
+}
+.messagesArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.msgWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.msgMine    { align-items: flex-end; }
+.msgTheirs  { align-items: flex-start; }
+.msgBubble {
+  max-width: 80%;
+  padding: 10px 13px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  word-break: break-word;
+  border: 1px solid transparent;
+}
+.msgBubbleMine {
+  background: rgba(99,102,241,0.2);
+  border-color: rgba(99,102,241,0.25);
+  color: #e0e7ff;
+  border-bottom-right-radius: 4px;
+}
+.msgBubbleTheirs {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.06);
+  color: #cbd5e1;
+  border-bottom-left-radius: 4px;
+}
+.msgMeta {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  color: #334155;
+  padding: 0 3px;
+}
+.msgInputRow {
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  gap: 8px;
+  background: rgba(255,255,255,0.01);
+}
+.chatInput {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.03);
+  color: #e2e8f0;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.chatInput:focus { border-color: rgba(99,102,241,0.4); }
+.sendBtn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(99,102,241,0.3);
+  background: rgba(99,102,241,0.12);
+  color: #a5b4fc;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.sendBtn:hover { background: rgba(99,102,241,0.22); }
+.startBtn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.04);
+  color: #94a3b8;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.startBtn:hover { background: rgba(255,255,255,0.08); color: #e2e8f0; }
+
+/* ── Loading ────────────────────────────────────────────────── */
+.loading {
+  min-height: 100vh;
+  background: #05090f;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .container { padding: 14px 14px 100px; }
+  .headerBtns { width: 100%; }
+  .headerBtns > * { flex: 1; }
+  .map { height: 320px; }
+  .chatSidebar { width: 100vw; top: 0; height: 100vh; }
+  .chatBody { grid-template-columns: 1fr; }
+  .convList { display: none; }
+}
+
+@media (max-width: 480px) {
+  .formGrid { grid-template-columns: 1fr; }
+  .legend { display: none; }
+}

@@ -6,12 +6,13 @@ import { useSession } from "next-auth/react";
 import Navbar from "../components/Navbar";
 
 import { groupByMonth, getPreviewFromForm, buildBikeTaskSummary } from "./utils";
-import { styles } from "./styles";
+import { useMapbox } from "./useMapbox"; // not used here, imported in emergency only
 
-import BikeSelector from "./BikeSelector";
-import StatusBoard from "./StatusBoard";
-import MaintenanceForm from "./MaintenanceForm";
+import BikeSelector        from "./BikeSelector";
+import StatusBoard         from "./StatusBoard";
+import MaintenanceForm     from "./MaintenanceForm";
 import MaintenanceTimeline from "./MaintenanceTimeline";
+import s from "./maintenance.module.css";
 
 const EMPTY_FORM = { type: [], date: "", km: "", notes: "", advisories: "" };
 
@@ -28,26 +29,23 @@ export default function MaintenancePage() {
   const [bikeResults,   setBikeResults]   = useState([]);
   const [bikeLoading,   setBikeLoading]   = useState(false);
 
-  const monthSections      = useMemo(() => Object.entries(groupByMonth(records)), [records]);
-  const previewList        = useMemo(() => getPreviewFromForm(form.type, form.km), [form.type, form.km]);
-  const bikeSummaries      = useMemo(() => buildBikeTaskSummary(records), [records]);
+  const monthSections       = useMemo(() => Object.entries(groupByMonth(records)), [records]);
+  const previewList         = useMemo(() => getPreviewFromForm(form.type, form.km), [form.type, form.km]);
+  const bikeSummaries       = useMemo(() => buildBikeTaskSummary(records), [records]);
   const selectedBikeSummary = useMemo(
     () => (selectedBike ? bikeSummaries.find((b) => b.bike === selectedBike) ?? null : null),
     [bikeSummaries, selectedBike]
   );
 
-  // Auth guard
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
-  // Init: restore saved bike & default date
   useEffect(() => {
     setSelectedBike(localStorage.getItem("userMotorbike") || "");
     setForm((prev) => ({ ...prev, date: prev.date || new Date().toISOString().slice(0, 10) }));
   }, []);
 
-  // Fetch records whenever email is available
   useEffect(() => { fetchRecords(); }, [email]);
 
   async function fetchRecords() {
@@ -57,7 +55,6 @@ export default function MaintenancePage() {
     setRecords(Array.isArray(data) ? data : []);
   }
 
-  // Bike search
   async function handleBikeSearch() {
     setBikeResults([]);
     const { make, model, year } = bikeSearch;
@@ -84,7 +81,6 @@ export default function MaintenancePage() {
     setBikeResults([]);
   }
 
-  // Form helpers
   function toggleTask(task) {
     setForm((prev) => ({
       ...prev,
@@ -96,13 +92,11 @@ export default function MaintenancePage() {
     e.preventDefault();
     if (!email) return;
     if (!selectedBike) { alert("Please select a motorbike before adding a record."); return; }
-
     await fetch("/api/maintenance", {
       method: editingId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userEmail: email, motorbike: selectedBike, _id: editingId, ...form }),
     });
-
     setForm({ ...EMPTY_FORM, date: new Date().toISOString().slice(0, 10) });
     setEditingId(null);
     await fetchRecords();
@@ -118,6 +112,7 @@ export default function MaintenancePage() {
       notes:      record.notes || "",
       advisories: record.advisories || "",
     });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function deleteRecord(id) {
@@ -130,18 +125,23 @@ export default function MaintenancePage() {
   }
 
   if (status === "loading") {
-    return (
-      <div style={{ minHeight: "100vh", background: "#0e0e0e", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        Loading...
-      </div>
-    );
+    return <div className={s.loading}>Initialising…</div>;
   }
 
   return (
-    <>
+    <div className={s.root}>
       <Navbar />
-      <div style={styles.container}>
-        <h1 style={styles.title}>Maintenance Records</h1>
+      <div className={s.container}>
+
+        {/* Header */}
+        <div className={s.pageHeader}>
+          <div>
+            <p className={s.pageSub}>RoadGuardian · Service Log</p>
+            <h1 className={s.pageTitle}>
+              Maintenance <span>Records</span>
+            </h1>
+          </div>
+        </div>
 
         <StatusBoard summary={selectedBikeSummary} />
 
@@ -169,7 +169,8 @@ export default function MaintenancePage() {
           onEdit={startEdit}
           onDelete={deleteRecord}
         />
+
       </div>
-    </>
+    </div>
   );
 }

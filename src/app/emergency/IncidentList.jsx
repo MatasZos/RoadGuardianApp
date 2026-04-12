@@ -1,63 +1,59 @@
 import { STATUS_LABELS } from "./constants";
 import { prettify, formatTime } from "./utils";
-import { styles } from "./styles";
+import s from "./emergency.module.css";
 
 export default function IncidentList({
-  activeIncidents,
-  recentHistory,
-  loadingIncidents,
-  email,
-  onRoute,
-  onUpdateIncident,
-  onMessage,
+  activeIncidents, recentHistory, loadingIncidents,
+  email, onRoute, onUpdateIncident, onMessage,
 }) {
   return (
-    <div style={styles.columns}>
-      {/* Active incidents */}
-      <div style={styles.panel}>
-        <h2 style={styles.panelTitle}>
-          Active Incidents {loadingIncidents ? "..." : `(${activeIncidents.length})`}
-        </h2>
+    <div className={s.columns}>
+      {/* Active */}
+      <div className={s.panel}>
+        <p className={s.panelTitle}>
+          Active Incidents{" "}
+          {loadingIncidents
+            ? <span style={{ color: "#1e293b" }}>···</span>
+            : <span style={{ color: "#ef4444" }}>({activeIncidents.length})</span>
+          }
+        </p>
 
         {activeIncidents.length === 0 ? (
-          <p style={styles.muted}>No active incidents right now.</p>
+          <p className={s.muted}>No active incidents.</p>
         ) : (
           activeIncidents.map((incident) => (
-            <div key={incident._id} style={styles.listCard}>
-              <div style={styles.listCardTop}>
-                <div>
-                  <strong>{incident.userName}</strong> • {prettify(incident.type)}
-                </div>
-                <span style={styles.smallBadge}>
+            <div key={incident._id} className={s.listCard}>
+              <div className={s.listCardTop}>
+                <span className={s.listCardName}>
+                  {incident.userName} <span style={{ color: "#334155" }}>·</span> {prettify(incident.type)}
+                </span>
+                <span className={s.statusChip}>
                   {STATUS_LABELS[incident.status] || incident.status}
                 </span>
               </div>
 
-              <div style={styles.listCardMeta}>
-                <div>Report type: {incident.reportMode === "third_party" ? "Reported by another rider" : "Self reported"}</div>
-                {incident.reportMode === "third_party" && incident.reportedForName && (
-                  <div>Reported for: {incident.reportedForName}</div>
-                )}
-                <div>Severity: {prettify(incident.severity)}</div>
-                <div>Created: {formatTime(incident.createdAt)}</div>
-                <div>Helper: {incident.helperUserName || "None assigned"}</div>
-                <div>Latest update: {incident.latestUpdate || "—"}</div>
+              <div className={s.listCardMeta}>
+                <span>
+                  {incident.reportMode === "third_party" ? "Reported by another rider" : "Self reported"}
+                  {incident.reportMode === "third_party" && incident.reportedForName && ` · For: ${incident.reportedForName}`}
+                </span>
+                <span>Severity: {prettify(incident.severity)}</span>
+                <span>{formatTime(incident.createdAt)}</span>
+                <span>Helper: {incident.helperUserName || "None"}</span>
+                {incident.latestUpdate && <span>{incident.latestUpdate}</span>}
               </div>
 
-              <div style={styles.actionRow}>
-                <button style={styles.secondaryBtn} onClick={() => onRoute(incident.lng, incident.lat)}>
+              <div className={s.actionRow}>
+                <button className={s.btnRoute} onClick={() => onRoute(incident.lng, incident.lat)}>
                   Route
                 </button>
 
                 {incident.userEmail !== email && (
                   <>
-                    <button style={styles.successBtn} onClick={() => onUpdateIncident(incident._id, "claim-help")}>
+                    <button className={s.btnOffer} onClick={() => onUpdateIncident(incident._id, "claim-help")}>
                       Offer Help
                     </button>
-                    <button
-                      style={styles.secondaryBtn}
-                      onClick={() => onMessage(incident.userEmail, "Hi, I can see your incident and I'm checking in.", incident)}
-                    >
+                    <button className={s.btnMsg} onClick={() => onMessage(incident.userEmail, "Hi, I can see your incident and I'm checking in.", incident)}>
                       Message
                     </button>
                   </>
@@ -66,16 +62,13 @@ export default function IncidentList({
                 {incident.helperUserEmail === email && (
                   <>
                     <button
-                      style={styles.secondaryBtn}
-                      onClick={async () => {
-                        await onRoute(incident.lng, incident.lat);
-                        await onUpdateIncident(incident._id, "route-started");
-                      }}
+                      className={s.btnRoute}
+                      onClick={async () => { await onRoute(incident.lng, incident.lat); await onUpdateIncident(incident._id, "route-started"); }}
                     >
-                      I'm On The Way
+                      On My Way
                     </button>
-                    <button style={styles.successBtn} onClick={() => onUpdateIncident(incident._id, "arrived")}>
-                      Mark Arrived
+                    <button className={s.btnOffer} onClick={() => onUpdateIncident(incident._id, "arrived")}>
+                      Arrived
                     </button>
                   </>
                 )}
@@ -85,21 +78,20 @@ export default function IncidentList({
         )}
       </div>
 
-      {/* Recent history */}
-      <div style={styles.panel}>
-        <h2 style={styles.panelTitle}>Recent Incidents</h2>
+      {/* History */}
+      <div className={s.panel}>
+        <p className={s.panelTitle}>Recent History</p>
 
         {recentHistory.length === 0 ? (
-          <p style={styles.muted}>No recent incident history yet.</p>
+          <p className={s.muted}>No recent history.</p>
         ) : (
           recentHistory.map((incident) => (
-            <div key={incident._id} style={styles.historyItem}>
-              <div style={{ fontWeight: 700 }}>
-                {incident.userName} • {prettify(incident.type)}
+            <div key={incident._id} className={s.historyItem}>
+              <div className={s.historyName}>
+                {incident.userName} · {prettify(incident.type)}
               </div>
-              <div style={styles.historyMeta}>
-                {STATUS_LABELS[incident.status] || incident.status} •{" "}
-                {formatTime(incident.updatedAt || incident.createdAt)}
+              <div className={s.historyMeta}>
+                {STATUS_LABELS[incident.status] || incident.status} · {formatTime(incident.updatedAt || incident.createdAt)}
               </div>
             </div>
           ))

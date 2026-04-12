@@ -1,41 +1,40 @@
 import { STATUS_LABELS } from "./constants";
 import { prettify, formatTime } from "./utils";
-import { styles } from "./styles";
+import s from "./emergency.module.css";
 
 export default function ActiveIncidentCard({ incident, onResolve, onCancel }) {
   return (
-    <div style={styles.activeCard}>
-      <div style={styles.activeCardTop}>
+    <div className={s.activeCard} style={{ marginBottom: 20 }}>
+      <div className={s.activeCardTop}>
         <div>
-          <h2 style={{ margin: 0, color: "#ef4444" }}>{prettify(incident.type)}</h2>
-          <p style={{ margin: "6px 0 0", color: "#e2e8f0" }}>
+          <h2 className={s.activeCardTitle}>{prettify(incident.type)}</h2>
+          <p className={s.activeCardStatus}>
             {STATUS_LABELS[incident.status] || incident.status}
           </p>
         </div>
-        <div style={styles.badge}>{prettify(incident.severity)}</div>
+        <span className={s.severityBadge}>{prettify(incident.severity)}</span>
       </div>
 
-      <div style={styles.infoGrid}>
-        <div><strong>Created:</strong> {formatTime(incident.createdAt)}</div>
-        <div><strong>Phone:</strong> {incident.phone || "—"}</div>
-        <div><strong>Injured:</strong> {incident.injured ? "Yes" : "No"}</div>
-        <div><strong>Bike rideable:</strong> {incident.bikeRideable ? "Yes" : "No"}</div>
-        <div><strong>Latest update:</strong> {incident.latestUpdate || "—"}</div>
-        <div><strong>Helper:</strong> {incident.helperUserName || "No rider assigned yet"}</div>
+      <div className={s.infoGrid}>
+        <div><strong>Created</strong><br />{formatTime(incident.createdAt)}</div>
+        <div><strong>Phone</strong><br />{incident.phone || "—"}</div>
+        <div><strong>Injured</strong><br />{incident.injured ? "Yes" : "No"}</div>
+        <div><strong>Rideable</strong><br />{incident.bikeRideable ? "Yes" : "No"}</div>
+        <div><strong>Update</strong><br />{incident.latestUpdate || "—"}</div>
+        <div><strong>Helper</strong><br />{incident.helperUserName || "Unassigned"}</div>
       </div>
 
       {incident.description && (
-        <div style={{ marginTop: 12 }}>
-          <strong>Description:</strong>
-          <p style={{ marginTop: 6, color: "#cbd5e1" }}>{incident.description}</p>
+        <div style={{ marginBottom: 16, color: "#64748b", fontSize: "0.88rem", fontStyle: "italic" }}>
+          "{incident.description}"
         </div>
       )}
 
-      <div style={styles.actionRow}>
-        <button onClick={onResolve} style={styles.successBtn}>
-          Assistance Received / Resolve
+      <div className={s.actionRow}>
+        <button className={s.btnSuccess} onClick={onResolve}>
+          ✓ Mark Resolved
         </button>
-        <button onClick={onCancel} style={styles.dangerBtn}>
+        <button className={s.btnDanger} onClick={onCancel}>
           Cancel Request
         </button>
       </div>
