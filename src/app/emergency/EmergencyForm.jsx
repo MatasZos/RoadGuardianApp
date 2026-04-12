@@ -1,43 +1,43 @@
 import { INCIDENT_TYPES, SEVERITIES } from "./constants";
 import { prettify } from "./utils";
-import s from "./emergency.module.css";
+import { styles } from "./styles";
 
 export default function EmergencyForm({ form, setForm, submitLoading, onSubmit, onClose }) {
   return (
-    <div className={s.panel} style={{ marginBottom: 20 }}>
-      <p className={s.panelTitle}>Create Emergency Report</p>
+    <div style={styles.panel}>
+      <h2 style={styles.panelTitle}>Create Emergency</h2>
 
-      <div className={s.formGrid}>
-        <label className={s.fieldLabel}>
-          Report type
+      <div style={styles.formGrid}>
+        <label style={styles.field}>
+          <span>Emergency report type</span>
           <select
-            className={s.panelSelect}
             value={form.reportMode}
             onChange={(e) => setForm((p) => ({ ...p, reportMode: e.target.value }))}
+            style={styles.input}
           >
             <option value="self">I need help</option>
-            <option value="third_party">Reporting someone else</option>
+            <option value="third_party">I am reporting someone else</option>
           </select>
         </label>
 
         {form.reportMode === "third_party" && (
-          <label className={s.fieldLabel}>
-            Reporting for
+          <label style={styles.field}>
+            <span>Who are you reporting for?</span>
             <input
-              className={s.panelInput}
               value={form.reportedForName}
               onChange={(e) => setForm((p) => ({ ...p, reportedForName: e.target.value }))}
-              placeholder="Rider name or note"
+              style={styles.input}
+              placeholder="Rider name or short note"
             />
           </label>
         )}
 
-        <label className={s.fieldLabel}>
-          Incident type
+        <label style={styles.field}>
+          <span>Incident type</span>
           <select
-            className={s.panelSelect}
             value={form.type}
             onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}
+            style={styles.input}
           >
             {INCIDENT_TYPES.map((t) => (
               <option key={t} value={t}>{prettify(t)}</option>
@@ -45,65 +45,64 @@ export default function EmergencyForm({ form, setForm, submitLoading, onSubmit, 
           </select>
         </label>
 
-        <label className={s.fieldLabel}>
-          Severity
+        <label style={styles.field}>
+          <span>Severity</span>
           <select
-            className={s.panelSelect}
             value={form.severity}
             onChange={(e) => setForm((p) => ({ ...p, severity: e.target.value }))}
+            style={styles.input}
           >
-            {SEVERITIES.map((lvl) => (
-              <option key={lvl} value={lvl}>{prettify(lvl)}</option>
+            {SEVERITIES.map((level) => (
+              <option key={level} value={level}>{prettify(level)}</option>
             ))}
           </select>
         </label>
 
-        <label className={s.fieldLabel}>
-          Contact phone
-          <input
-            className={s.panelInput}
-            value={form.phone}
-            onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-            placeholder="Your number"
-          />
-        </label>
-
-        <label className={s.fieldWide}>
-          Description
+        <label style={styles.fieldWide}>
+          <span>Short description</span>
           <textarea
-            className={s.panelInput}
             value={form.description}
             onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
             rows={4}
-            style={{ resize: "vertical" }}
-            placeholder="What happened? Be specific."
+            style={{ ...styles.input, resize: "vertical" }}
+            placeholder="Explain what happened..."
           />
         </label>
 
-        <label className={s.checkField}>
+        <label style={styles.field}>
+          <span>Phone</span>
+          <input
+            value={form.phone}
+            onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+            style={styles.input}
+            placeholder="Contact phone"
+          />
+        </label>
+
+        <label style={styles.checkboxField}>
           <input
             type="checkbox"
             checked={form.injured}
             onChange={(e) => setForm((p) => ({ ...p, injured: e.target.checked }))}
           />
-          Someone is injured
+          <span>Someone is injured</span>
         </label>
 
-        <label className={s.checkField}>
+        <label style={styles.checkboxField}>
           <input
             type="checkbox"
             checked={form.bikeRideable}
             onChange={(e) => setForm((p) => ({ ...p, bikeRideable: e.target.checked }))}
           />
-          Bike is still rideable
+          <span>Bike is still rideable</span>
         </label>
       </div>
 
-      <div className={s.actionRow}>
-        <button className={s.btnEmergency} onClick={onSubmit} disabled={submitLoading}>
-          {submitLoading ? "Sending…" : "Send Emergency"}
+      <div style={styles.actionRow}>
+        <button onClick={onSubmit} style={styles.emergencyBtn} disabled={submitLoading}>
+          {submitLoading ? "Creating..." : "Send Emergency"}
         </button>
-        <button className={s.btnSecondary} onClick={onClose}>Cancel</button>
+        <button onClick={onClose} style={styles.secondaryBtn}>Close</button>
       </div>
     </div>
   );
