@@ -16,7 +16,6 @@ function isClosed(status) {
   return status === "resolved" || status === "cancelled";
 }
 
-// ================= GET =================
 export async function GET() {
   try {
     const client = await clientPromise;
@@ -40,7 +39,6 @@ export async function GET() {
   }
 }
 
-// ================= POST (CREATE) =================
 export async function POST(req) {
   try {
     const session = await getServerSession(authOptions);
@@ -65,7 +63,6 @@ export async function POST(req) {
       shareLiveLocation,
     } = body || {};
 
-    // 🔒 REQUIRE live location
     if (!shareLiveLocation) {
       return NextResponse.json(
         { error: "Live location must be enabled." },
@@ -92,7 +89,6 @@ export async function POST(req) {
 
     const now = new Date();
 
-    // 🔒 Only restrict SELF reports (allow multiple third_party)
     if (reportMode === "self") {
       const existingActive = await emergencies.findOne({
         userEmail: session.user.email,
@@ -114,7 +110,7 @@ export async function POST(req) {
       lat,
       lng,
 
-      reportMode, // "self" | "third_party"
+      reportMode, 
       reportedForName:
         reportMode === "third_party" && typeof reportedForName === "string"
           ? reportedForName.trim()
@@ -157,7 +153,6 @@ export async function POST(req) {
       _id: String(result.insertedId),
     };
 
-    // 🔔 Realtime update
     try {
       const ably = getAblyRest();
       await ably.channels.get("emergencies:live").publish("emergency-updated", {
@@ -175,7 +170,6 @@ export async function POST(req) {
   }
 }
 
-// ================= PATCH (UPDATE) =================
 export async function PATCH(req) {
   try {
     const session = await getServerSession(authOptions);
