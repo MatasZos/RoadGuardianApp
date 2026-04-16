@@ -156,52 +156,51 @@ export default function MaintenancePage() {
 
   return (
     <>
-      <Navbar />
       <div className={styles.page}>
-        <div className={styles.container}>
-          <h1 className={styles.title}>Maintenance Records</h1>
+  <div className={styles.container}>
+    <h1 className={styles.title}>Maintenance Records</h1>
 
-          <StatusBoard summary={selectedBikeSummary} />
+    <StatusBoard summary={selectedBikeSummary} />
 
-<div className={styles.topGrid}>
-  <BikeSelector
-    selectedBike={selectedBike}
-    bikeSearch={bikeSearch}
-    setBikeSearch={setBikeSearch}
-    bikeResults={bikeResults}
-    bikeLoading={bikeLoading}
-    onSearch={handleBikeSearch}
-    onPick={pickBike}
-  />
+    <div className={styles.topGrid}>
+      <BikeSelector
+        selectedBike={selectedBike}
+        bikeSearch={bikeSearch}
+        setBikeSearch={setBikeSearch}
+        bikeResults={bikeResults}
+        bikeLoading={bikeLoading}
+        onSearch={handleBikeSearch}
+        onPick={pickBike}
+      />
 
-  <MaintenanceForm
-    form={form}
-    setForm={setForm}
-    editingId={editingId}
-    previewList={previewList}
-    onSubmit={handleSubmit}
-    onToggleTask={toggleTask}
-  />
-</div>
+      <MaintenanceForm
+        form={form}
+        setForm={setForm}
+        editingId={editingId}
+        previewList={previewList}
+        onSubmit={handleSubmit}
+        onToggleTask={toggleTask}
+      />
+    </div>
 
-<div className={styles.timelinePanel}>
-  <div className={styles.timelinePanelHeader}>
-    <h2 className={styles.timelinePanelTitle}>Service Timeline</h2>
-    <p className={styles.timelinePanelSubtitle}>
-      Your maintenance history, grouped by month
-    </p>
-  </div>
-
-  <div className={styles.timelineScroll}>
-    <MaintenanceTimeline
-      monthSections={monthSections}
-      onEdit={startEdit}
-      onDelete={deleteRecord}
-    />
-  </div>
-</div>
-        </div>
+    <div className={styles.timelinePanel}>
+      <div className={styles.timelinePanelHeader}>
+        <h2 className={styles.timelinePanelTitle}>Service Timeline</h2>
+        <p className={styles.timelinePanelSubtitle}>
+          Your maintenance history, grouped by month
+        </p>
       </div>
+
+      <div className={styles.timelineScroll}>
+        <MaintenanceTimeline
+          monthSections={monthSections}
+          onEdit={startEdit}
+          onDelete={deleteRecord}
+        />
+      </div>
+    </div>
+  </div>
+</div>
     </>
   );
 }
