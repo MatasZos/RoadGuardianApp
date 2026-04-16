@@ -329,41 +329,43 @@ export default function DocumentsPage() {
             </div>
           </form>
 
-          <Section
-            title="Expired"
-            subtitle="These documents are past their expiry date."
-            items={categorized.expired}
-            accentClass={styles.expiredText}
-            badgeClass={styles.expiredBadge}
-            cardClass={styles.expiredCard}
-          />
+          <div className={styles.sectionsGrid}>
+            <Section
+              title="Expired"
+              subtitle="These documents are past their expiry date."
+              items={categorized.expired}
+              accentClass={styles.expiredText}
+              badgeClass={styles.expiredBadge}
+              cardClass={styles.expiredCard}
+            />
 
-          <Section
-            title="Expiring Soon"
-            subtitle="Renew these within the next 30 days."
-            items={categorized.expiringSoon}
-            accentClass={styles.warningText}
-            badgeClass={styles.warningBadge}
-            cardClass={styles.warningCard}
-          />
+            <Section
+              title="Expiring Soon"
+              subtitle="Renew these within the next 30 days."
+              items={categorized.expiringSoon}
+              accentClass={styles.warningText}
+              badgeClass={styles.warningBadge}
+              cardClass={styles.warningCard}
+            />
 
-          <Section
-            title="Valid"
-            subtitle="These documents are currently up to date."
-            items={categorized.valid}
-            accentClass={styles.validText}
-            badgeClass={styles.validBadge}
-            cardClass={styles.validCard}
-          />
+            <Section
+              title="Valid"
+              subtitle="These documents are currently up to date."
+              items={categorized.valid}
+              accentClass={styles.validText}
+              badgeClass={styles.validBadge}
+              cardClass={styles.validCard}
+            />
 
-          <Section
-            title="No Expiry Required"
-            subtitle="Receipts and records that do not expire."
-            items={categorized.noExpiry}
-            accentClass={styles.infoText}
-            badgeClass={styles.infoBadge}
-            cardClass={styles.infoCard}
-          />
+            <Section
+              title="No Expiry Required"
+              subtitle="Receipts and records that do not expire."
+              items={categorized.noExpiry}
+              accentClass={styles.infoText}
+              badgeClass={styles.infoBadge}
+              cardClass={styles.infoCard}
+            />
+          </div>
         </div>
       </div>
     </>
