@@ -1,0 +1,148 @@
+.page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(255, 140, 0, 0.14), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.04), transparent 22%),
+    linear-gradient(180deg, #151922 0%, #0c1118 100%);
+  color: #ffffff;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  padding: 24px 18px 42px;
+}
+
+.container {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.hero {
+  margin-bottom: 20px;
+  padding: 28px 26px;
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+    rgba(15, 15, 18, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.pageTitle {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 3.8vw, 2.7rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #ffb04d;
+}
+
+.pageSubtitle {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.96rem;
+  line-height: 1.55;
+}
+
+.card {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+    rgba(15, 15, 18, 0.92) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px !important;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+}
+
+.cardContent {
+  padding: 24px !important;
+}
+
+.fieldBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldLabel {
+  color: rgba(255, 255, 255, 0.62) !important;
+  font-size: 0.88rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em;
+}
+
+.fieldValue {
+  color: #ffffff !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  line-height: 1.5;
+}
+
+.divider {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.actions {
+  padding-top: 6px;
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, #ffb04d, #ff8c00) !important;
+  color: #111111 !important;
+  font-weight: 800 !important;
+  border-radius: 12px !important;
+  padding: 10px 16px !important;
+  box-shadow: 0 12px 28px rgba(255, 140, 0, 0.24) !important;
+}
+
+.primaryButton:hover {
+  background: linear-gradient(135deg, #ffb04d, #ff8c00) !important;
+  opacity: 0.94;
+}
+
+.secondaryButton {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  color: #ffffff !important;
+  border-radius: 12px !important;
+  padding: 10px 16px !important;
+}
+
+.signOutButton {
+  border-radius: 12px !important;
+  padding: 10px 16px !important;
+  font-weight: 800 !important;
+}
+
+.loadingWrap {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #151922 0%, #0c1118 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loadingText {
+  color: #ffffff;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 18px 14px 34px;
+  }
+
+  .hero {
+    padding: 22px 18px;
+    border-radius: 18px;
+  }
+
+  .card {
+    border-radius: 18px !important;
+  }
+
+  .cardContent {
+    padding: 18px !important;
+  }
+}
