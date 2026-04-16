@@ -163,30 +163,43 @@ export default function MaintenancePage() {
 
           <StatusBoard summary={selectedBikeSummary} />
 
-          <BikeSelector
-            selectedBike={selectedBike}
-            bikeSearch={bikeSearch}
-            setBikeSearch={setBikeSearch}
-            bikeResults={bikeResults}
-            bikeLoading={bikeLoading}
-            onSearch={handleBikeSearch}
-            onPick={pickBike}
-          />
+<div className={styles.topGrid}>
+  <BikeSelector
+    selectedBike={selectedBike}
+    bikeSearch={bikeSearch}
+    setBikeSearch={setBikeSearch}
+    bikeResults={bikeResults}
+    bikeLoading={bikeLoading}
+    onSearch={handleBikeSearch}
+    onPick={pickBike}
+  />
 
-          <MaintenanceForm
-            form={form}
-            setForm={setForm}
-            editingId={editingId}
-            previewList={previewList}
-            onSubmit={handleSubmit}
-            onToggleTask={toggleTask}
-          />
+  <MaintenanceForm
+    form={form}
+    setForm={setForm}
+    editingId={editingId}
+    previewList={previewList}
+    onSubmit={handleSubmit}
+    onToggleTask={toggleTask}
+  />
+</div>
 
-          <MaintenanceTimeline
-            monthSections={monthSections}
-            onEdit={startEdit}
-            onDelete={deleteRecord}
-          />
+<div className={styles.timelinePanel}>
+  <div className={styles.timelinePanelHeader}>
+    <h2 className={styles.timelinePanelTitle}>Service Timeline</h2>
+    <p className={styles.timelinePanelSubtitle}>
+      Your maintenance history, grouped by month
+    </p>
+  </div>
+
+  <div className={styles.timelineScroll}>
+    <MaintenanceTimeline
+      monthSections={monthSections}
+      onEdit={startEdit}
+      onDelete={deleteRecord}
+    />
+  </div>
+</div>
         </div>
       </div>
     </>
