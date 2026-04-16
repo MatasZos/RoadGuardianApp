@@ -15,6 +15,7 @@ import {
   Divider,
   Alert,
 } from "@mui/material";
+import styles from "./profile.module.css";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -22,14 +23,12 @@ export default function ProfilePage() {
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [motorbike, setMotorbike] = useState("");
   const [phone, setPhone] = useState("");
 
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [editMotorbike, setEditMotorbike] = useState("");
   const [editPhone, setEditPhone] = useState("");
 
   const [error, setError] = useState("");
@@ -48,7 +47,6 @@ export default function ProfilePage() {
 
     setFullName(sessionName);
     setEmail(sessionEmail);
-
     setEditName(sessionName);
   }, [status, session, router]);
 
@@ -72,13 +70,11 @@ export default function ProfilePage() {
         }
 
         setFullName(data.fullName || session?.user?.name || "");
-        setMotorbike(data.motorbike || "");
         setPhone(data.phone || "");
 
         setEditName(data.fullName || session?.user?.name || "");
-        setEditMotorbike(data.motorbike || "");
         setEditPhone(data.phone || "");
-      } catch (err) {
+      } catch {
         setError("Server error loading profile");
       }
     })();
@@ -95,7 +91,6 @@ export default function ProfilePage() {
     setEditName(fullName);
     setEditPassword("");
     setConfirmPassword("");
-    setEditMotorbike(motorbike);
     setEditPhone(phone);
   };
 
@@ -106,7 +101,6 @@ export default function ProfilePage() {
     setEditName(fullName);
     setEditPassword("");
     setConfirmPassword("");
-    setEditMotorbike(motorbike);
     setEditPhone(phone);
   };
 
@@ -117,12 +111,6 @@ export default function ProfilePage() {
     const trimmedName = editName.trim();
     if (!trimmedName) {
       setError("Name cannot be empty.");
-      return;
-    }
-
-    const trimmedBike = editMotorbike.trim();
-    if (!trimmedBike) {
-      setError("Motorbike cannot be empty.");
       return;
     }
 
@@ -152,7 +140,6 @@ export default function ProfilePage() {
       body: JSON.stringify({
         email,
         fullName: trimmedName,
-        motorbike: trimmedBike,
         phone: trimmedPhone,
         password: wantsPasswordChange ? editPassword : "",
       }),
@@ -166,7 +153,6 @@ export default function ProfilePage() {
     }
 
     setFullName(trimmedName);
-    setMotorbike(trimmedBike);
     setPhone(trimmedPhone);
 
     setIsEditing(false);
@@ -176,49 +162,42 @@ export default function ProfilePage() {
   };
 
   const maskedPassword = "••••••••••••";
-
   const shownEmail = email || "Not set yet";
-  const shownBike = motorbike || "Not set yet";
   const shownPhone = phone || "Not set yet";
 
   if (status === "loading") {
     return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          p: 3,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Typography>Loading...</Typography>
+      <Box className={styles.loadingWrap}>
+        <Typography className={styles.loadingText}>Loading...</Typography>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ minHeight: "100vh", p: 3 }}>
+    <div className={styles.page}>
       <Navbar />
 
-      <Box sx={{ maxWidth: 520, mx: "auto" }}>
-        <Typography variant="h4" sx={{ mb: 2, fontWeight: 700 }}>
-          Profile
-        </Typography>
+      <div className={styles.container}>
+        <div className={styles.hero}>
+          <h1 className={styles.pageTitle}>Profile</h1>
+          <p className={styles.pageSubtitle}>
+            Manage your personal details and account information.
+          </p>
+        </div>
 
-        <Card elevation={1} sx={{ borderRadius: 3 }}>
-          <CardContent>
-            <Stack spacing={2}>
+        <Card className={styles.card} elevation={0}>
+          <CardContent className={styles.cardContent}>
+            <Stack spacing={2.2}>
               {error && <Alert severity="error">{error}</Alert>}
               {success && <Alert severity="success">{success}</Alert>}
 
-              <Box>
-                <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
+              <Box className={styles.fieldBlock}>
+                <Typography variant="subtitle2" className={styles.fieldLabel}>
                   Name
                 </Typography>
 
                 {!isEditing ? (
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                  <Typography variant="body1" className={styles.fieldValue}>
                     {fullName}
                   </Typography>
                 ) : (
@@ -232,26 +211,26 @@ export default function ProfilePage() {
                 )}
               </Box>
 
-              <Divider />
+              <Divider className={styles.divider} />
 
-              <Box>
-                <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
+              <Box className={styles.fieldBlock}>
+                <Typography variant="subtitle2" className={styles.fieldLabel}>
                   Email
                 </Typography>
-                <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                <Typography variant="body1" className={styles.fieldValue}>
                   {shownEmail}
                 </Typography>
               </Box>
 
-              <Divider />
+              <Divider className={styles.divider} />
 
-              <Box>
-                <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
+              <Box className={styles.fieldBlock}>
+                <Typography variant="subtitle2" className={styles.fieldLabel}>
                   Phone
                 </Typography>
 
                 {!isEditing ? (
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                  <Typography variant="body1" className={styles.fieldValue}>
                     {shownPhone}
                   </Typography>
                 ) : (
@@ -265,41 +244,19 @@ export default function ProfilePage() {
                 )}
               </Box>
 
-              <Divider />
+              <Divider className={styles.divider} />
 
-              <Box>
-                <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
-                  Motorbike
-                </Typography>
-
-                {!isEditing ? (
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {shownBike}
-                  </Typography>
-                ) : (
-                  <TextField
-                    fullWidth
-                    size="small"
-                    value={editMotorbike}
-                    onChange={(e) => setEditMotorbike(e.target.value)}
-                    placeholder="e.g. Yamaha R6"
-                  />
-                )}
-              </Box>
-
-              <Divider />
-
-              <Box>
-                <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
+              <Box className={styles.fieldBlock}>
+                <Typography variant="subtitle2" className={styles.fieldLabel}>
                   Password
                 </Typography>
 
                 {!isEditing ? (
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                  <Typography variant="body1" className={styles.fieldValue}>
                     {maskedPassword}
                   </Typography>
                 ) : (
-                  <Stack spacing={1}>
+                  <Stack spacing={1.2}>
                     <TextField
                       fullWidth
                       size="small"
@@ -321,19 +278,35 @@ export default function ProfilePage() {
                 )}
               </Box>
 
-              <Divider />
+              <Divider className={styles.divider} />
 
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1.2}
+                className={styles.actions}
+              >
                 {!isEditing ? (
-                  <Button variant="contained" onClick={startEditing}>
+                  <Button
+                    variant="contained"
+                    onClick={startEditing}
+                    className={styles.primaryButton}
+                  >
                     Edit Profile
                   </Button>
                 ) : (
                   <>
-                    <Button variant="contained" onClick={handleSave}>
+                    <Button
+                      variant="contained"
+                      onClick={handleSave}
+                      className={styles.primaryButton}
+                    >
                       Save Changes
                     </Button>
-                    <Button variant="outlined" onClick={cancelEditing}>
+                    <Button
+                      variant="outlined"
+                      onClick={cancelEditing}
+                      className={styles.secondaryButton}
+                    >
                       Cancel
                     </Button>
                   </>
@@ -345,6 +318,7 @@ export default function ProfilePage() {
                   color="error"
                   variant="contained"
                   onClick={handleSignOut}
+                  className={styles.signOutButton}
                 >
                   Sign Out
                 </Button>
@@ -352,7 +326,7 @@ export default function ProfilePage() {
             </Stack>
           </CardContent>
         </Card>
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }
