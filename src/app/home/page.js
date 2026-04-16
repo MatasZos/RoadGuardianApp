@@ -32,27 +32,35 @@ export default function HomePage() {
       <Navbar />
 
       <div className={styles.container}>
+        {/* Header */}
         <div className={styles.header}>
           <h1>Welcome, {name}</h1>
-          <p>Dashboard</p>
+          <p>Your RoadGuardian dashboard</p>
         </div>
 
-        <h2 className={styles.sectionTitle}>Quick Actions</h2>
+        {/* Quick Actions Section */}
+        <section>
+          <h2 className={styles.sectionTitle}>Quick Actions</h2>
 
-        <div className={styles.actions}>
-          {actions.map((action, i) => (
-            <button
-              key={i}
-              className={styles.button}
-              style={{ background: action.color }}
-              onClick={() => router.push(action.path)}
-            >
-              {action.label.toUpperCase()}
-            </button>
-          ))}
-        </div>
+          <div className={styles.actions}>
+            {actions.map((action, i) => (
+              <button
+                key={i}
+                className={styles.button}
+                style={{ background: action.color }}
+                onClick={() => router.push(action.path)}
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
+        </section>
 
-        <AiChat />
+        {/* AI Chat Section */}
+        <section>
+          <h2 className={styles.sectionTitle}>Assistant</h2>
+          <AiChat />
+        </section>
       </div>
     </div>
   );
