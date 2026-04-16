@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Navbar from "../components/Navbar";
+import styles from "./documents.module.css";
 
 export default function DocumentsPage() {
   const router = useRouter();
@@ -180,59 +181,37 @@ export default function DocumentsPage() {
   }
 
   if (status === "loading") {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "#0b0f1a",
-          color: "#fff",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        Loading...
-      </div>
-    );
+    return <div className={styles.loading}>Loading...</div>;
   }
 
-  function Section({ title, subtitle, items, accentColor }) {
+  function Section({ title, subtitle, items, accentClass, badgeClass, cardClass }) {
     return (
-      <div style={styles.section}>
-        <div style={styles.sectionHeader}>
+      <div className={styles.section}>
+        <div className={styles.sectionHeader}>
           <div>
-            <h2 style={styles.sectionTitle}>{title}</h2>
-            {subtitle && <p style={styles.sectionSubtitle}>{subtitle}</p>}
+            <h2 className={`${styles.sectionTitle} ${accentClass}`}>{title}</h2>
+            {subtitle && <p className={styles.sectionSubtitle}>{subtitle}</p>}
           </div>
 
-          <div
-            style={{
-              ...styles.badge,
-              borderColor: accentColor,
-              color: accentColor,
-            }}
-          >
-            {items.length}
-          </div>
+          <div className={`${styles.badge} ${badgeClass}`}>{items.length}</div>
         </div>
 
         {items.length === 0 ? (
-          <p style={{ color: "#94a3b8" }}>None</p>
+          <p className={styles.emptyText}>None</p>
         ) : (
-          <div style={styles.list}>
+          <div className={styles.list}>
             {items.map((d) => {
               const dLeft = d.expiryDate ? daysUntil(d.expiryDate) : null;
 
               return (
-                <div key={d._id} style={styles.card}>
-                  <h3 style={styles.cardTitle}>{d.title}</h3>
+                <div key={d._id} className={`${styles.card} ${cardClass}`}>
+                  <h3 className={styles.cardTitle}>{d.title}</h3>
 
                   {d.expiryDate ? (
-                    <p style={styles.cardText}>
-                      <strong>Expires:</strong>{" "}
-                      {formatDisplayDate(d.expiryDate)}
+                    <p className={styles.cardText}>
+                      <strong>Expires:</strong> {formatDisplayDate(d.expiryDate)}
                       {typeof dLeft === "number" && (
-                        <span style={styles.daysPill}>
+                        <span className={styles.daysPill}>
                           {dLeft < 0
                             ? `${Math.abs(dLeft)} day(s) ago`
                             : `${dLeft} day(s) left`}
@@ -240,23 +219,23 @@ export default function DocumentsPage() {
                       )}
                     </p>
                   ) : (
-                    <p style={styles.cardText}>
+                    <p className={styles.cardText}>
                       <strong>Expiry:</strong> Not required
                     </p>
                   )}
 
-                  {d.notes && <p style={styles.cardNotes}>{d.notes}</p>}
+                  {d.notes && <p className={styles.cardNotes}>{d.notes}</p>}
 
-                  <div style={styles.cardActions}>
+                  <div className={styles.cardActions}>
                     <button
-                      style={styles.editBtn}
+                      className={styles.editBtn}
                       onClick={() => startEdit(d)}
                     >
                       Edit
                     </button>
 
                     <button
-                      style={styles.deleteBtn}
+                      className={styles.deleteBtn}
                       onClick={() => deleteDoc(d._id)}
                     >
                       Delete
@@ -275,239 +254,118 @@ export default function DocumentsPage() {
     <>
       <Navbar />
 
-      <div style={styles.container}>
-        <h1 style={styles.title}>Your Documents</h1>
+      <div className={styles.page}>
+        <div className={styles.container}>
+          <div className={styles.hero}>
+            <h1 className={styles.title}>Your Documents</h1>
+            <p className={styles.heroText}>
+              Manage insurance, tax, warranties and other motorbike-related records in one place.
+            </p>
+          </div>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <select
-            style={styles.input}
-            value={form.title}
-            onChange={(e) =>
-              setForm({ ...form, title: e.target.value, expiryDate: "" })
-            }
-            required
-          >
-            <option value="">Select Document Type</option>
-            {documentTypes.map((type, i) => (
-              <option key={i} value={type.label}>
-                {type.label}
-              </option>
-            ))}
-          </select>
+          <form onSubmit={handleSubmit} className={styles.form}>
+            <div className={styles.formHeader}>
+              <h2 className={styles.formTitle}>
+                {editingId ? "Edit Document" : "Add Document"}
+              </h2>
+              <p className={styles.formSubtitle}>
+                Keep your important records organised and up to date.
+              </p>
+            </div>
 
-          {selectedType?.expires && (
-            <input
-              style={styles.input}
-              type="date"
-              value={form.expiryDate}
+            <select
+              className={styles.input}
+              value={form.title}
               onChange={(e) =>
-                setForm({ ...form, expiryDate: e.target.value })
+                setForm({ ...form, title: e.target.value, expiryDate: "" })
               }
               required
-            />
-          )}
+            >
+              <option value="">Select Document Type</option>
+              {documentTypes.map((type, i) => (
+                <option key={i} value={type.label}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
 
-          <textarea
-            style={styles.textarea}
-            placeholder={
-              form.title === "Other"
-                ? "Describe the document type..."
-                : "Notes (optional)"
-            }
-            value={form.notes}
-            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            {selectedType?.expires && (
+              <input
+                className={styles.input}
+                type="date"
+                value={form.expiryDate}
+                onChange={(e) =>
+                  setForm({ ...form, expiryDate: e.target.value })
+                }
+                required
+              />
+            )}
+
+            <textarea
+              className={styles.textarea}
+              placeholder={
+                form.title === "Other"
+                  ? "Describe the document type..."
+                  : "Notes (optional)"
+              }
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            />
+
+            <div className={styles.formActions}>
+              <button className={styles.button}>
+                {editingId ? "Save Changes" : "Add Document"}
+              </button>
+
+              {editingId && (
+                <button
+                  type="button"
+                  className={styles.cancelButton}
+                  onClick={cancelEdit}
+                >
+                  Cancel Edit
+                </button>
+              )}
+            </div>
+          </form>
+
+          <Section
+            title="Expired"
+            subtitle="These documents are past their expiry date."
+            items={categorized.expired}
+            accentClass={styles.expiredText}
+            badgeClass={styles.expiredBadge}
+            cardClass={styles.expiredCard}
           />
 
-          <button style={styles.button}>
-            {editingId ? "Save Changes" : "Add Document"}
-          </button>
+          <Section
+            title="Expiring Soon"
+            subtitle="Renew these within the next 30 days."
+            items={categorized.expiringSoon}
+            accentClass={styles.warningText}
+            badgeClass={styles.warningBadge}
+            cardClass={styles.warningCard}
+          />
 
-          {editingId && (
-            <button
-              type="button"
-              style={styles.cancelButton}
-              onClick={cancelEdit}
-            >
-              Cancel Edit
-            </button>
-          )}
-        </form>
+          <Section
+            title="Valid"
+            subtitle="These documents are currently up to date."
+            items={categorized.valid}
+            accentClass={styles.validText}
+            badgeClass={styles.validBadge}
+            cardClass={styles.validCard}
+          />
 
-        <Section
-          title="❌ Expired"
-          subtitle="These documents are past their expiry date."
-          items={categorized.expired}
-          accentColor="#ef4444"
-        />
-
-        <Section
-          title="⚠️ Expiring soon (next 30 days)"
-          subtitle="Renew these soon to avoid issues."
-          items={categorized.expiringSoon}
-          accentColor="#f59e0b"
-        />
-
-        <Section
-          title="✅ Valid"
-          subtitle="Up to date documents."
-          items={categorized.valid}
-          accentColor="#22c55e"
-        />
-
-        <Section
-          title="📄 No expiry required"
-          subtitle="Receipts and documents that don’t expire."
-          items={categorized.noExpiry}
-          accentColor="#3b82f6"
-        />
+          <Section
+            title="No Expiry Required"
+            subtitle="Receipts and records that do not expire."
+            items={categorized.noExpiry}
+            accentClass={styles.infoText}
+            badgeClass={styles.infoBadge}
+            cardClass={styles.infoCard}
+          />
+        </div>
       </div>
     </>
   );
 }
-
-const styles = {
-  container: {
-    minHeight: "100vh",
-    background: "#0b0f1a",
-    padding: "30px",
-    color: "#fff",
-  },
-  title: {
-    color: "#3b82f6",
-    marginBottom: "25px",
-    fontSize: "2rem",
-    fontWeight: "bold",
-  },
-  form: {
-    background: "#0f172a",
-    padding: "20px",
-    borderRadius: "12px",
-    maxWidth: "450px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-    marginBottom: "30px",
-  },
-  input: {
-    padding: "12px",
-    borderRadius: "8px",
-    border: "1px solid #1e293b",
-    background: "#1e293b",
-    color: "#fff",
-  },
-  textarea: {
-    padding: "12px",
-    borderRadius: "8px",
-    border: "1px solid #1e293b",
-    background: "#1e293b",
-    color: "#fff",
-    minHeight: "80px",
-  },
-  button: {
-    padding: "12px",
-    borderRadius: "8px",
-    border: "none",
-    background: "#3b82f6",
-    color: "#fff",
-    fontWeight: "bold",
-    cursor: "pointer",
-  },
-  cancelButton: {
-    padding: "12px",
-    borderRadius: "8px",
-    border: "none",
-    background: "#334155",
-    color: "#fff",
-    fontWeight: "bold",
-    cursor: "pointer",
-  },
-
-  section: {
-    background: "#0f172a",
-    borderRadius: "12px",
-    padding: "18px",
-    marginBottom: "16px",
-    border: "1px solid #1e293b",
-  },
-  sectionHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: "12px",
-    marginBottom: "12px",
-  },
-  sectionTitle: {
-    margin: 0,
-    fontSize: "1.1rem",
-  },
-  sectionSubtitle: {
-    margin: "6px 0 0 0",
-    color: "#94a3b8",
-    fontSize: "0.9rem",
-  },
-  badge: {
-    border: "1px solid",
-    padding: "6px 10px",
-    borderRadius: "999px",
-    fontWeight: "bold",
-    fontSize: "0.9rem",
-    minWidth: "34px",
-    textAlign: "center",
-  },
-
-  list: {
-    display: "grid",
-    gap: "12px",
-  },
-  card: {
-    background: "#0b1220",
-    padding: "16px",
-    borderRadius: "10px",
-    borderLeft: "5px solid #3b82f6",
-  },
-  cardTitle: {
-    marginBottom: "6px",
-    fontSize: "1.1rem",
-  },
-  cardText: {
-    marginBottom: "6px",
-    color: "#cbd5e1",
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    flexWrap: "wrap",
-  },
-  daysPill: {
-    display: "inline-block",
-    padding: "4px 10px",
-    borderRadius: "999px",
-    background: "#1e293b",
-    color: "#e2e8f0",
-    fontSize: "0.85rem",
-  },
-  cardNotes: {
-    color: "#94a3b8",
-    fontStyle: "italic",
-  },
-  cardActions: {
-    marginTop: "10px",
-    display: "flex",
-    gap: "10px",
-  },
-  editBtn: {
-    padding: "6px 12px",
-    background: "#2563eb",
-    border: "none",
-    borderRadius: "6px",
-    color: "#fff",
-    cursor: "pointer",
-  },
-  deleteBtn: {
-    padding: "6px 12px",
-    background: "#dc2626",
-    border: "none",
-    borderRadius: "6px",
-    color: "#fff",
-    cursor: "pointer",
-  },
-};
