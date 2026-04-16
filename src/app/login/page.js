@@ -35,53 +35,80 @@ export default function LoginPage() {
   }
 
   return (
-    <div className={styles.container}>
-      <div className={styles.card}>
-        <img src="/logo.png" alt="RoadGuardian" className={styles.logo} />
+    <div className={styles.page}>
+      <div className={styles.overlay} />
 
-        <h1 className={styles.title}>Welcome to RoadGuardian</h1>
+      <div className={styles.card}>
+        <div className={styles.logoWrap}>
+          <img src="/logo.png" alt="RoadGuardian" className={styles.logo} />
+        </div>
+
+        <div className={styles.header}>
+          <h1 className={styles.title}>Welcome back</h1>
+          <p className={styles.subtitle}>
+            Sign in to continue to your RoadGuardian dashboard
+          </p>
+        </div>
 
         <form onSubmit={handleLogin} className={styles.form}>
-          <input
-            className={styles.input}
-            placeholder="Email"
-            type="email"
-            value={email}
-            onChange={(e) => {
-              setMessage("");
-              setEmail(e.target.value);
-            }}
-            required
-          />
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>Email</label>
+            <input
+              className={styles.input}
+              placeholder="Enter your email"
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setMessage("");
+                setEmail(e.target.value);
+              }}
+              required
+            />
+          </div>
 
-          <input
-            className={styles.input}
-            placeholder="Password"
-            type="password"
-            value={password}
-            onChange={(e) => {
-              setMessage("");
-              setPassword(e.target.value);
-            }}
-            required
-          />
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>Password</label>
+            <input
+              className={styles.input}
+              placeholder="Enter your password"
+              type="password"
+              value={password}
+              onChange={(e) => {
+                setMessage("");
+                setPassword(e.target.value);
+              }}
+              required
+            />
+          </div>
 
           <button className={styles.button} disabled={loading}>
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
 
-        {message && <p className={styles.message}>{message}</p>}
-
-        <p className={styles.registerText}>
-          Don’t have an account?{" "}
-          <span
-            className={styles.registerLink}
-            onClick={() => router.push("/register")}
+        {message && (
+          <p
+            className={`${styles.message} ${
+              message === "Login successful"
+                ? styles.successMessage
+                : styles.errorMessage
+            }`}
           >
-            Register here
-          </span>
-        </p>
+            {message}
+          </p>
+        )}
+
+        <div className={styles.footer}>
+          <p className={styles.registerText}>
+            Don’t have an account?
+            <span
+              className={styles.registerLink}
+              onClick={() => router.push("/register")}
+            >
+              Register here
+            </span>
+          </p>
+        </div>
       </div>
     </div>
   );
