@@ -146,3 +146,36 @@
     padding: 18px !important;
   }
 }
+
+/* ========================= */
+/* 🔥 FIX MUI INPUT STYLES */
+/* ========================= */
+
+:global(.MuiInputBase-input) {
+  color: #ffffff !important;
+}
+
+:global(.MuiOutlinedInput-root) {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+:global(.MuiOutlinedInput-notchedOutline) {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+:global(.MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline) {
+  border-color: #ffb04d !important;
+}
+
+:global(.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline) {
+  border-color: #ff8c00 !important;
+}
+
+:global(.MuiInputBase-input::placeholder) {
+  color: rgba(255, 255, 255, 0.5) !important;
+  opacity: 1 !important;
+}
+
+:global(.MuiFormHelperText-root) {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
