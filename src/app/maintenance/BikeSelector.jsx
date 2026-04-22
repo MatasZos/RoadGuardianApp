@@ -10,30 +10,41 @@ export default function BikeSelector({
   onPick,
 }) {
   return (
-    <div className={`${styles.panel} ${styles.bikeCard}`}>
-      <h2 className={styles.bikeTitle}>Your Motorbike</h2>
-      <p className={styles.bikeSelected}>
-        <strong>Selected:</strong> {selectedBike || "None selected"}
-      </p>
+    <div className={styles.bikeWrap}>
+      <div className={styles.selectedBikeCard}>
+        <p className={styles.selectedBikeLabel}>Selected Bike</p>
+        <p className={styles.selectedBikeValue}>
+          {selectedBike || "No bike selected yet"}
+        </p>
+      </div>
 
-      <div className={styles.bikeRow}>
-        {["make", "model", "year"].map((field) => (
-          <input
-            key={field}
-            className={styles.input}
-            placeholder={
-              field === "make"
-                ? "Make (e.g. Kawasaki)"
-                : field === "model"
-                ? "Model (e.g. Ninja)"
-                : "Year (optional)"
-            }
-            value={bikeSearch[field]}
-            onChange={(e) =>
-              setBikeSearch({ ...bikeSearch, [field]: e.target.value })
-            }
-          />
-        ))}
+      <div className={styles.bikeSearchGrid}>
+        <input
+          className={styles.input}
+          placeholder="Make (e.g. Kawasaki)"
+          value={bikeSearch.make}
+          onChange={(e) =>
+            setBikeSearch({ ...bikeSearch, make: e.target.value })
+          }
+        />
+
+        <input
+          className={styles.input}
+          placeholder="Model (e.g. Ninja)"
+          value={bikeSearch.model}
+          onChange={(e) =>
+            setBikeSearch({ ...bikeSearch, model: e.target.value })
+          }
+        />
+
+        <input
+          className={styles.input}
+          placeholder="Year (optional)"
+          value={bikeSearch.year}
+          onChange={(e) =>
+            setBikeSearch({ ...bikeSearch, year: e.target.value })
+          }
+        />
 
         <button
           type="button"
