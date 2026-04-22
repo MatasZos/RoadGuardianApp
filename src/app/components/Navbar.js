@@ -222,6 +222,9 @@ export default function Navbar() {
           <div style={styles.item} onClick={() => goTo("/profile")}>
             My Profile
           </div>
+          <div style={styles.item} onClick={() => goTo("/mybike")}>
+            My Bike
+          </div>
           <div style={styles.item} onClick={() => goTo("/settings")}>
             Settings
           </div>
@@ -301,13 +304,9 @@ const styles = {
     alignItems: "center",
     justifyContent: "space-between",
     padding: "0 20px",
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
+    position: "relative",
     borderBottom: "1px solid #1e1e1e",
-    zIndex: 999,
-    boxSizing: "border-box",
+    zIndex: 300,
   },
   left: {
     display: "flex",
