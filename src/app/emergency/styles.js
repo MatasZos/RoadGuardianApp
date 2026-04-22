@@ -10,64 +10,94 @@ export const styles = {
   mapWrap: { width: "100%", borderRadius: "16px", overflow: "hidden", boxShadow: "0 12px 28px rgba(0,0,0,0.35)" },
   map: { width: "100%", height: "420px", minHeight: "420px" },
   errorText: { color: "#fecaca", margin: 0 },
-  panel: { background: "#0f172a", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "16px", padding: "18px", boxShadow: "0 10px 24px rgba(0,0,0,0.24)" },
-  panelTitle: { marginTop: 0, marginBottom: 14, color: "#f8fafc" },
-  formGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" },
-  field: { display: "flex", flexDirection: "column", gap: "8px", color: "#e2e8f0" },
-  fieldWide: { gridColumn: "1 / -1", display: "flex", flexDirection: "column", gap: "8px", color: "#e2e8f0" },
-  checkboxField: { display: "flex", alignItems: "center", gap: "10px", color: "#e2e8f0", paddingTop: "28px" },
-  input: { width: "100%", padding: "12px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.1)", background: "#111827", color: "#fff", outline: "none" },
-  actionRow: { display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "14px" },
-  emergencyBtn: { padding: "13px 20px", borderRadius: "10px", border: "none", backgroundColor: "#ef4444", color: "#fff", fontSize: "1rem", fontWeight: "bold", cursor: "pointer" },
-  secondaryBtn: { padding: "13px 20px", borderRadius: "10px", border: "none", backgroundColor: "#2563eb", color: "#fff", fontSize: "0.96rem", fontWeight: "bold", cursor: "pointer" },
-  successBtn: { padding: "13px 20px", borderRadius: "10px", border: "none", backgroundColor: "#16a34a", color: "#fff", fontSize: "0.96rem", fontWeight: "bold", cursor: "pointer" },
-  dangerBtn: { padding: "13px 20px", borderRadius: "10px", border: "none", backgroundColor: "#dc2626", color: "#fff", fontSize: "0.96rem", fontWeight: "bold", cursor: "pointer" },
-  activeCard: { background: "linear-gradient(180deg, #1f2937, #111827)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: "16px", padding: "18px", boxShadow: "0 10px 28px rgba(0,0,0,0.3)" },
-
-  /* CHAT */
 
   chatButton: {
     position: "fixed",
-    right: "480px", // moved out of sidebar
-    bottom: "24px",
-    width: "60px",
-    height: "60px",
-    borderRadius: "18px",
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "linear-gradient(135deg, #ffb04d, #ff8c00)",
-    color: "#111",
-    fontSize: "1.4rem",
+    right: "20px",
+    bottom: "20px",
+    width: "58px",
+    height: "58px",
+    borderRadius: "16px",
+    border: "1px solid rgba(255,255,255,0.08)",
+    background: "linear-gradient(180deg, #2563eb, #1d4ed8)",
+    color: "#fff",
+    fontSize: "1.35rem",
     cursor: "pointer",
-    boxShadow: "0 18px 40px rgba(255,140,0,0.28)",
-    zIndex: 200,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+    zIndex: 200
   },
 
   chatSidebar: {
     position: "fixed",
     top: "60px",
     right: 0,
-    width: "460px",
+    width: "440px",
+    maxWidth: "100%",
     height: "calc(100vh - 60px)",
-    background: "linear-gradient(180deg, #0f172a 0%, #0b1220 100%)",
+    background: "#0a0f18",
+    borderLeft: "1px solid rgba(255,255,255,0.06)",
+    transition: "transform 0.28s ease",
+    zIndex: 199,
     display: "flex",
     flexDirection: "column",
+    boxShadow: "-12px 0 32px rgba(0,0,0,0.35)"
+  },
+
+  chatHeader: {
+    padding: "16px 18px",
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    color: "#fff",
+    background: "#0d1320",
+    fontSize: "1rem",
+    fontWeight: "700"
+  },
+
+  closeBtn: {
+    background: "transparent",
+    border: "none",
+    color: "#cbd5e1",
+    cursor: "pointer",
+    fontSize: "1rem"
   },
 
   chatBody: {
     display: "grid",
-    gridTemplateColumns: "200px 1fr",
+    gridTemplateColumns: "165px 1fr",
     flex: 1,
-    minHeight: 0,
+    minHeight: 0
+  },
+
+  chatList: {
+    borderRight: "1px solid rgba(255,255,255,0.06)",
+    overflowY: "auto",
+    padding: "10px",
+    background: "#0a0f18"
+  },
+
+  chatListItem: {
+    width: "100%",
+    textAlign: "left",
+    padding: "12px",
+    borderRadius: "12px",
+    border: "1px solid rgba(255,255,255,0.05)",
+    marginBottom: "8px",
+    cursor: "pointer",
+    background: "#0f1724"
+  },
+
+  chatListItemActive: {
+    background: "#162033",
+    border: "1px solid rgba(59,130,246,0.35)"
   },
 
   chatPanel: {
     display: "flex",
     flexDirection: "column",
     minHeight: 0,
-    paddingRight: "12px", // pushes content away from scrollbar
+    background: "#0b111b"
   },
 
   messagesArea: {
@@ -76,32 +106,46 @@ export const styles = {
     padding: "16px",
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
+    gap: "12px"
+  },
+
+  messageBubble: {
+    maxWidth: "78%",
+    padding: "12px 14px",
+    borderRadius: "10px"
+  },
+
+  myMessageBubble: {
+    background: "#1d4ed8"
+  },
+
+  otherMessageBubble: {
+    background: "#151c28"
   },
 
   messageInputRow: {
-    padding: "12px 16px", // more space
-    borderTop: "1px solid rgba(255,255,255,0.08)",
+    padding: "12px",
+    borderTop: "1px solid rgba(255,255,255,0.06)",
     display: "flex",
-    gap: "10px",
+    gap: "8px"
   },
 
   chatInput: {
     flex: 1,
-    padding: "12px",
+    padding: "11px 12px",
     borderRadius: "10px",
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(255,255,255,0.04)",
-    color: "#fff",
+    border: "1px solid rgba(255,255,255,0.08)",
+    background: "#111827",
+    color: "#fff"
   },
 
   startBtn: {
-    padding: "12px 18px", // bigger + pushed out
+    padding: "10px 14px",
     borderRadius: "10px",
-    border: "none",
-    background: "linear-gradient(135deg, #ffb04d, #ff8c00)",
-    color: "#111",
-    fontWeight: "700",
+    border: "1px solid rgba(255,255,255,0.06)",
+    background: "linear-gradient(180deg, #2563eb, #1d4ed8)",
+    color: "#fff",
     cursor: "pointer",
-  },
+    fontWeight: "700"
+  }
 };
