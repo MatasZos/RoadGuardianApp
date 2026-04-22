@@ -233,9 +233,9 @@ function SettingRow({ title, desc, enabled, onToggle }) {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "radial-gradient(circle at top, #101a1f, #000)", 
+    background: "radial-gradient(circle at top, #101a1f, #000)",
     color: "#fff",
-    padding: "35px 18px",
+    padding: "95px 18px 35px",
   },
   container: {
     maxWidth: "1100px",
@@ -276,7 +276,7 @@ const styles = {
     width: "8px",
     height: "8px",
     borderRadius: "999px",
-    background: "#3b82f6", 
+    background: "#3b82f6",
     boxShadow: "0 0 12px rgba(59,130,246,0.55)",
   },
   accountText: {
@@ -355,7 +355,6 @@ const styles = {
     fontSize: "0.9rem",
     lineHeight: 1.35,
   },
-
   toggle: {
     width: "46px",
     height: "26px",
@@ -384,7 +383,6 @@ const styles = {
     background: "#fff",
     transition: "transform 0.2s ease",
   },
-
   loading: { padding: "8px 2px" },
   skeletonTitle: {
     height: "16px",
@@ -400,7 +398,6 @@ const styles = {
     background: "rgba(255,255,255,0.06)",
     marginBottom: "10px",
   },
-
   empty: {
     display: "flex",
     gap: "14px",
