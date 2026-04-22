@@ -9,17 +9,28 @@
 }
 
 .container {
-  max-width: 1180px;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 36px 24px 56px;
+  padding: 34px 24px 48px;
+}
+
+.pageHeader {
+  margin-bottom: 22px;
 }
 
 .title {
-  margin: 0 0 22px;
+  margin: 0 0 8px;
   font-size: clamp(2rem, 3.8vw, 2.8rem);
   font-weight: 800;
   letter-spacing: -0.03em;
   color: #ffb04d;
+}
+
+.subtitle {
+  margin: 0;
+  color: #aeb8c8;
+  font-size: 0.98rem;
+  line-height: 1.55;
 }
 
 .loading {
@@ -32,29 +43,84 @@
   font-size: 1.1rem;
 }
 
-/* Shared panel style */
-.panel {
+.layout {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.sidebar {
+  position: sticky;
+  top: 92px;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.sectionCard {
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
     rgba(15, 23, 42, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.07);
   box-shadow: 0 18px 36px rgba(0, 0, 0, 0.3);
   border-radius: 22px;
-}
-
-/* Top layout */
-.topGrid {
-  display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  gap: 20px;
-  align-items: start;
-  margin-bottom: 24px;
-}
-
-/* Status board */
-.statusBoard {
   padding: 22px;
-  margin-bottom: 24px;
+}
+
+.sectionHeader {
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  margin: 0 0 6px;
+  font-size: 1.24rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.sectionText {
+  margin: 0;
+  color: #9fb0c7;
+  line-height: 1.5;
+  font-size: 0.94rem;
+}
+
+.timelineCardWrap {
+  min-height: 420px;
+}
+
+.timelineScroll {
+  max-height: 620px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.timelineScroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.timelineScroll::-webkit-scrollbar-thumb {
+  background: #2a3445;
+  border-radius: 999px;
+}
+
+.timelineScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Sidebar / status board */
+.statusBoard {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
+    rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.3);
+  border-radius: 22px;
+  padding: 20px;
 }
 
 .statusBoardHeader {
@@ -63,7 +129,7 @@
 
 .statusBoardTitle {
   margin: 0;
-  font-size: 1.3rem;
+  font-size: 1.22rem;
   font-weight: 800;
   color: #ffffff;
 }
@@ -72,39 +138,39 @@
   margin: 6px 0 0;
   color: #9fb0c7;
   line-height: 1.5;
+  font-size: 0.92rem;
 }
 
 .statusColumns {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: 14px;
 }
 
 .statusColumn {
   background: #131c29;
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 18px;
-  padding: 16px;
+  padding: 14px;
 }
 
 .columnTitle {
-  margin: 0 0 14px;
-  font-size: 1rem;
+  margin: 0 0 12px;
+  font-size: 0.98rem;
   font-weight: 800;
 }
 
 .emptyText {
   margin: 0;
   color: #94a3b8;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
 }
 
 .taskCard {
   background: #0f1724;
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 14px;
-  padding: 14px;
-  margin-bottom: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
 }
 
 .taskCard:last-child {
@@ -121,9 +187,9 @@
 }
 
 .taskCardText {
-  margin: 0 0 6px;
+  margin: 0 0 5px;
   color: #d8e0ea;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   line-height: 1.45;
 }
 
@@ -137,39 +203,49 @@
   padding: 5px 10px;
   border-radius: 999px;
   color: #fff;
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   font-weight: 800;
   white-space: nowrap;
 }
 
 /* Bike selector */
-.bikeCard {
-  padding: 22px;
-  margin-bottom: 0;
+.bikeWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.bikeTitle {
-  margin: 0 0 8px;
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: #ffb04d;
+.selectedBikeCard {
+  background: #131c29;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 14px 16px;
 }
 
-.bikeSelected {
-  margin: 0 0 16px;
-  color: #cbd5e1;
+.selectedBikeLabel {
+  margin: 0 0 6px;
+  color: #9fb0c7;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.selectedBikeValue {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 700;
   line-height: 1.5;
 }
 
-.bikeRow {
+.bikeSearchGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 130px;
+  grid-template-columns: 1fr 1fr 1fr 140px;
   gap: 10px;
-  align-items: stretch;
 }
 
 .bikeResults {
-  margin-top: 14px;
   display: grid;
   gap: 10px;
 }
@@ -204,13 +280,9 @@
 
 /* Form */
 .form {
-  width: 100%;
-  max-width: none;
-  padding: 22px;
-  margin-bottom: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .formLabel {
@@ -223,7 +295,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  max-height: 220px;
+  max-height: 240px;
   overflow-y: auto;
   padding: 12px;
   background: #182231;
@@ -237,6 +309,16 @@
   gap: 8px;
   font-size: 0.92rem;
   color: #e5ebf2;
+}
+
+.fieldsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
 }
 
 .input,
@@ -260,7 +342,7 @@
 }
 
 .textarea {
-  min-height: 78px;
+  min-height: 88px;
   resize: vertical;
 }
 
@@ -288,6 +370,12 @@
   margin-bottom: 0;
 }
 
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Buttons */
 .button,
 .bikeButton,
 .editBtn,
@@ -307,7 +395,7 @@
 }
 
 .button {
-  padding: 12px 16px;
+  padding: 12px 18px;
   background: linear-gradient(135deg, #ffb04d, #ff8c00);
   color: #111111;
   box-shadow: 0 12px 24px rgba(255, 140, 0, 0.24);
@@ -324,53 +412,6 @@
   opacity: 0.7;
   cursor: not-allowed;
   transform: none;
-}
-
-/* Timeline panel */
-.timelinePanel {
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
-    rgba(15, 23, 42, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.3);
-  border-radius: 22px;
-  padding: 22px;
-}
-
-.timelinePanelHeader {
-  margin-bottom: 14px;
-}
-
-.timelinePanelTitle {
-  margin: 0;
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: #ffffff;
-}
-
-.timelinePanelSubtitle {
-  margin: 6px 0 0 0;
-  color: #9fb0c7;
-  font-size: 0.95rem;
-}
-
-.timelineScroll {
-  max-height: 520px;
-  overflow-y: auto;
-  padding-right: 6px;
-}
-
-.timelineScroll::-webkit-scrollbar {
-  width: 8px;
-}
-
-.timelineScroll::-webkit-scrollbar-thumb {
-  background: #2a3445;
-  border-radius: 999px;
-}
-
-.timelineScroll::-webkit-scrollbar-track {
-  background: transparent;
 }
 
 /* Timeline */
@@ -492,17 +533,31 @@
   color: #fff;
 }
 
-@media (max-width: 980px) {
-  .statusColumns {
+@media (max-width: 1100px) {
+  .layout {
     grid-template-columns: 1fr;
   }
 
-  .topGrid {
-    grid-template-columns: 1fr;
+  .sidebar {
+    position: static;
   }
+}
 
-  .bikeRow {
+@media (max-width: 900px) {
+  .bikeSearchGrid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .fieldsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fullWidth {
+    grid-column: auto;
+  }
+
+  .checkboxContainer {
+    grid-template-columns: 1fr;
   }
 
   .timelineScroll {
@@ -511,42 +566,35 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 640px) {
   .container {
     padding: 28px 18px 42px;
   }
 
-  .form,
-  .bikeCard,
+  .sectionCard,
   .statusBoard,
-  .timelinePanel,
   .timelineCard {
     border-radius: 18px;
   }
 
-  .checkboxContainer {
+  .bikeSearchGrid {
     grid-template-columns: 1fr;
   }
 
-  .bikeRow {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 560px) {
-  .timelineItem {
-    grid-template-columns: 20px 1fr;
-    gap: 10px;
-  }
-
-  .cardActions {
+  .cardActions,
+  .formActions {
     flex-direction: column;
   }
 
-  .editBtn,
-  .deleteBtn,
+  .button,
   .bikeButton,
-  .button {
+  .editBtn,
+  .deleteBtn {
     width: 100%;
+  }
+
+  .timelineItem {
+    grid-template-columns: 20px 1fr;
+    gap: 10px;
   }
 }
