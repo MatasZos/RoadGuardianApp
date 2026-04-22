@@ -39,9 +39,9 @@ function TaskCard({ task, showUrgent }) {
 }
 
 const COLUMNS = [
-  { key: "overdue", label: "Overdue", color: "#ef4444", urgent: true, limit: null },
-  { key: "dueSoon", label: "Due Soon", color: "#f59e0b", urgent: false, limit: null },
-  { key: "upcoming", label: "Upcoming", color: "#22c55e", urgent: false, limit: 6 },
+  { key: "overdue", label: "Overdue", color: "#ef4444", urgent: true, limit: 4 },
+  { key: "dueSoon", label: "Due Soon", color: "#f59e0b", urgent: false, limit: 4 },
+  { key: "upcoming", label: "Upcoming", color: "#22c55e", urgent: false, limit: 4 },
 ];
 
 const EMPTY = {
@@ -50,22 +50,23 @@ const EMPTY = {
   upcoming: "No upcoming tasks yet",
 };
 
-export default function StatusBoard({ summary }) {
-  if (!summary) return null;
-
+export default function StatusBoard({ summary, selectedBike }) {
   return (
-    <div className={`${styles.panel} ${styles.statusBoard}`}>
+    <div className={styles.statusBoard}>
       <div className={styles.statusBoardHeader}>
         <h2 className={styles.statusBoardTitle}>Bike Service Intelligence</h2>
         <p className={styles.statusBoardSubtitle}>
-          {summary.bike} · Estimated current km:{" "}
-          <strong>{summary.currentKm.toLocaleString()}</strong>
+          {summary
+            ? `${summary.bike} · Estimated current km: ${summary.currentKm.toLocaleString()}`
+            : selectedBike
+            ? `${selectedBike} · No service data yet`
+            : "Select a bike to view service intelligence"}
         </p>
       </div>
 
       <div className={styles.statusColumns}>
         {COLUMNS.map(({ key, label, color, urgent, limit }) => {
-          const tasks = limit ? summary[key].slice(0, limit) : summary[key];
+          const tasks = summary ? summary[key].slice(0, limit) : [];
 
           return (
             <div key={key} className={styles.statusColumn}>
