@@ -35,7 +35,7 @@ export const styles = {
   historyMeta: { color: "#94a3b8", marginTop: "4px", fontSize: "0.9rem" },
   muted: { color: "#94a3b8", margin: 0 },
 
-  /* ===== IMPROVED CHAT UI ===== */
+  /*messaing UI*/
 
   chatButton: {
     position: "fixed",
