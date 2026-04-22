@@ -51,28 +51,34 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
   backdrop-filter: blur(10px);
-  transition:
-    transform 0.35s ease,
-    box-shadow 0.35s ease,
-    border-color 0.35s ease,
-    opacity 0.7s ease;
+
+  /* animation start state */
   opacity: 0;
-  transform: translateY(50px) scale(0.96);
+  transform: translateX(-80px);
+
+  transition:
+    transform 0.7s ease,
+    opacity 0.7s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
 }
 
+/* reversed cards slide from right */
+.reverse {
+  flex-direction: row-reverse;
+  transform: translateX(80px);
+}
+
+/* when visible */
 .show {
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translateX(0);
 }
 
 .feature:hover {
   transform: translateY(-6px);
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.3);
   border-color: rgba(255, 140, 0, 0.28);
-}
-
-.reverse {
-  flex-direction: row-reverse;
 }
 
 .feature img {
@@ -194,6 +200,7 @@
   .reverse {
     flex-direction: column;
     text-align: center;
+    transform: translateY(40px); /* mobile fallback animation */
   }
 
   .feature {
