@@ -39,7 +39,6 @@ export default function MaintenancePage() {
   const [bikeResults, setBikeResults] = useState([]);
   const [bikeLoading, setBikeLoading] = useState(false);
 
-  // ===== COMPUTED DATA =====
   const monthSections = useMemo(
     () => Object.entries(groupByMonth(records)),
     [records]
@@ -63,14 +62,12 @@ export default function MaintenancePage() {
     [bikeSummaries, selectedBike]
   );
 
-  // ===== AUTH GUARD =====
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
     }
   }, [status, router]);
 
-  // ===== INITIAL SETUP =====
   useEffect(() => {
     setSelectedBike(localStorage.getItem("userMotorbike") || "");
     setForm((prev) => ({
@@ -79,7 +76,6 @@ export default function MaintenancePage() {
     }));
   }, []);
 
-  // ===== FETCH DATA =====
   useEffect(() => {
     fetchRecords();
   }, [email]);
@@ -96,7 +92,6 @@ export default function MaintenancePage() {
     setRecords(Array.isArray(data) ? data : []);
   }
 
-  // ===== BIKE SEARCH =====
   async function handleBikeSearch() {
     setBikeResults([]);
 
@@ -124,7 +119,7 @@ export default function MaintenancePage() {
       }
 
       setBikeResults(Array.isArray(data) ? data : []);
-      if (!data.length) alert("No bikes found.");
+      if (!data?.length) alert("No bikes found.");
     } catch {
       alert("Bike search error.");
     } finally {
@@ -139,7 +134,6 @@ export default function MaintenancePage() {
     setBikeResults([]);
   }
 
-  // ===== FORM =====
   function toggleTask(task) {
     setForm((prev) => ({
       ...prev,
@@ -153,8 +147,9 @@ export default function MaintenancePage() {
     e.preventDefault();
 
     if (!email) return;
+
     if (!selectedBike) {
-      alert("Please select a motorbike first.");
+      alert("Please select a motorbike before adding a record.");
       return;
     }
 
@@ -173,7 +168,6 @@ export default function MaintenancePage() {
       ...EMPTY_FORM,
       date: new Date().toISOString().slice(0, 10),
     });
-
     setEditingId(null);
     await fetchRecords();
   }
@@ -181,7 +175,6 @@ export default function MaintenancePage() {
   function startEdit(record) {
     setEditingId(record._id);
     setSelectedBike(record.motorbike || "");
-
     setForm({
       type: Array.isArray(record.type) ? record.type : [record.type],
       date: record.date || "",
@@ -201,63 +194,87 @@ export default function MaintenancePage() {
     setRecords((prev) => prev.filter((r) => r._id !== id));
   }
 
-  // ===== LOADING =====
   if (status === "loading") {
-    return (
-      <div className={styles.loading}>
-        Loading...
-      </div>
-    );
+    return <div className={styles.loading}>Loading...</div>;
   }
 
-  // ===== UI =====
   return (
     <>
       <Navbar />
 
       <div className={styles.page}>
         <div className={styles.container}>
-          <h1 className={styles.title}>Maintenance Records</h1>
-
-          {/* STATUS BOARD */}
-          <StatusBoard summary={selectedBikeSummary} />
-
-          {/* TOP SECTION */}
-          <div className={styles.topGrid}>
-            <BikeSelector
-              selectedBike={selectedBike}
-              bikeSearch={bikeSearch}
-              setBikeSearch={setBikeSearch}
-              bikeResults={bikeResults}
-              bikeLoading={bikeLoading}
-              onSearch={handleBikeSearch}
-              onPick={pickBike}
-            />
-
-            <MaintenanceForm
-              form={form}
-              setForm={setForm}
-              editingId={editingId}
-              previewList={previewList}
-              onSubmit={handleSubmit}
-              onToggleTask={toggleTask}
-            />
+          <div className={styles.pageHeader}>
+            <div>
+              <h1 className={styles.title}>Maintenance Records</h1>
+              <p className={styles.subtitle}>
+                Track servicing, manage advisories, and monitor what your bike needs next.
+              </p>
+            </div>
           </div>
 
-          {/* TIMELINE */}
-          <div className={styles.timelinePanel}>
-            <div className={styles.timelineHeader}>
-              <h2>Service Timeline</h2>
-              <p>Your maintenance history grouped by month</p>
-            </div>
+          <div className={styles.layout}>
+            <aside className={styles.sidebar}>
+              <StatusBoard summary={selectedBikeSummary} selectedBike={selectedBike} />
+            </aside>
 
-            <div className={styles.timelineScroll}>
-              <MaintenanceTimeline
-                monthSections={monthSections}
-                onEdit={startEdit}
-                onDelete={deleteRecord}
-              />
-            </div>
+            <main className={styles.main}>
+              <section className={styles.sectionCard}>
+                <div className={styles.sectionHeader}>
+                  <h2 className={styles.sectionTitle}>Search Your Bike</h2>
+                  <p className={styles.sectionText}>
+                    Select the correct bike before adding or reviewing maintenance records.
+                  </p>
+                </div>
+
+                <BikeSelector
+                  selectedBike={selectedBike}
+                  bikeSearch={bikeSearch}
+                  setBikeSearch={setBikeSearch}
+                  bikeResults={bikeResults}
+                  bikeLoading={bikeLoading}
+                  onSearch={handleBikeSearch}
+                  onPick={pickBike}
+                />
+              </section>
+
+              <section className={styles.sectionCard}>
+                <div className={styles.sectionHeader}>
+                  <h2 className={styles.sectionTitle}>
+                    {editingId ? "Edit Maintenance Record" : "Add Maintenance Record"}
+                  </h2>
+                  <p className={styles.sectionText}>
+                    Save service history, current mileage, notes and advisories for future reminders.
+                  </p>
+                </div>
+
+                <MaintenanceForm
+                  form={form}
+                  setForm={setForm}
+                  editingId={editingId}
+                  previewList={previewList}
+                  onSubmit={handleSubmit}
+                  onToggleTask={toggleTask}
+                />
+              </section>
+
+              <section className={`${styles.sectionCard} ${styles.timelineCardWrap}`}>
+                <div className={styles.sectionHeader}>
+                  <h2 className={styles.sectionTitle}>Service Timeline</h2>
+                  <p className={styles.sectionText}>
+                    Browse your maintenance history grouped by month.
+                  </p>
+                </div>
+
+                <div className={styles.timelineScroll}>
+                  <MaintenanceTimeline
+                    monthSections={monthSections}
+                    onEdit={startEdit}
+                    onDelete={deleteRecord}
+                  />
+                </div>
+              </section>
+            </main>
           </div>
         </div>
       </div>
