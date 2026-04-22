@@ -222,9 +222,6 @@ export default function Navbar() {
           <div style={styles.item} onClick={() => goTo("/profile")}>
             My Profile
           </div>
-          <div style={styles.item} onClick={() => goTo("/mybike")}>
-            My Bike
-          </div>
           <div style={styles.item} onClick={() => goTo("/settings")}>
             Settings
           </div>
