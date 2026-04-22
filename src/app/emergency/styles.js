@@ -63,18 +63,19 @@ export const styles = {
   },
 
   /* SIDEBAR */
-  chatSidebar: {
-    position: "fixed",
-    top: "60px",
-    right: 0,
-    width: "440px",
-    height: "calc(100vh - 60px)",
-    background: "#0a0f18",
-    borderLeft: "1px solid rgba(255,255,255,0.06)",
-    transition: "transform 0.28s ease",
-    display: "flex",
-    flexDirection: "column",
-  },
+chatSidebar: {
+  position: "fixed",
+  top: "60px",
+  right: 0,
+  width: "440px",
+  height: "calc(100vh - 60px)",
+  background: "#0a0f18",
+  borderLeft: "1px solid rgba(255,255,255,0.06)",
+  transition: "transform 0.28s ease",
+  display: "flex",
+  flexDirection: "column",
+  zIndex: 9999, 
+},
 
   chatHeader: {
     padding: "16px 18px",
