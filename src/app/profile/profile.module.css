@@ -6,7 +6,7 @@
     linear-gradient(180deg, #151922 0%, #0c1118 100%);
   color: #ffffff;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  padding: 24px 18px 42px;
+  padding: 84px 18px 42px;
 }
 
 .container {
@@ -130,7 +130,7 @@
 
 @media (max-width: 640px) {
   .page {
-    padding: 18px 14px 34px;
+    padding: 78px 14px 34px;
   }
 
   .hero {
