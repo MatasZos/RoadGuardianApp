@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 
@@ -40,6 +41,34 @@ const features = [
 
 export default function LandingPage() {
   const router = useRouter();
+  const featureRefs = useRef([]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add(styles.show);
+          }
+        });
+      },
+      {
+        threshold: 0.2,
+      }
+    );
+
+    const currentRefs = featureRefs.current;
+
+    currentRefs.forEach((el) => {
+      if (el) observer.observe(el);
+    });
+
+    return () => {
+      currentRefs.forEach((el) => {
+        if (el) observer.unobserve(el);
+      });
+    };
+  }, []);
 
   return (
     <div className={styles.page}>
@@ -52,7 +81,11 @@ export default function LandingPage() {
 
       <section className={styles.features}>
         {features.map((f, i) => (
-          <Feature key={i} {...f} />
+          <Feature
+            key={i}
+            {...f}
+            refCallback={(el) => (featureRefs.current[i] = el)}
+          />
         ))}
       </section>
 
@@ -79,11 +112,14 @@ export default function LandingPage() {
   );
 }
 
-function Feature({ title, description, image, reverse }) {
+function Feature({ title, description, image, reverse, refCallback }) {
   return (
-    <div className={`${styles.feature} ${reverse ? styles.reverse : ""}`}>
+    <div
+      ref={refCallback}
+      className={`${styles.feature} ${reverse ? styles.reverse : ""}`}
+    >
       <img src={image} alt={title} />
-      <div>
+      <div className={styles.featureText}>
         <h3>{title}</h3>
         <p>{description}</p>
       </div>
