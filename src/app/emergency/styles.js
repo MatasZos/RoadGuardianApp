@@ -45,6 +45,7 @@ export const styles = {
 
   /* CHAT */
 
+ /* CHAT BUTTON */
   chatButton: {
     position: "fixed",
     right: "20px",
@@ -61,17 +62,16 @@ export const styles = {
     zIndex: 200
   },
 
+  /* SIDEBAR */
   chatSidebar: {
     position: "fixed",
     top: "60px",
     right: 0,
     width: "440px",
-    maxWidth: "100%",
     height: "calc(100vh - 60px)",
     background: "#0a0f18",
     borderLeft: "1px solid rgba(255,255,255,0.06)",
     transition: "transform 0.28s ease",
-    zIndex: 199,
     display: "flex",
     flexDirection: "column",
   },
@@ -86,12 +86,21 @@ export const styles = {
     fontWeight: "700",
   },
 
+  closeBtn: {
+    background: "transparent",
+    border: "none",
+    color: "#cbd5e1",
+    cursor: "pointer",
+    fontSize: "1rem"
+  },
+
   chatBody: {
     display: "grid",
     gridTemplateColumns: "165px 1fr",
     flex: 1,
   },
 
+  /* LEFT LIST */
   chatList: {
     borderRight: "1px solid rgba(255,255,255,0.06)",
     padding: "10px",
@@ -99,13 +108,22 @@ export const styles = {
   },
 
   chatListItem: {
+    width: "100%",
+    textAlign: "left",
     padding: "12px",
     borderRadius: "12px",
     background: "#0f1724",
     marginBottom: "8px",
     color: "#fff",
+    cursor: "pointer",
   },
 
+  chatListItemActive: {
+    background: "#162033",
+    border: "1px solid rgba(59,130,246,0.35)",
+  },
+
+  /* CHAT PANEL */
   chatPanel: {
     display: "flex",
     flexDirection: "column",
@@ -115,31 +133,44 @@ export const styles = {
   messagesArea: {
     flex: 1,
     overflowY: "auto",
-    padding: "16px",
+    padding: "18px 16px",
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
-    background: "#0b111b" // 🔥 FIXED (no gradient fade)
+    gap: "14px",
+    background: "#0b111b",
   },
 
+  /* 🔥 NICE MESSAGE BUBBLES */
   messageBubble: {
     maxWidth: "78%",
-    padding: "12px 14px",
-    borderRadius: "10px",
+    padding: "12px 16px",
+    borderRadius: "18px",
     fontSize: "0.95rem",
-    lineHeight: "1.4",
+    lineHeight: "1.45",
+    wordBreak: "break-word",
+    boxShadow: "0 8px 20px rgba(0,0,0,0.22)",
   },
 
   myMessageBubble: {
-    background: "#2563eb",
+    background: "linear-gradient(180deg, #3b82f6, #2563eb)",
     color: "#fff",
+    borderBottomRightRadius: "6px",
   },
 
   otherMessageBubble: {
     background: "#1f2937",
-    color: "#e5e7eb",
+    color: "#f3f4f6",
+    border: "1px solid rgba(255,255,255,0.06)",
+    borderBottomLeftRadius: "6px",
   },
 
+  messageMeta: {
+    fontSize: "0.72rem",
+    color: "#94a3b8",
+    padding: "0 6px",
+  },
+
+  /* INPUT */
   messageInputRow: {
     padding: "12px",
     borderTop: "1px solid rgba(255,255,255,0.06)",
@@ -160,7 +191,7 @@ export const styles = {
   startBtn: {
     padding: "10px 14px",
     borderRadius: "10px",
-    background: "#2563eb",
+    background: "linear-gradient(180deg, #2563eb, #1d4ed8)",
     color: "#fff",
     border: "none",
     fontWeight: "700",
