@@ -3,14 +3,22 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import styles from "./login.module.css";
+import {
+  Form,
+  Button,
+  Alert,
+  InputGroup,
+  Spinner,
+} from "react-bootstrap";
 
 export default function LoginPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
+  const [isSuccess, setIsSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleLogin(e) {
@@ -27,87 +35,134 @@ export default function LoginPage() {
     setLoading(false);
 
     if (res?.ok) {
-      setMessage("Login successful");
+      setIsSuccess(true);
+      setMessage("Login successful — redirecting...");
       setTimeout(() => router.push("/home"), 600);
     } else {
+      setIsSuccess(false);
       setMessage("Invalid email or password");
     }
   }
 
-  return (
-    <div className={styles.page}>
-      <div className={styles.overlay} />
+  function clearMessage() {
+    if (message) setMessage("");
+  }
 
-      <div className={styles.card}>
-        <div className={styles.logoWrap}>
-          <img src="/logo.png" alt="RoadGuardian" className={styles.logo} />
+  return (
+    <div className="rg-auth-page">
+      <div className="rg-glass-card">
+        <div className="text-center mb-3">
+          <img
+            src="/logo.png"
+            alt="RoadGuardian"
+            className="rg-auth-logo"
+          />
         </div>
 
-        <div className={styles.header}>
-          <h1 className={styles.title}>Welcome back</h1>
-          <p className={styles.subtitle}>
+        <div className="text-center mb-4">
+          <h1 className="rg-auth-title text-white mb-2">Welcome back</h1>
+          <p className="text-body-secondary mb-0">
             Sign in to continue to your RoadGuardian dashboard
           </p>
         </div>
 
-        <form onSubmit={handleLogin} className={styles.form}>
-          <div className={styles.inputGroup}>
-            <label className={styles.label}>Email</label>
-            <input
-              className={styles.input}
-              placeholder="Enter your email"
+        <Form onSubmit={handleLogin}>
+          <Form.Group className="mb-3" controlId="loginEmail">
+            <Form.Label className="fw-semibold text-body-secondary small">
+              Email
+            </Form.Label>
+            <Form.Control
               type="email"
+              placeholder="Enter your email"
               value={email}
               onChange={(e) => {
-                setMessage("");
+                clearMessage();
                 setEmail(e.target.value);
               }}
               required
+              autoComplete="email"
+              size="lg"
             />
-          </div>
+          </Form.Group>
 
-          <div className={styles.inputGroup}>
-            <label className={styles.label}>Password</label>
-            <input
-              className={styles.input}
-              placeholder="Enter your password"
-              type="password"
-              value={password}
-              onChange={(e) => {
-                setMessage("");
-                setPassword(e.target.value);
-              }}
-              required
-            />
-          </div>
+          <Form.Group className="mb-4" controlId="loginPassword">
+            <Form.Label className="fw-semibold text-body-secondary small">
+              Password
+            </Form.Label>
+            <InputGroup size="lg">
+              <Form.Control
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => {
+                  clearMessage();
+                  setPassword(e.target.value);
+                }}
+                required
+                autoComplete="current-password"
+              />
+              <Button
+                variant="outline-secondary"
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                tabIndex={-1}
+              >
+                <i
+                  className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`}
+                ></i>
+              </Button>
+            </InputGroup>
+          </Form.Group>
 
-          <button className={styles.button} disabled={loading}>
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            className="w-100"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Spinner animation="border" size="sm" className="me-2" />
+                Logging in...
+              </>
+            ) : (
+              <>
+                <i className="bi bi-box-arrow-in-right me-2"></i>Login
+              </>
+            )}
+          </Button>
+        </Form>
 
         {message && (
-          <p
-            className={`${styles.message} ${
-              message === "Login successful"
-                ? styles.successMessage
-                : styles.errorMessage
-            }`}
+          <Alert
+            variant={isSuccess ? "success" : "danger"}
+            className="mt-3 mb-0 text-center"
           >
+            <i
+              className={`bi ${
+                isSuccess
+                  ? "bi-check-circle-fill"
+                  : "bi-exclamation-triangle-fill"
+              } me-2`}
+            ></i>
             {message}
-          </p>
+          </Alert>
         )}
 
-        <div className={styles.footer}>
-          <p className={styles.registerText}>
-            Don’t have an account?
-            <span
-              className={styles.registerLink}
-              onClick={() => router.push("/register")}
-            >
-              Register here
-            </span>
-          </p>
+        <div className="text-center mt-4">
+          <span className="text-body-secondary small">
+            Don't have an account?{" "}
+          </span>
+          <Button
+            variant="link"
+            className="p-0 small fw-bold text-decoration-underline"
+            style={{ color: "#fff" }}
+            onClick={() => router.push("/register")}
+          >
+            Register here
+          </Button>
         </div>
       </div>
     </div>

@@ -67,6 +67,7 @@ export default function LandingPage() {
 
   return (
     <div className="bg-body text-body min-vh-100">
+      {/* Hero */}
       <section className="rg-hero py-5 py-md-6 text-center">
         <Container>
           <div className="rg-hero-eyebrow text-uppercase small fw-semibold mb-3">
@@ -142,7 +143,7 @@ export default function LandingPage() {
       <style>{`
         .rg-hero {
           background:
-            radial-gradient(1200px 400px at 50% -10%, rgba(13, 110, 253, 0.20), transparent 60%),
+            radial-gradient(1200px 400px at 50% -10%, rgba(var(--bs-primary-rgb), 0.20), transparent 60%),
             linear-gradient(180deg, var(--bs-body-bg), var(--bs-body-bg));
         }
         .rg-hero-eyebrow {
@@ -163,7 +164,7 @@ export default function LandingPage() {
           width: 64px;
           height: 64px;
           border-radius: 16px;
-          background: rgba(13, 110, 253, 0.12);
+          background: rgba(var(--bs-primary-rgb), 0.12);
           color: var(--bs-primary);
         }
         .rg-feature {
@@ -176,7 +177,7 @@ export default function LandingPage() {
           transform: translateY(0) !important;
         }
         .rg-cta {
-          background: linear-gradient(180deg, transparent, rgba(13, 110, 253, 0.06));
+          background: linear-gradient(180deg, transparent, rgba(var(--bs-primary-rgb), 0.06));
           border-top: 1px solid var(--bs-border-color);
         }
       `}</style>
