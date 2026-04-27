@@ -1,9 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Navbar from "../components/Navbar";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import {
+  Container,
+  Card,
+  Form,
+  Button,
+  Row,
+  Col,
+  Badge,
+  Spinner,
+  Stack,
+  Toast,
+  ToastContainer,
+} from "react-bootstrap";
+import Navbar from "../components/Navbar";
+
+const ISSUE_TYPES = [
+  "Account Issue",
+  "Maintenance Records",
+  "Document Reminders",
+  "Emergency Feature",
+  "Bug Report",
+  "Other",
+];
 
 export default function SupportPage() {
   const router = useRouter();
@@ -11,6 +33,7 @@ export default function SupportPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [toast, setToast] = useState(null);
 
   const [form, setForm] = useState({
     issueType: "Bug Report",
@@ -22,27 +45,24 @@ export default function SupportPage() {
   }, [status]);
 
   const unauthenticated = status === "unauthenticated";
-
   const name = session?.user?.name || "RoadGuardian User";
   const email = session?.user?.email || "";
 
-  const issueTypes = [
-    "Account Issue",
-    "Maintenance Records",
-    "Document Reminders",
-    "Emergency Feature",
-    "Bug Report",
-    "Other",
-  ];
+  function showToast(variant, message) {
+    setToast({ variant, message });
+  }
 
-  const handleChange = (e) => {
+  function handleChange(e) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-  };
+  }
 
-  const submitTicket = async () => {
-    if (!form.message.trim()) {
-      alert("Please enter a message.");
+  async function submitTicket(e) {
+    e.preventDefault();
+
+    const trimmed = form.message.trim();
+    if (!trimmed) {
+      showToast("danger", "Please enter a message.");
       return;
     }
 
@@ -53,408 +73,309 @@ export default function SupportPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           issueType: form.issueType,
-          message: form.message,
+          message: trimmed,
         }),
       });
-
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data?.error || "Failed to submit ticket");
+        showToast("danger", data?.error || "Failed to submit ticket");
         return;
       }
 
-      alert("Ticket submitted! We’ll get back to you soon.");
+      showToast("success", "Ticket submitted — we'll get back to you soon.");
       setForm((prev) => ({ ...prev, message: "" }));
-    } catch (err) {
-      console.error("Submit ticket error:", err);
-      alert("Server error while submitting ticket");
+    } catch {
+      showToast("danger", "Server error while submitting ticket");
     } finally {
       setSubmitting(false);
     }
-  };
+  }
 
   return (
     <>
       <Navbar />
 
-      <div style={styles.page}>
-        <div style={styles.container}>
-          <div style={styles.header}>
+      <div className="rg-support-page min-vh-100 py-4 py-md-5">
+        <Container style={{ maxWidth: 1100 }}>
+          <div className="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3 mb-4">
             <div>
-              <h1 style={styles.title}>Support</h1>
-              <p style={styles.subtitle}>
-                Submit an issue and we’ll review it. Your ticket is linked to your account.
+              <h1 className="rg-page-title fw-bold mb-2">
+                <i className="bi bi-life-preserver me-2"></i>Support
+              </h1>
+              <p className="text-body-secondary mb-0" style={{ maxWidth: 720 }}>
+                Submit an issue and we'll review it. Your ticket is linked to
+                your account.
               </p>
             </div>
-
-            <div style={styles.accountPill}>
-              <span style={styles.dot} />
-              <span style={styles.accountText}>
+            <Badge
+              pill
+              bg="dark"
+              className="rg-account-pill px-3 py-2 d-inline-flex align-items-center gap-2"
+            >
+              <span
+                className={`rg-status-dot ${
+                  unauthenticated ? "rg-status-off" : "rg-status-on"
+                }`}
+              ></span>
+              <span className="text-body-secondary fw-normal small">
                 {unauthenticated ? "Signed out" : `Signed in as: ${email}`}
               </span>
-            </div>
+            </Badge>
           </div>
-
-          <div style={styles.card}>
-            {!loaded || status === "loading" ? (
-              <div style={styles.loading}>
-                <div style={styles.skeletonTitle} />
-                <div style={styles.skeletonLine} />
-                <div style={styles.skeletonLine} />
-                <div style={{ ...styles.skeletonLine, width: "70%" }} />
-              </div>
-            ) : unauthenticated ? (
-              <div style={styles.empty}>
-                <div style={styles.emptyIcon}>!</div>
-                <div>
-                  <div style={styles.emptyTitle}>You’re not signed in</div>
-                  <div style={styles.emptyText}>
-                    Please log in to submit a support ticket.
-                  </div>
-                  <button style={styles.primaryBtn} onClick={() => router.push("/login")}>
-                    Go to Login
-                  </button>
+          <Card className="rg-section-card border-0">
+            <Card.Body className="p-4">
+              {!loaded || status === "loading" ? (
+                <div className="d-flex justify-content-center py-4">
+                  <Spinner animation="border" variant="primary" />
                 </div>
-              </div>
-            ) : (
-              <>
-                {}
-                <div style={styles.banner}>
-                  <div style={styles.bannerLeft}>
-                    <div style={styles.bannerTitle}>Contact Support</div>
-                    <div style={styles.bannerText}>
-                      Provide as much detail as you can (what you clicked, what happened, any errors).
-                    </div>
-                  </div>
-                  <div style={styles.badge}>Ticket</div>
-                </div>
-
-                <div style={styles.form}>
-                  <div style={styles.grid}>
+              ) : unauthenticated ? (
+                <UnauthedPrompt onLogin={() => router.push("/login")} />
+              ) : (
+                <>
+                  <div className="rg-support-banner d-flex align-items-center justify-content-between gap-3 p-3 rounded-3 mb-4">
                     <div>
-                      <label style={styles.label}>Name</label>
-                      <div style={styles.readOnly}>{name}</div>
+                      <div className="fw-bold mb-1">Contact Support</div>
+                      <div className="small text-body-secondary">
+                        Provide as much detail as you can — what you clicked,
+                        what happened, any errors.
+                      </div>
                     </div>
-
-                    <div>
-                      <label style={styles.label}>Email</label>
-                      <div style={styles.readOnly}>{email}</div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={styles.label}>Issue Type</label>
-                    <select
-                      name="issueType"
-                      value={form.issueType}
-                      onChange={handleChange}
-                      style={styles.select}
+                    <Badge
+                      bg="primary"
+                      className="rg-ticket-badge px-3 py-2 fw-bold"
                     >
-                      {issueTypes.map((t) => (
-                        <option key={t} value={t} style={{ background: "#0f0f0f" }}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
+                      <i className="bi bi-ticket-perforated-fill me-1"></i>
+                      Ticket
+                    </Badge>
                   </div>
 
-                  <div>
-                    <label style={styles.label}>Message</label>
-                    <textarea
-                      name="message"
-                      value={form.message}
-                      onChange={handleChange}
-                      placeholder="Describe the issue… (What were you doing? What did you expect? What happened?)"
-                      rows={7}
-                      style={styles.textarea}
-                    />
-                    <div style={styles.helper}>
-                      Tip: include steps to reproduce and any visible error messages.
-                    </div>
-                  </div>
+                  {/* Form */}
+                  <Form onSubmit={submitTicket}>
+                    <Row className="g-3 mb-3">
+                      <Col xs={12} md={6}>
+                        <Form.Group>
+                          <Form.Label className="text-body-secondary small fw-semibold">
+                            NAME
+                          </Form.Label>
+                          <div className="rg-readonly-field">
+                            <i className="bi bi-person-fill me-2 text-body-secondary"></i>
+                            {name}
+                          </div>
+                        </Form.Group>
+                      </Col>
+                      <Col xs={12} md={6}>
+                        <Form.Group>
+                          <Form.Label className="text-body-secondary small fw-semibold">
+                            EMAIL
+                          </Form.Label>
+                          <div className="rg-readonly-field">
+                            <i className="bi bi-envelope-fill me-2 text-body-secondary"></i>
+                            {email}
+                          </div>
+                        </Form.Group>
+                      </Col>
+                    </Row>
 
-                  <div style={styles.actions}>
-                    <button
-                      onClick={submitTicket}
-                      disabled={submitting}
-                      style={{
-                        ...styles.submitBtn,
-                        ...(submitting ? styles.submitBtnDisabled : {}),
-                      }}
-                    >
-                      {submitting ? "Submitting..." : "Submit Ticket"}
-                    </button>
+                    <Form.Group className="mb-3" controlId="supportIssueType">
+                      <Form.Label className="text-body-secondary small fw-semibold">
+                        ISSUE TYPE
+                      </Form.Label>
+                      <Form.Select
+                        name="issueType"
+                        value={form.issueType}
+                        onChange={handleChange}
+                      >
+                        {ISSUE_TYPES.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </Form.Select>
+                    </Form.Group>
 
-                    <button
-                      type="button"
-                      onClick={() => setForm((p) => ({ ...p, message: "" }))}
-                      disabled={submitting}
-                      style={{
-                        ...styles.secondaryBtn,
-                        ...(submitting ? styles.submitBtnDisabled : {}),
-                      }}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+                    <Form.Group className="mb-3" controlId="supportMessage">
+                      <div className="d-flex justify-content-between align-items-baseline">
+                        <Form.Label className="text-body-secondary small fw-semibold mb-0">
+                          MESSAGE
+                        </Form.Label>
+                        <small className="text-body-secondary">
+                          {form.message.length} chars
+                        </small>
+                      </div>
+                      <Form.Control
+                        as="textarea"
+                        name="message"
+                        value={form.message}
+                        onChange={handleChange}
+                        rows={7}
+                        placeholder="Describe the issue... (What were you doing? What did you expect? What happened?)"
+                        style={{ resize: "vertical" }}
+                      />
+                      <Form.Text className="text-body-secondary">
+                        <i className="bi bi-lightbulb-fill me-1"></i>
+                        Tip: include steps to reproduce and any visible error
+                        messages.
+                      </Form.Text>
+                    </Form.Group>
 
-          <div style={styles.footerHint}>
+                    <Stack direction="horizontal" gap={2} className="flex-wrap">
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        disabled={submitting}
+                      >
+                        {submitting ? (
+                          <>
+                            <Spinner
+                              animation="border"
+                              size="sm"
+                              className="me-2"
+                            />
+                            Submitting...
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-send-fill me-2"></i>
+                            Submit Ticket
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline-secondary"
+                        onClick={() =>
+                          setForm((p) => ({ ...p, message: "" }))
+                        }
+                        disabled={submitting || !form.message}
+                      >
+                        Clear
+                      </Button>
+                    </Stack>
+                  </Form>
+                </>
+              )}
+            </Card.Body>
+          </Card>
+
+          <p className="text-center text-body-secondary small mt-3 mb-0">
+            <i className="bi bi-shield-lock-fill me-1"></i>
             Tickets are stored securely and reviewed by the team.
-          </div>
-        </div>
+          </p>
+        </Container>
       </div>
+
+      <ToastContainer position="bottom-end" className="p-3">
+        <Toast
+          show={!!toast}
+          onClose={() => setToast(null)}
+          delay={3500}
+          autohide
+          bg={toast?.variant}
+        >
+          <Toast.Body className="text-white d-flex align-items-center gap-2">
+            <i
+              className={`bi ${
+                toast?.variant === "success"
+                  ? "bi-check-circle-fill"
+                  : "bi-exclamation-triangle-fill"
+              }`}
+            ></i>
+            {toast?.message}
+          </Toast.Body>
+        </Toast>
+      </ToastContainer>
+
+      <style>{`
+        .rg-support-page {
+          background: radial-gradient(circle at top, #1b1026, #000);
+          color: #fff;
+        }
+        .rg-page-title {
+          font-size: clamp(1.8rem, 3.5vw, 2.2rem);
+          letter-spacing: -0.02em;
+        }
+        .rg-section-card {
+          background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)) !important;
+          border: 1px solid rgba(255,255,255,0.10) !important;
+          box-shadow: 0 18px 60px rgba(0,0,0,0.6);
+        }
+        .rg-account-pill {
+          background: rgba(255,255,255,0.06) !important;
+          border: 1px solid rgba(255,255,255,0.10);
+        }
+        .rg-status-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 999px;
+          display: inline-block;
+        }
+        .rg-status-on {
+          background: var(--bs-primary);
+          box-shadow: 0 0 12px rgba(var(--bs-primary-rgb), 0.55);
+        }
+        .rg-status-off {
+          background: #6b7280;
+        }
+        .rg-support-banner {
+          background: linear-gradient(90deg, rgba(var(--bs-primary-rgb), 0.18), rgba(0,0,0,0.15));
+          border: 1px solid rgba(var(--bs-primary-rgb), 0.22);
+        }
+        .rg-readonly-field {
+          width: 100%;
+          padding: 12px;
+          border-radius: 8px;
+          border: 1px solid rgba(255,255,255,0.10);
+          background: rgba(0,0,0,0.30);
+          color: rgba(255,255,255,0.90);
+          font-size: 0.95rem;
+        }
+        .rg-support-page .form-control,
+        .rg-support-page .form-select {
+          background: rgba(0,0,0,0.35);
+          border-color: rgba(255,255,255,0.12);
+          color: #fff;
+        }
+        .rg-support-page .form-control:focus,
+        .rg-support-page .form-select:focus {
+          background: rgba(0,0,0,0.45);
+          border-color: var(--bs-primary);
+          box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.18);
+          color: #fff;
+        }
+        .rg-support-page .form-control::placeholder {
+          color: rgba(255,255,255,0.4);
+        }
+      `}</style>
     </>
   );
 }
 
-const styles = {
-  page: {
-    minHeight: "100vh",
-    background: "radial-gradient(circle at top, #1b1026, #000)", 
-    color: "#fff",
-    padding: "35px 18px",
-  },
-  container: {
-    maxWidth: "1100px",
-    margin: "0 auto",
-  },
-  header: {
-    display: "flex",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: "18px",
-    marginBottom: "18px",
-  },
-  title: {
-    margin: 0,
-    fontSize: "2.2rem",
-    fontWeight: 800,
-    letterSpacing: "0.2px",
-  },
-  subtitle: {
-    marginTop: "8px",
-    marginBottom: 0,
-    color: "rgba(255,255,255,0.65)",
-    fontSize: "0.95rem",
-    lineHeight: 1.4,
-    maxWidth: "720px",
-  },
-
-  accountPill: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    padding: "10px 14px",
-    borderRadius: "999px",
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.10)",
-    boxShadow: "0 12px 35px rgba(0,0,0,0.55)",
-    whiteSpace: "nowrap",
-  },
-  dot: {
-    width: "8px",
-    height: "8px",
-    borderRadius: "999px",
-    background: "#a855f7", 
-    boxShadow: "0 0 12px rgba(168,85,247,0.55)",
-  },
-  accountText: {
-    fontSize: "0.85rem",
-    color: "rgba(255,255,255,0.85)",
-  },
-
-  card: {
-    background:
-      "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))",
-    border: "1px solid rgba(255,255,255,0.10)",
-    borderRadius: "18px",
-    padding: "22px",
-    boxShadow: "0 18px 60px rgba(0,0,0,0.60)",
-    overflow: "hidden",
-  },
-
-  banner: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "14px",
-    padding: "14px 14px",
-    borderRadius: "14px",
-    border: "1px solid rgba(168,85,247,0.22)",
-    background:
-      "linear-gradient(90deg, rgba(168,85,247,0.18), rgba(0,0,0,0.15))",
-    marginBottom: "18px",
-  },
-  bannerLeft: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-  },
-  bannerTitle: {
-    fontWeight: 900,
-    letterSpacing: "0.2px",
-  },
-  bannerText: {
-    color: "rgba(255,255,255,0.70)",
-    fontSize: "0.9rem",
-    lineHeight: 1.35,
-  },
-  badge: {
-    padding: "8px 10px",
-    borderRadius: "999px",
-    fontWeight: 900,
-    color: "#000",
-    background: "#a855f7",
-    boxShadow: "0 12px 30px rgba(168,85,247,0.22)",
-    flexShrink: 0,
-  },
-
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "14px",
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "14px",
-  },
-
-  label: {
-    display: "block",
-    marginBottom: "8px",
-    fontSize: "0.85rem",
-    color: "rgba(255,255,255,0.75)",
-  },
-  readOnly: {
-    width: "100%",
-    padding: "12px 12px",
-    borderRadius: "12px",
-    border: "1px solid rgba(255,255,255,0.10)",
-    background: "rgba(0,0,0,0.30)",
-    color: "rgba(255,255,255,0.90)",
-    fontSize: "0.95rem",
-  },
-
-  select: {
-    width: "100%",
-    padding: "12px 12px",
-    borderRadius: "12px",
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(0,0,0,0.35)",
-    color: "#fff",
-    outline: "none",
-    fontSize: "0.95rem",
-  },
-
-  textarea: {
-    width: "100%",
-    padding: "12px 12px",
-    borderRadius: "12px",
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(0,0,0,0.35)",
-    color: "#fff",
-    outline: "none",
-    fontSize: "0.95rem",
-    resize: "none",
-  },
-  helper: {
-    marginTop: "8px",
-    color: "rgba(255,255,255,0.55)",
-    fontSize: "0.85rem",
-  },
-
-  actions: {
-    display: "flex",
-    gap: "10px",
-    marginTop: "6px",
-  },
-  submitBtn: {
-    padding: "11px 14px",
-    borderRadius: "12px",
-    border: "none",
-    background: "#a855f7",
-    color: "#000",
-    fontWeight: 900,
-    cursor: "pointer",
-    boxShadow: "0 12px 30px rgba(168,85,247,0.22)",
-  },
-  secondaryBtn: {
-    padding: "11px 14px",
-    borderRadius: "12px",
-    border: "1px solid rgba(255,255,255,0.14)",
-    background: "rgba(255,255,255,0.06)",
-    color: "#fff",
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  submitBtnDisabled: {
-    opacity: 0.65,
-    cursor: "not-allowed",
-  },
-
-  footerHint: {
-    marginTop: "14px",
-    color: "rgba(255,255,255,0.55)",
-    fontSize: "0.85rem",
-    textAlign: "center",
-  },
-
-  loading: { padding: "8px 2px" },
-  skeletonTitle: {
-    height: "16px",
-    width: "180px",
-    borderRadius: "10px",
-    background: "rgba(255,255,255,0.08)",
-    marginBottom: "14px",
-  },
-  skeletonLine: {
-    height: "12px",
-    width: "100%",
-    borderRadius: "10px",
-    background: "rgba(255,255,255,0.06)",
-    marginBottom: "10px",
-  },
-
-  empty: {
-    display: "flex",
-    gap: "14px",
-    alignItems: "flex-start",
-    padding: "10px 2px",
-  },
-  emptyIcon: {
-    width: "38px",
-    height: "38px",
-    borderRadius: "12px",
-    background: "rgba(231,76,60,0.12)",
-    border: "1px solid rgba(231,76,60,0.25)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#e74c3c",
-    fontWeight: 900,
-  },
-  emptyTitle: {
-    fontWeight: 900,
-    marginBottom: "6px",
-  },
-  emptyText: {
-    color: "rgba(255,255,255,0.65)",
-    marginBottom: "12px",
-    lineHeight: 1.4,
-  },
-  primaryBtn: {
-    padding: "10px 14px",
-    borderRadius: "10px",
-    border: "none",
-    background: "#e74c3c",
-    color: "#fff",
-    fontWeight: 900,
-    cursor: "pointer",
-  },
-};
+function UnauthedPrompt({ onLogin }) {
+  return (
+    <div className="d-flex gap-3 align-items-start">
+      <div
+        className="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0"
+        style={{
+          width: 44,
+          height: 44,
+          background: "rgba(231,76,60,0.12)",
+          border: "1px solid rgba(231,76,60,0.25)",
+          color: "#e74c3c",
+        }}
+      >
+        <i className="bi bi-exclamation-lg fs-4"></i>
+      </div>
+      <div>
+        <div className="fw-bold mb-1">You're not signed in</div>
+        <p className="text-body-secondary small mb-3">
+          Please log in to submit a support ticket.
+        </p>
+        <Button variant="danger" onClick={onLogin}>
+          <i className="bi bi-box-arrow-in-right me-2"></i>
+          Go to Login
+        </Button>
+      </div>
+    </div>
+  );
+}

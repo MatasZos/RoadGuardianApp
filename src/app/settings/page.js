@@ -1,9 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Navbar from "../components/Navbar";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import {
+  Container,
+  Card,
+  Form,
+  Button,
+  Badge,
+  Spinner,
+  Stack,
+  Toast,
+  ToastContainer,
+} from "react-bootstrap";
+import Navbar from "../components/Navbar";
+
+const DEFAULTS = {
+  emailReminders: true,
+  documentReminders: true,
+  maintenanceReminders: true,
+  emergencyLocation: true,
+  compactMode: false,
+};
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -11,49 +30,43 @@ export default function SettingsPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const [settings, setSettings] = useState({
-    emailReminders: true,
-    documentReminders: true,
-    maintenanceReminders: true,
-    emergencyLocation: true,
-    compactMode: false,
-  });
+  const [settings, setSettings] = useState(DEFAULTS);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     if (status === "loading") return;
-
     if (status === "unauthenticated") {
       setLoading(false);
       return;
     }
 
-    const fetchSettings = async () => {
+    (async () => {
       setLoading(true);
       try {
         const res = await fetch("/api/settings", { method: "GET" });
         const data = await res.json();
-
         if (res.ok) {
           setSettings((prev) => ({ ...prev, ...(data?.settings || {}) }));
         } else {
-          console.error(data?.error || "Failed to load settings");
+          showToast("danger", data?.error || "Failed to load settings");
         }
-      } catch (err) {
-        console.error("Fetch settings error:", err);
+      } catch {
+        showToast("danger", "Server error loading settings");
       } finally {
         setLoading(false);
       }
-    };
-
-    fetchSettings();
+    })();
   }, [status]);
 
-  const toggle = (key) => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+  function showToast(variant, message) {
+    setToast({ variant, message });
+  }
 
-  const handleSave = async () => {
+  function toggle(key) {
+    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  async function handleSave() {
     setSaving(true);
     try {
       const res = await fetch("/api/settings", {
@@ -61,23 +74,18 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
-        console.error(data?.error || "Failed to save settings");
-        alert(data?.error || "Failed to save settings");
+        showToast("danger", data?.error || "Failed to save settings");
         return;
       }
-
-      alert("Settings saved!");
-    } catch (err) {
-      console.error("Save settings error:", err);
-      alert("Server error while saving settings");
+      showToast("success", "Settings saved");
+    } catch {
+      showToast("danger", "Server error while saving");
     } finally {
       setSaving(false);
     }
-  };
+  }
 
   const unauthenticated = status === "unauthenticated";
 
@@ -85,356 +93,266 @@ export default function SettingsPage() {
     <>
       <Navbar />
 
-      <div style={styles.page}>
-        <div style={styles.container}>
-          <div style={styles.header}>
+      <div className="rg-settings-page min-vh-100 py-4 py-md-5">
+        <Container style={{ maxWidth: 1100 }}>
+
+          <div className="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3 mb-4">
             <div>
-              <h1 style={styles.title}>Settings</h1>
-              <p style={styles.subtitle}>
+              <h1 className="rg-page-title fw-bold mb-2">
+                <i className="bi bi-gear-fill me-2"></i>Settings
+              </h1>
+              <p className="text-body-secondary mb-0">
                 Manage your preferences and reminders for RoadGuardian.
               </p>
             </div>
-
-            <div style={styles.accountPill}>
-              <span style={styles.dot} />
-              <span style={styles.accountText}>
+            <Badge
+              pill
+              bg="dark"
+              className="rg-account-pill px-3 py-2 d-inline-flex align-items-center gap-2"
+            >
+              <span
+                className={`rg-status-dot ${
+                  unauthenticated ? "rg-status-off" : "rg-status-on"
+                }`}
+              ></span>
+              <span className="text-body-secondary fw-normal small">
                 {unauthenticated
                   ? "Signed out"
                   : `Signed in as: ${session?.user?.email || ""}`}
               </span>
-            </div>
+            </Badge>
           </div>
-
-          <div style={styles.card}>
-            {status === "loading" || loading ? (
-              <div style={styles.loading}>
-                <div style={styles.skeletonTitle} />
-                <div style={styles.skeletonLine} />
-                <div style={styles.skeletonLine} />
-                <div style={{ ...styles.skeletonLine, width: "70%" }} />
-              </div>
-            ) : unauthenticated ? (
-              <div style={styles.empty}>
-                <div style={styles.emptyIcon}>!</div>
-                <div>
-                  <div style={styles.emptyTitle}>You’re not signed in</div>
-                  <div style={styles.emptyText}>
-                    Please log in to view and update your settings.
+          <Card className="rg-section-card border-0">
+            <Card.Body className="p-4">
+              {loading ? (
+                <LoadingSkeleton />
+              ) : unauthenticated ? (
+                <UnauthedPrompt onLogin={() => router.push("/login")} />
+              ) : (
+                <>
+                  <div className="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 pb-3 mb-3 border-bottom border-secondary-subtle">
+                    <div>
+                      <h2 className="h5 fw-bold mb-1">Preferences</h2>
+                      <p className="small text-body-secondary mb-0">
+                        Saved to your account and synced across devices.
+                      </p>
+                    </div>
+                    <Button
+                      variant="primary"
+                      onClick={handleSave}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <>
+                          <Spinner
+                            animation="border"
+                            size="sm"
+                            className="me-2"
+                          />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <i className="bi bi-check-lg me-2"></i>
+                          Save Settings
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  <button style={styles.primaryBtn} onClick={() => router.push("/login")}>
-                    Go to Login
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div style={styles.cardHeader}>
-                  <div>
-                    <h2 style={styles.cardTitle}>Preferences</h2>
-                    <p style={styles.cardHint}>
-                      These settings are saved to your account and follow you across devices.
-                    </p>
-                  </div>
 
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    style={{
-                      ...styles.saveBtn,
-                      ...(saving ? styles.saveBtnDisabled : {}),
-                    }}
+                  <SettingsSection
+                    title="Reminders"
+                    icon="bi-bell-fill"
                   >
-                    {saving ? "Saving..." : "Save Settings"}
-                  </button>
-                </div>
+                    <SettingRow
+                      id="emailReminders"
+                      title="Email reminders"
+                      desc="Receive email notifications for important events."
+                      enabled={settings.emailReminders}
+                      onToggle={() => toggle("emailReminders")}
+                    />
+                    <SettingRow
+                      id="documentReminders"
+                      title="Document reminders"
+                      desc="Get notified when documents are expiring soon."
+                      enabled={settings.documentReminders}
+                      onToggle={() => toggle("documentReminders")}
+                    />
+                    <SettingRow
+                      id="maintenanceReminders"
+                      title="Maintenance reminders"
+                      desc="Get reminders based on your service history."
+                      enabled={settings.maintenanceReminders}
+                      onToggle={() => toggle("maintenanceReminders")}
+                    />
+                  </SettingsSection>
 
-                <div style={styles.section}>
-                  <div style={styles.sectionTitle}>Reminders</div>
+                  <SettingsSection
+                    title="Safety"
+                    icon="bi-shield-fill-check"
+                  >
+                    <SettingRow
+                      id="emergencyLocation"
+                      title="Emergency location access"
+                      desc="Allow RoadGuardian to use your location for emergency assistance."
+                      enabled={settings.emergencyLocation}
+                      onToggle={() => toggle("emergencyLocation")}
+                    />
+                  </SettingsSection>
 
-                  <SettingRow
-                    title="Email reminders"
-                    desc="Receive email notifications for important events."
-                    enabled={settings.emailReminders}
-                    onToggle={() => toggle("emailReminders")}
-                  />
-
-                  <SettingRow
-                    title="Document reminders"
-                    desc="Get notified when documents are expiring soon."
-                    enabled={settings.documentReminders}
-                    onToggle={() => toggle("documentReminders")}
-                  />
-
-                  <SettingRow
-                    title="Maintenance reminders"
-                    desc="Get reminders based on your service history."
-                    enabled={settings.maintenanceReminders}
-                    onToggle={() => toggle("maintenanceReminders")}
-                  />
-                </div>
-
-                <div style={styles.section}>
-                  <div style={styles.sectionTitle}>Safety</div>
-
-                  <SettingRow
-                    title="Emergency location access"
-                    desc="Allow RoadGuardian to use location for emergency assistance."
-                    enabled={settings.emergencyLocation}
-                    onToggle={() => toggle("emergencyLocation")}
-                  />
-                </div>
-
-                <div style={styles.section}>
-                  <div style={styles.sectionTitle}>Display</div>
-
-                  <SettingRow
-                    title="Compact mode"
-                    desc="Tighter spacing for smaller screens."
-                    enabled={settings.compactMode}
-                    onToggle={() => toggle("compactMode")}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+                  <SettingsSection
+                    title="Display"
+                    icon="bi-display"
+                    isLast
+                  >
+                    <SettingRow
+                      id="compactMode"
+                      title="Compact mode"
+                      desc="Tighter spacing for smaller screens."
+                      enabled={settings.compactMode}
+                      onToggle={() => toggle("compactMode")}
+                    />
+                  </SettingsSection>
+                </>
+              )}
+            </Card.Body>
+          </Card>
+        </Container>
       </div>
+
+      <ToastContainer position="bottom-end" className="p-3">
+        <Toast
+          show={!!toast}
+          onClose={() => setToast(null)}
+          delay={3500}
+          autohide
+          bg={toast?.variant}
+        >
+          <Toast.Body className="text-white d-flex align-items-center gap-2">
+            <i
+              className={`bi ${
+                toast?.variant === "success"
+                  ? "bi-check-circle-fill"
+                  : "bi-exclamation-triangle-fill"
+              }`}
+            ></i>
+            {toast?.message}
+          </Toast.Body>
+        </Toast>
+      </ToastContainer>
+
+      <style>{`
+        .rg-settings-page {
+          background: radial-gradient(circle at top, #101a1f, #000);
+          color: #fff;
+        }
+        .rg-page-title {
+          font-size: clamp(1.8rem, 3.5vw, 2.2rem);
+          letter-spacing: -0.02em;
+        }
+        .rg-section-card {
+          background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)) !important;
+          border: 1px solid rgba(255,255,255,0.10) !important;
+          box-shadow: 0 18px 60px rgba(0,0,0,0.6);
+        }
+        .rg-account-pill {
+          background: rgba(255,255,255,0.06) !important;
+          border: 1px solid rgba(255,255,255,0.10);
+        }
+        .rg-status-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 999px;
+          display: inline-block;
+        }
+        .rg-status-on {
+          background: var(--bs-primary);
+          box-shadow: 0 0 12px rgba(var(--bs-primary-rgb), 0.55);
+        }
+        .rg-status-off {
+          background: #6b7280;
+        }
+        .rg-settings-page .form-check-input {
+          width: 2.5rem;
+          height: 1.4rem;
+          margin-top: 0;
+        }
+        .rg-settings-page .form-check-input:checked {
+          background-color: var(--bs-primary);
+          border-color: var(--bs-primary);
+        }
+        .rg-settings-page .form-check-input:focus {
+          box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+          border-color: var(--bs-primary);
+        }
+      `}</style>
     </>
   );
 }
 
-function SettingRow({ title, desc, enabled, onToggle }) {
+function SettingsSection({ title, icon, children, isLast }) {
   return (
-    <div style={styles.row}>
-      <div style={styles.rowLeft}>
-        <div style={styles.rowTitle}>{title}</div>
-        <div style={styles.rowDesc}>{desc}</div>
-      </div>
+    <section className={isLast ? "pt-3" : "pt-3 pb-2 border-bottom border-secondary-subtle mb-3"}>
+      <h3 className="small fw-bold text-uppercase text-body-secondary mb-3">
+        <i className={`bi ${icon} me-2`}></i>
+        {title}
+      </h3>
+      <Stack gap={3}>{children}</Stack>
+    </section>
+  );
+}
 
-      <button
-        onClick={onToggle}
-        style={{
-          ...styles.toggle,
-          ...(enabled ? styles.toggleOn : styles.toggleOff),
-        }}
-        aria-label={`${title} toggle`}
-      >
-        <span
-          style={{
-            ...styles.knob,
-            transform: enabled ? "translateX(18px)" : "translateX(0px)",
-          }}
-        />
-      </button>
+function SettingRow({ id, title, desc, enabled, onToggle }) {
+  return (
+    <div className="d-flex align-items-start justify-content-between gap-3">
+      <label htmlFor={id} className="flex-grow-1 mb-0" style={{ cursor: "pointer" }}>
+        <div className="fw-semibold mb-1">{title}</div>
+        <div className="small text-body-secondary">{desc}</div>
+      </label>
+      <Form.Check
+        type="switch"
+        id={id}
+        checked={enabled}
+        onChange={onToggle}
+        className="flex-shrink-0"
+      />
     </div>
   );
 }
 
-const styles = {
-  page: {
-    minHeight: "100vh",
-    background: "radial-gradient(circle at top, #101a1f, #000)", 
-    color: "#fff",
-    padding: "35px 18px",
-  },
-  container: {
-    maxWidth: "1100px",
-    margin: "0 auto",
-  },
-  header: {
-    display: "flex",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: "18px",
-    marginBottom: "18px",
-  },
-  title: {
-    margin: 0,
-    fontSize: "2.2rem",
-    fontWeight: 800,
-    letterSpacing: "0.2px",
-  },
-  subtitle: {
-    marginTop: "8px",
-    marginBottom: 0,
-    color: "rgba(255,255,255,0.65)",
-    fontSize: "0.95rem",
-    lineHeight: 1.4,
-  },
-  accountPill: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    padding: "10px 14px",
-    borderRadius: "999px",
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.10)",
-    boxShadow: "0 12px 35px rgba(0,0,0,0.55)",
-    whiteSpace: "nowrap",
-  },
-  dot: {
-    width: "8px",
-    height: "8px",
-    borderRadius: "999px",
-    background: "#3b82f6", 
-    boxShadow: "0 0 12px rgba(59,130,246,0.55)",
-  },
-  accountText: {
-    fontSize: "0.85rem",
-    color: "rgba(255,255,255,0.85)",
-  },
-  card: {
-    background: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))",
-    border: "1px solid rgba(255,255,255,0.10)",
-    borderRadius: "18px",
-    padding: "22px",
-    boxShadow: "0 18px 60px rgba(0,0,0,0.60)",
-    overflow: "hidden",
-  },
-  cardHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "14px",
-    paddingBottom: "16px",
-    borderBottom: "1px solid rgba(255,255,255,0.08)",
-    marginBottom: "18px",
-  },
-  cardTitle: {
-    margin: 0,
-    fontSize: "1.25rem",
-    fontWeight: 800,
-    letterSpacing: "0.2px",
-  },
-  cardHint: {
-    margin: "6px 0 0 0",
-    fontSize: "0.9rem",
-    color: "rgba(255,255,255,0.6)",
-    lineHeight: 1.4,
-  },
-  saveBtn: {
-    padding: "10px 14px",
-    borderRadius: "10px",
-    border: "none",
-    background: "#3b82f6",
-    color: "#000",
-    fontWeight: 900,
-    cursor: "pointer",
-    boxShadow: "0 12px 30px rgba(59,130,246,0.22)",
-  },
-  saveBtnDisabled: {
-    opacity: 0.65,
-    cursor: "not-allowed",
-  },
-  section: {
-    padding: "14px 0",
-    borderTop: "1px solid rgba(255,255,255,0.08)",
-  },
-  sectionTitle: {
-    fontWeight: 900,
-    marginBottom: "10px",
-    color: "rgba(255,255,255,0.9)",
-    letterSpacing: "0.2px",
-  },
-  row: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "14px",
-    padding: "12px 0",
-  },
-  rowLeft: {
-    maxWidth: "740px",
-  },
-  rowTitle: {
-    fontWeight: 800,
-    marginBottom: "5px",
-  },
-  rowDesc: {
-    color: "rgba(255,255,255,0.62)",
-    fontSize: "0.9rem",
-    lineHeight: 1.35,
-  },
+function LoadingSkeleton() {
+  return (
+    <div className="d-flex align-items-center justify-content-center py-4">
+      <Spinner animation="border" variant="primary" />
+    </div>
+  );
+}
 
-  toggle: {
-    width: "46px",
-    height: "26px",
-    borderRadius: "999px",
-    border: "1px solid rgba(255,255,255,0.14)",
-    background: "rgba(0,0,0,0.25)",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    padding: "3px",
-    transition: "all 0.2s ease",
-    flexShrink: 0,
-  },
-  toggleOn: {
-    background: "rgba(59,130,246,0.35)",
-    border: "1px solid rgba(59,130,246,0.55)",
-    boxShadow: "0 10px 26px rgba(59,130,246,0.18)",
-  },
-  toggleOff: {
-    background: "rgba(0,0,0,0.25)",
-  },
-  knob: {
-    width: "20px",
-    height: "20px",
-    borderRadius: "999px",
-    background: "#fff",
-    transition: "transform 0.2s ease",
-  },
-
-  loading: { padding: "8px 2px" },
-  skeletonTitle: {
-    height: "16px",
-    width: "180px",
-    borderRadius: "10px",
-    background: "rgba(255,255,255,0.08)",
-    marginBottom: "14px",
-  },
-  skeletonLine: {
-    height: "12px",
-    width: "100%",
-    borderRadius: "10px",
-    background: "rgba(255,255,255,0.06)",
-    marginBottom: "10px",
-  },
-
-  empty: {
-    display: "flex",
-    gap: "14px",
-    alignItems: "flex-start",
-    padding: "10px 2px",
-  },
-  emptyIcon: {
-    width: "38px",
-    height: "38px",
-    borderRadius: "12px",
-    background: "rgba(231,76,60,0.12)",
-    border: "1px solid rgba(231,76,60,0.25)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#e74c3c",
-    fontWeight: 900,
-  },
-  emptyTitle: {
-    fontWeight: 900,
-    marginBottom: "6px",
-  },
-  emptyText: {
-    color: "rgba(255,255,255,0.65)",
-    marginBottom: "12px",
-    lineHeight: 1.4,
-  },
-  primaryBtn: {
-    padding: "10px 14px",
-    borderRadius: "10px",
-    border: "none",
-    background: "#e74c3c",
-    color: "#fff",
-    fontWeight: 900,
-    cursor: "pointer",
-  },
-};
+function UnauthedPrompt({ onLogin }) {
+  return (
+    <div className="d-flex gap-3 align-items-start">
+      <div
+        className="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0"
+        style={{
+          width: 44,
+          height: 44,
+          background: "rgba(231,76,60,0.12)",
+          border: "1px solid rgba(231,76,60,0.25)",
+          color: "#e74c3c",
+        }}
+      >
+        <i className="bi bi-exclamation-lg fs-4"></i>
+      </div>
+      <div>
+        <div className="fw-bold mb-1">You're not signed in</div>
+        <p className="text-body-secondary small mb-3">
+          Please log in to view and update your settings.
+        </p>
+        <Button variant="danger" onClick={onLogin}>
+          <i className="bi bi-box-arrow-in-right me-2"></i>
+          Go to Login
+        </Button>
+      </div>
+    </div>
+  );
+}

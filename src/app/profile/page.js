@@ -3,19 +3,19 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import Navbar from "../components/Navbar";
 import {
-  Box,
+  Container,
   Card,
-  CardContent,
-  Typography,
-  TextField,
+  Form,
   Button,
-  Stack,
-  Divider,
   Alert,
-} from "@mui/material";
-import styles from "./profile.module.css";
+  Row,
+  Col,
+  InputGroup,
+  Spinner,
+  Stack,
+} from "react-bootstrap";
+import Navbar from "../components/Navbar";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -27,16 +27,17 @@ export default function ProfilePage() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [editPhone, setEditPhone] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (status === "loading") return;
-
     if (status === "unauthenticated") {
       router.push("/login");
       return;
@@ -56,12 +57,9 @@ export default function ProfilePage() {
     (async () => {
       try {
         const res = await fetch("/api/profile", {
-          headers: {
-            "x-user-email": email,
-          },
+          headers: { "x-user-email": email },
           cache: "no-store",
         });
-
         const data = await res.json();
 
         if (!res.ok) {
@@ -71,7 +69,6 @@ export default function ProfilePage() {
 
         setFullName(data.fullName || session?.user?.name || "");
         setPhone(data.phone || "");
-
         setEditName(data.fullName || session?.user?.name || "");
         setEditPhone(data.phone || "");
       } catch {
@@ -80,41 +77,37 @@ export default function ProfilePage() {
     })();
   }, [email, session]);
 
-  const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/login" });
-  };
-
-  const startEditing = () => {
+  function startEditing() {
     setError("");
     setSuccess("");
     setIsEditing(true);
     setEditName(fullName);
+    setEditPhone(phone);
     setEditPassword("");
     setConfirmPassword("");
-    setEditPhone(phone);
-  };
+  }
 
-  const cancelEditing = () => {
+  function cancelEditing() {
     setError("");
-    setSuccess("");
     setIsEditing(false);
     setEditName(fullName);
+    setEditPhone(phone);
     setEditPassword("");
     setConfirmPassword("");
-    setEditPhone(phone);
-  };
+  }
 
-  const handleSave = async () => {
+  async function handleSave(e) {
+    e.preventDefault();
     setError("");
     setSuccess("");
 
     const trimmedName = editName.trim();
+    const trimmedPhone = editPhone.trim();
+
     if (!trimmedName) {
       setError("Name cannot be empty.");
       return;
     }
-
-    const trimmedPhone = editPhone.trim();
     if (!trimmedPhone) {
       setError("Phone number cannot be empty.");
       return;
@@ -134,199 +127,293 @@ export default function ProfilePage() {
       }
     }
 
-    const res = await fetch("/api/profile/update", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        fullName: trimmedName,
-        phone: trimmedPhone,
-        password: wantsPasswordChange ? editPassword : "",
-      }),
-    });
+    setSaving(true);
+    try {
+      const res = await fetch("/api/profile/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          fullName: trimmedName,
+          phone: trimmedPhone,
+          password: wantsPasswordChange ? editPassword : "",
+        }),
+      });
+      const data = await res.json();
 
-    const data = await res.json();
+      if (!res.ok) {
+        setError(data?.error || "Update failed");
+        return;
+      }
 
-    if (!res.ok) {
-      setError(data?.error || "Update failed");
-      return;
+      setFullName(trimmedName);
+      setPhone(trimmedPhone);
+      setIsEditing(false);
+      setEditPassword("");
+      setConfirmPassword("");
+      setSuccess("Profile updated successfully.");
+    } catch {
+      setError("Server error while saving");
+    } finally {
+      setSaving(false);
     }
+  }
 
-    setFullName(trimmedName);
-    setPhone(trimmedPhone);
-
-    setIsEditing(false);
-    setEditPassword("");
-    setConfirmPassword("");
-    setSuccess("Profile updated successfully.");
-  };
-
-  const maskedPassword = "••••••••••••";
-  const shownEmail = email || "Not set yet";
-  const shownPhone = phone || "Not set yet";
+  async function handleSignOut() {
+    await signOut({ callbackUrl: "/login" });
+  }
 
   if (status === "loading") {
     return (
-      <Box className={styles.loadingWrap}>
-        <Typography className={styles.loadingText}>Loading...</Typography>
-      </Box>
+      <div className="rg-profile-page min-vh-100 d-flex align-items-center justify-content-center">
+        <Spinner animation="border" variant="primary" />
+      </div>
     );
   }
 
   return (
-    <div className={styles.page}>
+    <div className="rg-profile-page min-vh-100">
       <Navbar />
 
-      <div className={styles.container}>
-        <div className={styles.hero}>
-          <h1 className={styles.pageTitle}>Profile</h1>
-          <p className={styles.pageSubtitle}>
-            Manage your personal details and account information.
-          </p>
-        </div>
-
-        <Card className={styles.card} elevation={0}>
-          <CardContent className={styles.cardContent}>
-            <Stack spacing={2.2}>
-              {error && <Alert severity="error">{error}</Alert>}
-              {success && <Alert severity="success">{success}</Alert>}
-
-              <Box className={styles.fieldBlock}>
-                <Typography variant="subtitle2" className={styles.fieldLabel}>
-                  Name
-                </Typography>
-
-                {!isEditing ? (
-                  <Typography variant="body1" className={styles.fieldValue}>
-                    {fullName}
-                  </Typography>
-                ) : (
-                  <TextField
-                    fullWidth
-                    size="small"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    placeholder="Your name"
-                  />
-                )}
-              </Box>
-
-              <Divider className={styles.divider} />
-
-              <Box className={styles.fieldBlock}>
-                <Typography variant="subtitle2" className={styles.fieldLabel}>
-                  Email
-                </Typography>
-                <Typography variant="body1" className={styles.fieldValue}>
-                  {shownEmail}
-                </Typography>
-              </Box>
-
-              <Divider className={styles.divider} />
-
-              <Box className={styles.fieldBlock}>
-                <Typography variant="subtitle2" className={styles.fieldLabel}>
-                  Phone
-                </Typography>
-
-                {!isEditing ? (
-                  <Typography variant="body1" className={styles.fieldValue}>
-                    {shownPhone}
-                  </Typography>
-                ) : (
-                  <TextField
-                    fullWidth
-                    size="small"
-                    value={editPhone}
-                    onChange={(e) => setEditPhone(e.target.value)}
-                    placeholder="e.g. 08XXXXXXXX"
-                  />
-                )}
-              </Box>
-
-              <Divider className={styles.divider} />
-
-              <Box className={styles.fieldBlock}>
-                <Typography variant="subtitle2" className={styles.fieldLabel}>
-                  Password
-                </Typography>
-
-                {!isEditing ? (
-                  <Typography variant="body1" className={styles.fieldValue}>
-                    {maskedPassword}
-                  </Typography>
-                ) : (
-                  <Stack spacing={1.2}>
-                    <TextField
-                      fullWidth
-                      size="small"
-                      type="password"
-                      value={editPassword}
-                      onChange={(e) => setEditPassword(e.target.value)}
-                      placeholder="New password"
-                      helperText="Leave blank to keep your current password"
-                    />
-                    <TextField
-                      fullWidth
-                      size="small"
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Confirm new password"
-                    />
-                  </Stack>
-                )}
-              </Box>
-
-              <Divider className={styles.divider} />
-
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                spacing={1.2}
-                className={styles.actions}
-              >
-                {!isEditing ? (
-                  <Button
-                    variant="contained"
-                    onClick={startEditing}
-                    className={styles.primaryButton}
-                  >
-                    Edit Profile
-                  </Button>
-                ) : (
-                  <>
-                    <Button
-                      variant="contained"
-                      onClick={handleSave}
-                      className={styles.primaryButton}
-                    >
-                      Save Changes
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      onClick={cancelEditing}
-                      className={styles.secondaryButton}
-                    >
-                      Cancel
-                    </Button>
-                  </>
-                )}
-
-                <Box sx={{ flex: 1 }} />
-
-                <Button
-                  color="error"
-                  variant="contained"
-                  onClick={handleSignOut}
-                  className={styles.signOutButton}
-                >
-                  Sign Out
-                </Button>
-              </Stack>
-            </Stack>
-          </CardContent>
+      <Container className="py-4 py-md-5" style={{ maxWidth: 760 }}>
+        {/* Hero */}
+        <Card className="rg-section-card border-0 mb-4 overflow-hidden">
+          <Card.Body className="p-4 p-md-5">
+            <h1 className="rg-page-title fw-bold mb-2">
+              <i className="bi bi-person-circle me-2"></i>Profile
+            </h1>
+            <p className="text-body-secondary mb-0">
+              Manage your personal details and account information.
+            </p>
+          </Card.Body>
         </Card>
-      </div>
+
+        <Card className="rg-section-card border-0">
+          <Card.Body className="p-4">
+            <Form onSubmit={handleSave}>
+              <Stack gap={3}>
+                {error && (
+                  <Alert variant="danger" className="mb-0">
+                    <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                    {error}
+                  </Alert>
+                )}
+                {success && (
+                  <Alert
+                    variant="success"
+                    className="mb-0"
+                    dismissible
+                    onClose={() => setSuccess("")}
+                  >
+                    <i className="bi bi-check-circle-fill me-2"></i>
+                    {success}
+                  </Alert>
+                )}
+
+                <Form.Group controlId="profileName">
+                  <Form.Label className="text-body-secondary small fw-semibold">
+                    NAME
+                  </Form.Label>
+                  {!isEditing ? (
+                    <div className="rg-readonly-value">{fullName || "—"}</div>
+                  ) : (
+                    <Form.Control
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder="Your name"
+                    />
+                  )}
+                </Form.Group>
+
+                <hr className="border-secondary-subtle my-0" />
+
+                <Form.Group>
+                  <Form.Label className="text-body-secondary small fw-semibold">
+                    EMAIL
+                  </Form.Label>
+                  <div className="rg-readonly-value">
+                    {email || "Not set yet"}
+                  </div>
+                </Form.Group>
+
+                <hr className="border-secondary-subtle my-0" />
+
+                <Form.Group controlId="profilePhone">
+                  <Form.Label className="text-body-secondary small fw-semibold">
+                    PHONE
+                  </Form.Label>
+                  {!isEditing ? (
+                    <div className="rg-readonly-value">
+                      {phone || "Not set yet"}
+                    </div>
+                  ) : (
+                    <Form.Control
+                      type="tel"
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      placeholder="e.g. 08XXXXXXXX"
+                    />
+                  )}
+                </Form.Group>
+
+                <hr className="border-secondary-subtle my-0" />
+
+                <Form.Group>
+                  <Form.Label className="text-body-secondary small fw-semibold">
+                    PASSWORD
+                  </Form.Label>
+                  {!isEditing ? (
+                    <div className="rg-readonly-value">••••••••••••</div>
+                  ) : (
+                    <Stack gap={2}>
+                      <InputGroup>
+                        <Form.Control
+                          type={showPassword ? "text" : "password"}
+                          value={editPassword}
+                          onChange={(e) => setEditPassword(e.target.value)}
+                          placeholder="New password"
+                          autoComplete="new-password"
+                        />
+                        <Button
+                          variant="outline-secondary"
+                          type="button"
+                          onClick={() => setShowPassword((s) => !s)}
+                          tabIndex={-1}
+                          aria-label={
+                            showPassword ? "Hide password" : "Show password"
+                          }
+                        >
+                          <i
+                            className={`bi ${
+                              showPassword ? "bi-eye-slash" : "bi-eye"
+                            }`}
+                          ></i>
+                        </Button>
+                      </InputGroup>
+                      <Form.Control
+                        type={showPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm new password"
+                        autoComplete="new-password"
+                      />
+                      <Form.Text className="text-body-secondary">
+                        Leave blank to keep your current password.
+                      </Form.Text>
+                    </Stack>
+                  )}
+                </Form.Group>
+
+                <hr className="border-secondary-subtle my-0" />
+
+                <Row className="g-2">
+                  <Col xs={12} sm="auto">
+                    {!isEditing ? (
+                      <Button
+                        variant="primary"
+                        onClick={startEditing}
+                        className="w-100"
+                      >
+                        <i className="bi bi-pencil-fill me-2"></i>
+                        Edit Profile
+                      </Button>
+                    ) : (
+                      <Stack
+                        direction="horizontal"
+                        gap={2}
+                        className="flex-wrap"
+                      >
+                        <Button
+                          type="submit"
+                          variant="primary"
+                          disabled={saving}
+                        >
+                          {saving ? (
+                            <>
+                              <Spinner
+                                animation="border"
+                                size="sm"
+                                className="me-2"
+                              />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <i className="bi bi-check-lg me-2"></i>
+                              Save Changes
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline-secondary"
+                          type="button"
+                          onClick={cancelEditing}
+                          disabled={saving}
+                        >
+                          Cancel
+                        </Button>
+                      </Stack>
+                    )}
+                  </Col>
+                  <Col className="d-flex justify-content-sm-end">
+                    <Button
+                      variant="outline-danger"
+                      type="button"
+                      onClick={handleSignOut}
+                      className="w-100 w-sm-auto"
+                    >
+                      <i className="bi bi-box-arrow-right me-2"></i>
+                      Sign Out
+                    </Button>
+                  </Col>
+                </Row>
+              </Stack>
+            </Form>
+          </Card.Body>
+        </Card>
+      </Container>
+
+      <style>{`
+        .rg-profile-page {
+          background:
+            radial-gradient(circle at top, rgba(var(--bs-primary-rgb), 0.14), transparent 24%),
+            radial-gradient(circle at top right, rgba(255, 255, 255, 0.04), transparent 22%),
+            linear-gradient(180deg, #151922 0%, #0c1118 100%);
+        }
+        .rg-section-card {
+          background:
+            linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+            rgba(15, 15, 18, 0.92) !important;
+          border: 1px solid rgba(255, 255, 255, 0.08) !important;
+          box-shadow:
+            0 24px 60px rgba(0, 0, 0, 0.35),
+            inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        }
+        .rg-page-title {
+          font-size: clamp(2rem, 3.8vw, 2.7rem);
+          letter-spacing: -0.03em;
+          color: var(--bs-primary);
+        }
+        .rg-readonly-value {
+          color: #fff;
+          font-weight: 600;
+          padding: 8px 0;
+        }
+        .rg-section-card .form-control {
+          background: rgba(255, 255, 255, 0.04);
+          border-color: rgba(255, 255, 255, 0.12);
+          color: #fff;
+        }
+        .rg-section-card .form-control:focus {
+          background: rgba(255, 255, 255, 0.06);
+          border-color: var(--bs-primary);
+          box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.18);
+          color: #fff;
+        }
+        .rg-section-card .form-control::placeholder {
+          color: rgba(255, 255, 255, 0.5);
+        }
+      `}</style>
     </div>
   );
 }
