@@ -3,10 +3,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import {
+  Navbar as BsNavbar,
+  Container,
+  Offcanvas,
+  Dropdown,
+  Badge,
+  Button,
+  ListGroup,
+} from "react-bootstrap";
 import { getAblyClient } from "../../lib/ablyClient";
 
 export default function Navbar() {
-  const [open, setOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const router = useRouter();
@@ -21,32 +30,22 @@ export default function Navbar() {
 
   function goTo(path) {
     router.push(path);
-    setOpen(false);
+    setMenuOpen(false);
     setNotifOpen(false);
   }
 
   async function logout() {
-    setOpen(false);
+    setMenuOpen(false);
     setNotifOpen(false);
     await signOut({ callbackUrl: "/login" });
   }
 
-  function toggleMenu() {
-    setOpen((prev) => !prev);
-    setNotifOpen(false);
-  }
-
-  function toggleNotifications() {
-    setNotifOpen((prev) => !prev);
-    setOpen(false);
-  }
-
-  function getDotColor(type) {
-    if (type === "message") return "#2563eb";
-    if (type === "document") return "#f59e0b";
-    if (type === "emergency") return "#ef4444";
-    if (type === "maintenance") return "#22c55e";
-    return "#94a3b8";
+  function getNotifIcon(type) {
+    if (type === "message") return "bi-chat-dots-fill text-primary";
+    if (type === "document") return "bi-file-earmark-text-fill text-warning";
+    if (type === "emergency") return "bi-exclamation-triangle-fill text-danger";
+    if (type === "maintenance") return "bi-wrench-adjustable text-success";
+    return "bi-bell-fill text-secondary";
   }
 
   function formatTime(dateValue) {
@@ -63,13 +62,11 @@ export default function Navbar() {
 
   async function loadNotifications() {
     if (!email) return;
-
     try {
       const res = await fetch("/api/notifications", {
         headers: { "x-user-email": email },
         cache: "no-store",
       });
-
       const data = await res.json().catch(() => []);
       setNotifications(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -79,21 +76,14 @@ export default function Navbar() {
 
   async function markAllRead() {
     if (!email) return;
-
     try {
       const res = await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "markAllRead",
-          userEmail: email,
-        }),
+        body: JSON.stringify({ action: "markAllRead", userEmail: email }),
       });
-
       if (res.ok) {
-        setNotifications((prev) =>
-          prev.map((item) => ({ ...item, read: true }))
-        );
+        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       }
     } catch (err) {
       console.error("Mark all read error:", err);
@@ -102,20 +92,13 @@ export default function Navbar() {
 
   async function clearNotifications() {
     if (!email) return;
-
     try {
       const res = await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "clearAll",
-          userEmail: email,
-        }),
+        body: JSON.stringify({ action: "clearAll", userEmail: email }),
       });
-
-      if (res.ok) {
-        setNotifications([]);
-      }
+      if (res.ok) setNotifications([]);
     } catch (err) {
       console.error("Clear notifications error:", err);
     }
@@ -123,23 +106,15 @@ export default function Navbar() {
 
   async function markSingleRead(id) {
     if (!email || !id) return;
-
     try {
       const res = await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "markRead",
-          id,
-          userEmail: email,
-        }),
+        body: JSON.stringify({ action: "markRead", id, userEmail: email }),
       });
-
       if (res.ok) {
         setNotifications((prev) =>
-          prev.map((item) =>
-            item._id === id ? { ...item, read: true } : item
-          )
+          prev.map((n) => (n._id === id ? { ...n, read: true } : n))
         );
       }
     } catch (err) {
@@ -163,335 +138,242 @@ export default function Navbar() {
           return [msg.data, ...prev];
         });
       }
-
       if (msg.name === "notification-refresh") {
         await loadNotifications();
       }
     };
 
     channel.subscribe(handler);
-
-    return () => {
-      channel.unsubscribe(handler);
-    };
+    return () => channel.unsubscribe(handler);
   }, [email]);
 
   return (
-    <div style={styles.navbar}>
-      <div style={styles.left}>
-        <div style={styles.hamburger} onClick={toggleMenu}>
-          <div style={styles.line}></div>
-          <div style={styles.line}></div>
-          <div style={styles.line}></div>
-        </div>
+    <>
+      <BsNavbar
+        bg="dark"
+        variant="dark"
+        sticky="top"
+        className="border-bottom border-secondary-subtle shadow-sm"
+        style={{ zIndex: 1030 }}
+      >
+        <Container fluid className="px-3">
+          <div className="d-flex align-items-center gap-3">
+            <Button
+              variant="outline-light"
+              size="sm"
+              onClick={() => setMenuOpen(true)}
+              aria-label="Open menu"
+              className="border-0"
+            >
+              <i className="bi bi-list fs-4"></i>
+            </Button>
 
-        <div style={styles.brand}>
-          <img
-            src="/logo.png"
-            alt="RoadGuardian"
-            style={{ ...styles.logo, cursor: "pointer" }}
-            onClick={() => router.push("/home")}
-          />
-          <span
-            style={{ cursor: "pointer" }}
-            onClick={() => router.push("/home")}
-          >
-            RoadGuardian
-          </span>
-        </div>
-      </div>
-
-      <div style={styles.right}>
-        <div style={styles.bellWrapper}>
-          <button style={styles.bellButton} onClick={toggleNotifications}>
-            🔔
-          </button>
-          {unreadCount > 0 && <div style={styles.badge}>{unreadCount}</div>}
-        </div>
-
-        <img
-          src="/profile.png"
-          alt="Profile"
-          style={styles.profile}
-          onClick={() => router.push("/profile")}
-        />
-      </div>
-
-      {open && (
-        <div style={styles.dropdown}>
-          <div style={styles.item} onClick={() => goTo("/profile")}>
-            My Profile
-          </div>
-          <div style={styles.item} onClick={() => goTo("/settings")}>
-            Settings
-          </div>
-          <div style={styles.item} onClick={() => goTo("/support")}>
-            Support
-          </div>
-          <div style={styles.divider}></div>
-          <div
-            style={{ ...styles.item, ...styles.signOutItem }}
-            onClick={logout}
-          >
-            Sign Out
-          </div>
-        </div>
-      )}
-
-      {notifOpen && (
-        <div style={styles.notifPanel}>
-          <div style={styles.notifHeader}>
-            <span style={styles.notifTitle}>Notifications</span>
-
-            <div style={styles.notifActions}>
-              <button style={styles.notifActionBtn} onClick={markAllRead}>
-                Mark all read
-              </button>
-              <button style={styles.notifActionBtn} onClick={clearNotifications}>
-                Clear
-              </button>
-            </div>
+            <BsNavbar.Brand
+              role="button"
+              onClick={() => router.push("/home")}
+              className="d-flex align-items-center gap-2 mb-0"
+            >
+              <img
+                src="/logo.png"
+                alt="RoadGuardian"
+                width={28}
+                height={28}
+              />
+              <span className="fw-bold">RoadGuardian</span>
+            </BsNavbar.Brand>
           </div>
 
-          <div style={styles.notifList}>
-            {notifications.length === 0 ? (
-              <div style={styles.emptyNotif}>No notifications yet</div>
-            ) : (
-              notifications.map((item) => (
-                <div
-                  key={item._id}
-                  style={{
-                    ...styles.notifItem,
-                    background: item.read ? "#111827" : "#162033",
-                  }}
-                  onClick={() => markSingleRead(item._id)}
-                >
-                  <div
-                    style={{
-                      ...styles.notifDot,
-                      background: getDotColor(item.type),
-                    }}
-                  />
+          <div className="d-flex align-items-center gap-2">
+            <Dropdown
+              align="end"
+              show={notifOpen}
+              onToggle={(open) => setNotifOpen(open)}
+            >
+              <Dropdown.Toggle
+                as={Button}
+                variant="outline-light"
+                size="sm"
+                className="position-relative border-0"
+                aria-label="Notifications"
+              >
+                <i className="bi bi-bell-fill fs-5"></i>
+                {unreadCount > 0 && (
+                  <Badge
+                    bg="danger"
+                    pill
+                    className="position-absolute top-0 start-100 translate-middle"
+                    style={{ fontSize: "0.65rem" }}
+                  >
+                    {unreadCount}
+                    <span className="visually-hidden">unread notifications</span>
+                  </Badge>
+                )}
+              </Dropdown.Toggle>
 
-                  <div style={styles.notifContent}>
-                    <div style={styles.notifItemTop}>
-                      <span style={styles.notifItemTitle}>{item.title}</span>
-                      <span style={styles.notifTime}>
-                        {formatTime(item.createdAt)}
-                      </span>
-                    </div>
-
-                    <div style={styles.notifText}>{item.text}</div>
+              <Dropdown.Menu
+                className="shadow-lg p-0 overflow-hidden"
+                style={{
+                  width: "min(360px, calc(100vw - 24px))",
+                  maxHeight: "70vh",
+                }}
+              >
+                <div className="d-flex justify-content-between align-items-center px-3 py-2 border-bottom border-secondary-subtle">
+                  <strong>Notifications</strong>
+                  <div className="d-flex gap-2">
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="text-decoration-none p-0"
+                      onClick={markAllRead}
+                    >
+                      Mark all read
+                    </Button>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="text-decoration-none p-0 text-danger"
+                      onClick={clearNotifications}
+                    >
+                      Clear
+                    </Button>
                   </div>
                 </div>
-              ))
-            )}
+
+                <div style={{ maxHeight: "55vh", overflowY: "auto" }}>
+                  {notifications.length === 0 ? (
+                    <div className="text-center text-secondary py-4 px-3 small">
+                      No notifications yet
+                    </div>
+                  ) : (
+                    <ListGroup variant="flush">
+                      {notifications.map((item) => (
+                        <ListGroup.Item
+                          key={item._id}
+                          action
+                          onClick={() => markSingleRead(item._id)}
+                          className={`d-flex gap-2 py-3 ${
+                            item.read ? "" : "bg-body-tertiary"
+                          }`}
+                        >
+                          <i
+                            className={`bi ${getNotifIcon(item.type)} fs-5`}
+                            style={{ flexShrink: 0 }}
+                          ></i>
+                          <div className="flex-grow-1 min-w-0">
+                            <div className="d-flex justify-content-between gap-2 align-items-baseline">
+                              <span className="fw-semibold small text-truncate">
+                                {item.title}
+                              </span>
+                              <small
+                                className="text-secondary"
+                                style={{ whiteSpace: "nowrap" }}
+                              >
+                                {formatTime(item.createdAt)}
+                              </small>
+                            </div>
+                            <div className="small text-body-secondary mt-1">
+                              {item.text}
+                            </div>
+                          </div>
+                        </ListGroup.Item>
+                      ))}
+                    </ListGroup>
+                  )}
+                </div>
+              </Dropdown.Menu>
+            </Dropdown>
+
+            <img
+              src="/profile.png"
+              alt="Profile"
+              role="button"
+              onClick={() => router.push("/profile")}
+              className="rounded-circle border border-secondary-subtle"
+              style={{ width: 36, height: 36, objectFit: "cover" }}
+            />
           </div>
-        </div>
-      )}
-    </div>
+        </Container>
+      </BsNavbar>
+
+      <Offcanvas
+        show={menuOpen}
+        onHide={() => setMenuOpen(false)}
+        placement="start"
+        className="bg-dark text-light"
+      >
+        <Offcanvas.Header closeButton closeVariant="white">
+          <Offcanvas.Title className="d-flex align-items-center gap-2">
+            <img
+              src="/logo.png"
+              alt=""
+              width={24}
+              height={24}
+            />
+            RoadGuardian
+          </Offcanvas.Title>
+        </Offcanvas.Header>
+        <Offcanvas.Body className="p-0">
+          <ListGroup variant="flush">
+            <ListGroup.Item
+              action
+              onClick={() => goTo("/home")}
+              className="bg-dark text-light border-secondary-subtle py-3"
+            >
+              <i className="bi bi-house-door-fill me-3"></i>Home
+            </ListGroup.Item>
+            <ListGroup.Item
+              action
+              onClick={() => goTo("/emergency")}
+              className="bg-dark text-light border-secondary-subtle py-3"
+            >
+              <i className="bi bi-exclamation-triangle-fill me-3 text-danger"></i>
+              Emergency
+            </ListGroup.Item>
+            <ListGroup.Item
+              action
+              onClick={() => goTo("/maintenance")}
+              className="bg-dark text-light border-secondary-subtle py-3"
+            >
+              <i className="bi bi-wrench-adjustable me-3"></i>Maintenance
+            </ListGroup.Item>
+            <ListGroup.Item
+              action
+              onClick={() => goTo("/documents")}
+              className="bg-dark text-light border-secondary-subtle py-3"
+            >
+              <i className="bi bi-file-earmark-text-fill me-3"></i>Documents
+            </ListGroup.Item>
+            <ListGroup.Item
+              action
+              onClick={() => goTo("/profile")}
+              className="bg-dark text-light border-secondary-subtle py-3"
+            >
+              <i className="bi bi-person-fill me-3"></i>My Profile
+            </ListGroup.Item>
+            <ListGroup.Item
+              action
+              onClick={() => goTo("/settings")}
+              className="bg-dark text-light border-secondary-subtle py-3"
+            >
+              <i className="bi bi-gear-fill me-3"></i>Settings
+            </ListGroup.Item>
+            <ListGroup.Item
+              action
+              onClick={() => goTo("/support")}
+              className="bg-dark text-light border-secondary-subtle py-3"
+            >
+              <i className="bi bi-life-preserver me-3"></i>Support
+            </ListGroup.Item>
+            <ListGroup.Item
+              action
+              onClick={logout}
+              className="bg-dark text-danger border-secondary-subtle py-3"
+            >
+              <i className="bi bi-box-arrow-right me-3"></i>Sign Out
+            </ListGroup.Item>
+          </ListGroup>
+        </Offcanvas.Body>
+      </Offcanvas>
+    </>
   );
 }
-
-const styles = {
-  navbar: {
-    height: "60px",
-    background: "#0b0b0b",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "0 20px",
-    position: "relative",
-    borderBottom: "1px solid #1e1e1e",
-    zIndex: 300,
-  },
-  left: {
-    display: "flex",
-    alignItems: "center",
-    gap: "15px",
-  },
-  right: {
-    display: "flex",
-    alignItems: "center",
-    gap: "14px",
-  },
-  hamburger: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    cursor: "pointer",
-  },
-  line: {
-    width: "22px",
-    height: "2px",
-    background: "#fff",
-  },
-  brand: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: "1rem",
-  },
-  logo: {
-    width: "28px",
-    height: "28px",
-  },
-  profile: {
-    width: "34px",
-    height: "34px",
-    borderRadius: "50%",
-    cursor: "pointer",
-  },
-  bellWrapper: {
-    position: "relative",
-  },
-  bellButton: {
-    width: "36px",
-    height: "36px",
-    borderRadius: "10px",
-    border: "1px solid #1f2937",
-    background: "#111827",
-    color: "#fff",
-    cursor: "pointer",
-    fontSize: "1rem",
-  },
-  badge: {
-    position: "absolute",
-    top: "-6px",
-    right: "-6px",
-    minWidth: "18px",
-    height: "18px",
-    padding: "0 5px",
-    borderRadius: "999px",
-    background: "#ef4444",
-    color: "#fff",
-    fontSize: "0.72rem",
-    fontWeight: "bold",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    border: "2px solid #0b0b0b",
-  },
-  dropdown: {
-    position: "absolute",
-    top: "60px",
-    left: "20px",
-    background: "#111",
-    borderRadius: "10px",
-    width: "200px",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.8)",
-    overflow: "hidden",
-    zIndex: 310,
-  },
-  item: {
-    padding: "12px 15px",
-    color: "#fff",
-    cursor: "pointer",
-    fontSize: "0.9rem",
-    borderBottom: "1px solid #1e1e1e",
-  },
-  signOutItem: {
-    color: "#e74c3c",
-    borderBottom: "none",
-  },
-  divider: {
-    height: "1px",
-    background: "#1e1e1e",
-  },
-  notifPanel: {
-    position: "absolute",
-    top: "60px",
-    right: "20px",
-    width: "360px",
-    maxWidth: "calc(100vw - 40px)",
-    background: "#0f172a",
-    border: "1px solid #1e293b",
-    borderRadius: "14px",
-    boxShadow: "0 14px 40px rgba(0,0,0,0.45)",
-    overflow: "hidden",
-    zIndex: 320,
-  },
-  notifHeader: {
-    padding: "14px 16px",
-    borderBottom: "1px solid #1e293b",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "10px",
-    background: "#111827",
-  },
-  notifTitle: {
-    color: "#fff",
-    fontWeight: "700",
-  },
-  notifActions: {
-    display: "flex",
-    gap: "8px",
-  },
-  notifActionBtn: {
-    border: "none",
-    background: "#1f2937",
-    color: "#cbd5e1",
-    padding: "6px 10px",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontSize: "0.75rem",
-  },
-  notifList: {
-    maxHeight: "420px",
-    overflowY: "auto",
-    padding: "10px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-  },
-  notifItem: {
-    display: "flex",
-    gap: "10px",
-    padding: "12px",
-    borderRadius: "12px",
-    border: "1px solid #1e293b",
-    cursor: "pointer",
-  },
-  notifDot: {
-    width: "10px",
-    height: "10px",
-    borderRadius: "50%",
-    marginTop: "6px",
-    flexShrink: 0,
-  },
-  notifContent: {
-    flex: 1,
-    minWidth: 0,
-  },
-  notifItemTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "10px",
-    alignItems: "center",
-  },
-  notifItemTitle: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: "0.9rem",
-  },
-  notifTime: {
-    color: "#94a3b8",
-    fontSize: "0.72rem",
-    whiteSpace: "nowrap",
-  },
-  notifText: {
-    marginTop: "4px",
-    color: "#cbd5e1",
-    fontSize: "0.82rem",
-    lineHeight: "1.35",
-  },
-  emptyNotif: {
-    padding: "24px 16px",
-    textAlign: "center",
-    color: "#94a3b8",
-    fontSize: "0.9rem",
-  },
-};
