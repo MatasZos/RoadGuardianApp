@@ -1,3 +1,4 @@
+// Settings page
 "use client";
 
 import { useEffect, useState } from "react";
@@ -16,6 +17,7 @@ import {
 } from "react-bootstrap";
 import Navbar from "../components/Navbar";
 
+// the values used when the user has no saved settings yet
 const DEFAULTS = {
   emailReminders: true,
   documentReminders: true,
@@ -24,15 +26,18 @@ const DEFAULTS = {
   compactMode: false,
 };
 
+// the main settings page that the user sees
 export default function SettingsPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
 
+  // page values we need to remember
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState(DEFAULTS);
   const [toast, setToast] = useState(null);
 
+  // get the user's settings from the server when the page opens
   useEffect(() => {
     if (status === "loading") return;
     if (status === "unauthenticated") {
@@ -58,14 +63,17 @@ export default function SettingsPage() {
     })();
   }, [status]);
 
+  // show a small popup message at the bottom
   function showToast(variant, message) {
     setToast({ variant, message });
   }
 
+  // flip one of the on/off switches
   function toggle(key) {
     setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
   }
 
+  // send the chosen settings to the server to be saved
   async function handleSave() {
     setSaving(true);
     try {
@@ -95,7 +103,7 @@ export default function SettingsPage() {
 
       <div className="rg-settings-page min-vh-100 py-4 py-md-5">
         <Container style={{ maxWidth: 1100 }}>
-
+          {/* top of the page with the title and signed in pill */}
           <div className="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3 mb-4">
             <div>
               <h1 className="rg-page-title fw-bold mb-2">
@@ -122,6 +130,7 @@ export default function SettingsPage() {
               </span>
             </Badge>
           </div>
+          {/* the main card holding all the settings */}
           <Card className="rg-section-card border-0">
             <Card.Body className="p-4">
               {loading ? (
@@ -130,6 +139,7 @@ export default function SettingsPage() {
                 <UnauthedPrompt onLogin={() => router.push("/login")} />
               ) : (
                 <>
+                  {/* heading row with the save button on the right */}
                   <div className="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 pb-3 mb-3 border-bottom border-secondary-subtle">
                     <div>
                       <h2 className="h5 fw-bold mb-1">Preferences</h2>
@@ -290,6 +300,7 @@ export default function SettingsPage() {
   );
 }
 
+// one group of settings with a title at the top
 function SettingsSection({ title, icon, children, isLast }) {
   return (
     <section className={isLast ? "pt-3" : "pt-3 pb-2 border-bottom border-secondary-subtle mb-3"}>
@@ -302,6 +313,7 @@ function SettingsSection({ title, icon, children, isLast }) {
   );
 }
 
+// one row showing a setting with a title, a small note and a switch
 function SettingRow({ id, title, desc, enabled, onToggle }) {
   return (
     <div className="d-flex align-items-start justify-content-between gap-3">
@@ -320,6 +332,7 @@ function SettingRow({ id, title, desc, enabled, onToggle }) {
   );
 }
 
+// loading spinner shown while the settings are being fetched
 function LoadingSkeleton() {
   return (
     <div className="d-flex align-items-center justify-content-center py-4">
@@ -328,6 +341,7 @@ function LoadingSkeleton() {
   );
 }
 
+// shown when the user is not signed in, asking them to log in
 function UnauthedPrompt({ onLogin }) {
   return (
     <div className="d-flex gap-3 align-items-start">
