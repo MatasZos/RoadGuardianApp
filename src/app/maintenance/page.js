@@ -1,18 +1,20 @@
+// Maintenance page
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import Navbar from "../components/Navbar";
+import { Container, Stack, Spinner, Card, Row, Col } from "react-bootstrap";
 
+import Navbar from "../components/Navbar";
 import { groupByMonth, getPreviewFromForm, buildBikeTaskSummary } from "./utils";
-import styles from "./maintenance.module.css";
 
 import BikeSelector from "./BikeSelector";
 import StatusBoard from "./StatusBoard";
 import MaintenanceForm from "./MaintenanceForm";
 import MaintenanceTimeline from "./MaintenanceTimeline";
 
+// the empty form values used when the page loads or after saving
 const EMPTY_FORM = {
   type: [],
   date: "",
@@ -21,15 +23,18 @@ const EMPTY_FORM = {
   advisories: "",
 };
 
+// the main maintenance page that the user sees
 export default function MaintenancePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const email = session?.user?.email || null;
 
+  // page values we need to remember
   const [records, setRecords] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
 
+  // bike picker values
   const [selectedBike, setSelectedBike] = useState("");
   const [bikeSearch, setBikeSearch] = useState({
     make: "",
@@ -39,21 +44,25 @@ export default function MaintenancePage() {
   const [bikeResults, setBikeResults] = useState([]);
   const [bikeLoading, setBikeLoading] = useState(false);
 
+  // group the records by month so the timeline has section headers
   const monthSections = useMemo(
     () => Object.entries(groupByMonth(records)),
     [records]
   );
 
+  // small list shown under the form telling the user when each task is due next
   const previewList = useMemo(
     () => getPreviewFromForm(form.type, form.km),
     [form.type, form.km]
   );
 
+  // work out a summary for every bike the user has records for
   const bikeSummaries = useMemo(
     () => buildBikeTaskSummary(records),
     [records]
   );
 
+  // pick the summary for the bike that is currently selected
   const selectedBikeSummary = useMemo(
     () =>
       selectedBike
@@ -62,12 +71,14 @@ export default function MaintenancePage() {
     [bikeSummaries, selectedBike]
   );
 
+  // send the user to login if they are not signed in
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
     }
   }, [status, router]);
 
+  // load the saved bike from the browser and set today's date in the form
   useEffect(() => {
     setSelectedBike(localStorage.getItem("userMotorbike") || "");
     setForm((prev) => ({
@@ -76,10 +87,12 @@ export default function MaintenancePage() {
     }));
   }, []);
 
+  // get the records when we know who the user is
   useEffect(() => {
     fetchRecords();
   }, [email]);
 
+  // get the user's maintenance records from the server
   async function fetchRecords() {
     if (!email) return;
 
@@ -92,6 +105,7 @@ export default function MaintenancePage() {
     setRecords(Array.isArray(data) ? data : []);
   }
 
+  // search for bikes that match what the user typed in
   async function handleBikeSearch() {
     setBikeResults([]);
 
@@ -127,6 +141,7 @@ export default function MaintenancePage() {
     }
   }
 
+  // user picked a bike from the search results
   function pickBike(bike) {
     const label = `${bike.make} ${String(bike.model).trim()} (${bike.year})`;
     setSelectedBike(label);
@@ -134,6 +149,7 @@ export default function MaintenancePage() {
     setBikeResults([]);
   }
 
+  // tick or untick a maintenance task in the form
   function toggleTask(task) {
     setForm((prev) => ({
       ...prev,
@@ -143,6 +159,7 @@ export default function MaintenancePage() {
     }));
   }
 
+  // save the form as a new record or an edit to an old one
   async function handleSubmit(e) {
     e.preventDefault();
 
@@ -164,6 +181,7 @@ export default function MaintenancePage() {
       }),
     });
 
+    // clear the form and refresh the list
     setForm({
       ...EMPTY_FORM,
       date: new Date().toISOString().slice(0, 10),
@@ -172,6 +190,7 @@ export default function MaintenancePage() {
     await fetchRecords();
   }
 
+  // load an existing record into the form for editing
   function startEdit(record) {
     setEditingId(record._id);
     setSelectedBike(record.motorbike || "");
@@ -184,6 +203,7 @@ export default function MaintenancePage() {
     });
   }
 
+  // remove a record from the server and the page
   async function deleteRecord(id) {
     await fetch("/api/maintenance", {
       method: "DELETE",
@@ -194,90 +214,173 @@ export default function MaintenancePage() {
     setRecords((prev) => prev.filter((r) => r._id !== id));
   }
 
+  // show a loading spinner while checking the user is signed in
   if (status === "loading") {
-    return <div className={styles.loading}>Loading...</div>;
+    return (
+      <div className="rg-maintenance-page d-flex align-items-center justify-content-center min-vh-100">
+        <Spinner animation="border" variant="primary" />
+      </div>
+    );
   }
 
   return (
-    <>
+    <div className="rg-maintenance-page min-vh-100">
       <Navbar />
 
-      <div className={styles.page}>
-        <div className={styles.container}>
-          <div className={styles.pageHeader}>
-            <div>
-              <h1 className={styles.title}>Maintenance Records</h1>
-              <p className={styles.subtitle}>
-                Track servicing, manage advisories, and monitor what your bike needs next.
-              </p>
-            </div>
+      <Container fluid="xxl" className="py-4">
+        <Stack gap={3}>
+          {/* top of the page with the title */}
+          <div>
+            <h1 className="rg-page-title fw-bold mb-1 text-primary">
+              <i className="bi bi-tools me-2"></i>
+              Maintenance Records
+            </h1>
+            <p className="text-body-secondary mb-0">
+              Track servicing, manage advisories, and monitor what your bike
+              needs next.
+            </p>
           </div>
 
-          <div className={styles.layout}>
-            <aside className={styles.sidebar}>
-              <StatusBoard summary={selectedBikeSummary} selectedBike={selectedBike} />
-            </aside>
+          {/* main two column layout */}
+          <Row className="g-3">
+            {/* left side panel showing what is due */}
+            <Col xs={12} lg={4}>
+              <StatusBoard
+                summary={selectedBikeSummary}
+                selectedBike={selectedBike}
+              />
+            </Col>
 
-            <main className={styles.main}>
-              <section className={styles.sectionCard}>
-                <div className={styles.sectionHeader}>
-                  <h2 className={styles.sectionTitle}>Search Your Bike</h2>
-                  <p className={styles.sectionText}>
-                    Select the correct bike before adding or reviewing maintenance records.
-                  </p>
-                </div>
+            {/* right side with the bike picker, the form and the timeline */}
+            <Col xs={12} lg={8}>
+              <Stack gap={3}>
+                {/* bike picker card */}
+                <Card className="rg-section-card border-0">
+                  <Card.Body>
+                    <div className="mb-3">
+                      <h2 className="h5 fw-bold mb-1">Search Your Bike</h2>
+                      <p className="text-body-secondary small mb-0">
+                        Select the correct bike before adding or reviewing
+                        maintenance records.
+                      </p>
+                    </div>
 
-                <BikeSelector
-                  selectedBike={selectedBike}
-                  bikeSearch={bikeSearch}
-                  setBikeSearch={setBikeSearch}
-                  bikeResults={bikeResults}
-                  bikeLoading={bikeLoading}
-                  onSearch={handleBikeSearch}
-                  onPick={pickBike}
-                />
-              </section>
+                    <BikeSelector
+                      selectedBike={selectedBike}
+                      bikeSearch={bikeSearch}
+                      setBikeSearch={setBikeSearch}
+                      bikeResults={bikeResults}
+                      bikeLoading={bikeLoading}
+                      onSearch={handleBikeSearch}
+                      onPick={pickBike}
+                    />
+                  </Card.Body>
+                </Card>
 
-              <section className={styles.sectionCard}>
-                <div className={styles.sectionHeader}>
-                  <h2 className={styles.sectionTitle}>
-                    {editingId ? "Edit Maintenance Record" : "Add Maintenance Record"}
-                  </h2>
-                  <p className={styles.sectionText}>
-                    Save service history, current mileage, notes and advisories for future reminders.
-                  </p>
-                </div>
+                {/* add or edit a record card */}
+                <Card className="rg-section-card border-0">
+                  <Card.Body>
+                    <div className="mb-3">
+                      <h2 className="h5 fw-bold mb-1">
+                        {editingId
+                          ? "Edit Maintenance Record"
+                          : "Add Maintenance Record"}
+                      </h2>
+                      <p className="text-body-secondary small mb-0">
+                        Save service history, current mileage, notes and
+                        advisories for future reminders.
+                      </p>
+                    </div>
 
-                <MaintenanceForm
-                  form={form}
-                  setForm={setForm}
-                  editingId={editingId}
-                  previewList={previewList}
-                  onSubmit={handleSubmit}
-                  onToggleTask={toggleTask}
-                />
-              </section>
+                    <MaintenanceForm
+                      form={form}
+                      setForm={setForm}
+                      editingId={editingId}
+                      previewList={previewList}
+                      onSubmit={handleSubmit}
+                      onToggleTask={toggleTask}
+                    />
+                  </Card.Body>
+                </Card>
 
-              <section className={`${styles.sectionCard} ${styles.timelineCardWrap}`}>
-                <div className={styles.sectionHeader}>
-                  <h2 className={styles.sectionTitle}>Service Timeline</h2>
-                  <p className={styles.sectionText}>
-                    Browse your maintenance history grouped by month.
-                  </p>
-                </div>
+                {/* timeline card with all past records */}
+                <Card className="rg-section-card border-0">
+                  <Card.Body>
+                    <div className="mb-3">
+                      <h2 className="h5 fw-bold mb-1">Service Timeline</h2>
+                      <p className="text-body-secondary small mb-0">
+                        Browse your maintenance history grouped by month.
+                      </p>
+                    </div>
 
-                <div className={styles.timelineScroll}>
-                  <MaintenanceTimeline
-                    monthSections={monthSections}
-                    onEdit={startEdit}
-                    onDelete={deleteRecord}
-                  />
-                </div>
-              </section>
-            </main>
-          </div>
-        </div>
-      </div>
-    </>
+                    <div className="rg-timeline-scroll">
+                      <MaintenanceTimeline
+                        monthSections={monthSections}
+                        onEdit={startEdit}
+                        onDelete={deleteRecord}
+                      />
+                    </div>
+                  </Card.Body>
+                </Card>
+              </Stack>
+            </Col>
+          </Row>
+        </Stack>
+      </Container>
+
+      {/* styles just for this page */}
+      <style>{`
+        .rg-maintenance-page {
+          background:
+            radial-gradient(circle at top left, rgba(var(--bs-primary-rgb), 0.12), transparent 25%),
+            radial-gradient(circle at top right, rgba(34, 197, 94, 0.10), transparent 25%),
+            linear-gradient(180deg, #111827 0%, #0b0f17 100%);
+          color: #fff;
+        }
+        .rg-page-title {
+          font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+          letter-spacing: -0.02em;
+        }
+        /* the card boxes around the page all look the same */
+        .rg-section-card {
+          background:
+            linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
+            rgba(15, 23, 42, 0.92) !important;
+          border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        }
+        /* timeline can get long so let it scroll inside the card */
+        .rg-timeline-scroll {
+          max-height: 640px;
+          overflow-y: auto;
+          padding-right: 4px;
+        }
+        /* make form boxes look right on the dark page */
+        .rg-maintenance-page .form-control,
+        .rg-maintenance-page .form-select {
+          background: rgba(0, 0, 0, 0.3);
+          border-color: rgba(255, 255, 255, 0.12);
+          color: #fff;
+        }
+        .rg-maintenance-page .form-control:focus,
+        .rg-maintenance-page .form-select:focus {
+          background: rgba(0, 0, 0, 0.4);
+          border-color: var(--bs-primary);
+          box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.18);
+          color: #fff;
+        }
+        .rg-maintenance-page .form-control::placeholder {
+          color: rgba(255, 255, 255, 0.4);
+        }
+        /* checkbox color matches the brand */
+        .rg-maintenance-page .form-check-input:checked {
+          background-color: var(--bs-primary);
+          border-color: var(--bs-primary);
+        }
+        .rg-maintenance-page .form-check-input:focus {
+          box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+          border-color: var(--bs-primary);
+        }
+      `}</style>
+    </div>
   );
 }
