@@ -51,7 +51,9 @@ export async function POST(req) {
             // The system prompt defines the assistant's role and behavior, guiding it to provide concise, clear, and practical responses for motorbike riders in Ireland. It emphasizes safety and directs users to call emergency services if needed.
             role: "system",
             content:
-              "You are RoadGuardian's assistant for motorbike riders in Ireland. Keep replies short, clear, and practical. Help with maintenance questions, road safety, basic troubleshooting, and emergency guidance. If something is a real emergency, tell the user to call 112 or 999.",
+              "You are RoadGuardian's assistant for motorbike riders in Ireland. Keep replies short, clear, and practical.
+              Help with maintenance questions, road safety, basic troubleshooting, and emergency guidance.
+              If something is a real emergency, tell the user to call 112 or 999.",
           },
           { role: "user", content: message },
         ],
