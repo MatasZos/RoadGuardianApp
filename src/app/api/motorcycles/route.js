@@ -25,7 +25,6 @@ export async function GET(req) {
     );
   }
 
-  // ✅ CORRECT API URL
   const url = new URL("https://api.api-ninjas.com/v1/motorcycles");
 
   if (make) url.searchParams.set("make", make);

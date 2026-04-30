@@ -1,23 +1,27 @@
-// Utility functions for the emergency page.
+// Turn "rider_responding" into "Rider Responding".
 export function prettify(value) {
   return String(value || "")
     .replaceAll("_", " ")
     .replace(/\b\w/g, (m) => m.toUpperCase());
 }
+
 export function isClosedStatus(status) {
   return status === "resolved" || status === "cancelled";
 }
+
+// Maps an incident's status to the marker colour used on the map.
+//   red    = waiting for help
+//   green  = a helper is on the way
+//   amber  = helper has arrived / receiving assistance
+//   grey   = closed
 export function markerColorForIncident(status) {
-  // Red = freshly reported / waiting for help
   if (status === "reported" || status === "dispatching") return "#ef4444";
-  // Green = a helper has claimed it / on the way
   if (status === "rider_responding" || status === "help_on_the_way") return "#22c55e";
-  // Amber = victim has confirmed the helper has arrived / is being helped
   if (status === "assistance_received") return "#f59e0b";
-  // Grey = closed 
   if (status === "resolved" || status === "cancelled") return "#9ca3af";
   return "#ef4444";
 }
+
 export function formatTime(dateValue) {
   if (!dateValue) return "—";
   try {
@@ -26,21 +30,24 @@ export function formatTime(dateValue) {
     return "—";
   }
 }
-// Haversine formula to calculate the distance in km between two lat/lng points. used to show how far helpers are from the incident, and to decide whether to show the "I'm nearby" quick reply.
+
+// Distance in km between two lat/lng points (Haversine). Used for the
+// "X km away" badges on incidents and on nearby-rider markers.
 export function haversineKm(a, b) {
   if (!a || !b) return null;
   const toRad = (deg) => (deg * Math.PI) / 180;
-  const R = 6371; // Earth radius in km
+  const R = 6371;
   const dLat = toRad(b.lat - a.lat);
   const dLng = toRad(b.lng - a.lng);
   const x =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(a.lat)) *
-      Math.cos(toRad(b.lat)) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 }
+
+// Inline style string for the buttons we inject into Mapbox popup HTML.
+// (Mapbox popups render inside their own DOM tree, so Bootstrap classes
+// won't take effect there — we have to inline the look.)
 export function popupBtnStyle(background) {
   return `background:${background};color:white;border:none;border-radius:8px;padding:8px 10px;cursor:pointer;font-weight:700;width:100%;`;
 }

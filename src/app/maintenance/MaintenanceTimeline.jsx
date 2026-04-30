@@ -1,8 +1,6 @@
-// the list of past maintenance records grouped by month
 import { Card, Button, Stack } from "react-bootstrap";
-import { formatDisplayDate } from "./utils";
+import { formatDisplayDate } from "@/lib/maintenance";
 
-// shows all the user's past records in a timeline
 export default function MaintenanceTimeline({ monthSections, onEdit, onDelete }) {
   // friendly message when there are no records yet
   if (monthSections.length === 0) {

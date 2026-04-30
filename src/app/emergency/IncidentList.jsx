@@ -1,21 +1,24 @@
-// ─── Emergency feature: incident lists 
-
 import { Card, Row, Col, Badge, Button, Spinner } from "react-bootstrap";
 import { STATUS_LABELS } from "./constants";
 import { prettify, formatTime } from "./utils";
 
-export default function IncidentList({activeIncidents,recentHistory,loadingIncidents,email,onRoute,onUpdateIncident,onMessage,})
- {
+export default function IncidentList({
+  activeIncidents,
+  recentHistory,
+  loadingIncidents,
+  email,
+  onRoute,
+  onUpdateIncident,
+  onMessage,
+}) {
   return (
     <Row className="g-4">
-      {/* active incidents */}
       <Col xs={12} lg={7}>
         <Card className="rg-list-panel border-0 h-100">
           <Card.Body className="p-4">
             <h2 className="h5 fw-bold mb-3 d-flex align-items-center gap-2">
               <i className="bi bi-broadcast text-danger"></i>
               Active Incidents
-              {/* Loading spinner or incident count */}
               {loadingIncidents ? (
                 <Spinner animation="border" size="sm" className="ms-2" />
               ) : (
@@ -48,7 +51,6 @@ export default function IncidentList({activeIncidents,recentHistory,loadingIncid
         </Card>
       </Col>
 
-      {/* recent history */}
       <Col xs={12} lg={5}>
         <Card className="rg-list-panel border-0 h-100">
           <Card.Body className="p-4">
@@ -76,7 +78,6 @@ export default function IncidentList({activeIncidents,recentHistory,loadingIncid
   );
 }
 
-// Active incidents
 function ActiveIncidentItem({
   incident,
   email,
@@ -84,13 +85,13 @@ function ActiveIncidentItem({
   onUpdateIncident,
   onMessage,
 }) {
-  // Determine if the current user is the one who reported the incident or has claimed to help with it. This affects which action buttons are shown.
+  // Reporter sees "cancel/resolve"; everyone else sees "offer help".
+  // The helper (the one who claimed it) sees the "on the way / arrived" buttons.
   const isMine = incident.userEmail === email;
   const isMyHelper = incident.helperUserEmail === email;
 
   return (
     <div className="rg-incident-item p-3 rounded-3">
-      {/* Rider name and incident type */}
       <div className="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
         <div className="fw-bold">
           <i className="bi bi-person-fill me-1 text-body-secondary"></i>
@@ -102,7 +103,6 @@ function ActiveIncidentItem({
         </Badge>
       </div>
 
-      {/* Incident details */}
       <div className="small text-body-secondary mb-3">
         <div>
           Report type:{" "}
@@ -119,9 +119,7 @@ function ActiveIncidentItem({
         <div>Latest update: {incident.latestUpdate || "—"}</div>
       </div>
 
-      {/* action buttons */}
       <div className="d-flex flex-wrap gap-2">
-        {/* Anyone can route to the incident on the map */}
         <Button
           variant="outline-primary"
           size="sm"
@@ -130,7 +128,6 @@ function ActiveIncidentItem({
           <i className="bi bi-geo-alt-fill me-1"></i>Route
         </Button>
 
-        {/* Other people's incidents — offer help and message */}
         {!isMine && (
           <>
             <Button
@@ -156,14 +153,12 @@ function ActiveIncidentItem({
           </>
         )}
 
-        {/* I claimed this — show progress actions */}
         {isMyHelper && (
           <>
             <Button
               variant="outline-primary"
               size="sm"
               onClick={async () => {
-                // Draw the route then update the status on the server.
                 await onRoute(incident.lng, incident.lat);
                 await onUpdateIncident(incident._id, "route-started");
               }}
@@ -184,7 +179,6 @@ function ActiveIncidentItem({
   );
 }
 
-//closed or resolved incidents
 function HistoryItem({ incident }) {
   return (
     <div className="rg-history-item p-2 rounded-2">
@@ -200,7 +194,6 @@ function HistoryItem({ incident }) {
   );
 }
 
-// nothing to show in active or recent incidents
 function EmptyState({ icon, text }) {
   return (
     <div className="text-center text-body-secondary py-4">

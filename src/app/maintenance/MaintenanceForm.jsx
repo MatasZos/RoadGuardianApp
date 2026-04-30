@@ -1,8 +1,6 @@
-// the form for adding or editing a maintenance record
 import { Form, Button, Row, Col } from "react-bootstrap";
-import { maintenanceTypes } from "./constants";
+import { MAINTENANCE_TASKS } from "@/lib/maintenance";
 
-// the form shown in the add or edit card
 export default function MaintenanceForm({
   form,
   setForm,
@@ -13,10 +11,9 @@ export default function MaintenanceForm({
 }) {
   return (
     <Form onSubmit={onSubmit}>
-      {/* the list of tasks the user can tick */}
       <Form.Label className="fw-semibold">Select Tasks Done:</Form.Label>
       <div className="rg-task-checks d-flex flex-wrap gap-3 mb-3">
-        {maintenanceTypes.map((task) => (
+        {MAINTENANCE_TASKS.map((task) => (
           <Form.Check
             key={task}
             type="checkbox"

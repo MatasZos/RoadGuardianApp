@@ -1,6 +1,31 @@
-import { serviceIntervals } from "./constants";
 
-export function safeDate(value) {
+
+export const SERVICE_INTERVALS_KM = {
+  "Oil Change": 5000,
+  "Oil Filter Replacement": 5000,
+  "Air Filter Replacement": 12000,
+  "Chain Clean & Lube": 800,
+  "Chain Adjustment": 1500,
+  "Chain & Sprocket Kit Replacement": 20000,
+  "Brake Pads Replacement": 15000,
+  "Brake Fluid Change": 20000,
+  "Tire Replacement": 12000,
+  "Tire Pressure Check": 500,
+  "Spark Plug Replacement": 12000,
+  "Battery Replacement": 30000,
+  "Clutch Cable Adjustment": 8000,
+  "Throttle Cable Adjustment": 8000,
+  "Fuel Filter Replacement": 15000,
+  "Suspension Service": 25000,
+  "Wheel Bearings Check": 12000,
+  "Headlight Bulb Replacement": 20000,
+  "Indicator Bulb Replacement": 20000,
+  "Brake Disc Replacement": 30000,
+};
+
+export const MAINTENANCE_TASKS = Object.keys(SERVICE_INTERVALS_KM);
+
+function safeDate(value) {
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
 }
@@ -11,14 +36,14 @@ export function formatDisplayDate(value) {
   return d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export function monthYearLabel(value) {
+function monthYearLabel(value) {
   const d = safeDate(value);
   if (!d) return "Unknown date";
   return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 }
 
-export function groupByMonth(recs) {
-  return recs.reduce((groups, r) => {
+export function groupByMonth(records) {
+  return records.reduce((groups, r) => {
     const key = monthYearLabel(r.date || r.createdAt);
     (groups[key] = groups[key] || []).push(r);
     return groups;
@@ -27,24 +52,12 @@ export function groupByMonth(recs) {
 
 export function getTaskStatus(remainingKm) {
   if (!Number.isFinite(remainingKm)) return { label: "Unknown", color: "#94a3b8" };
-  if (remainingKm < 0)    return { label: "Overdue",   color: "#ef4444" };
-  if (remainingKm <= 500) return { label: "Urgent",    color: "#dc2626" };
+  if (remainingKm < 0)     return { label: "Overdue",  color: "#ef4444" };
+  if (remainingKm <= 500)  return { label: "Urgent",   color: "#dc2626" };
   if (remainingKm <= 1500) return { label: "Due soon", color: "#f59e0b" };
   return { label: "Healthy", color: "#22c55e" };
 }
 
-export function getPreviewFromForm(types, km) {
-  const numericKm = Number(km);
-  if (!Array.isArray(types) || !types.length || !Number.isFinite(numericKm)) return [];
-  return types
-    .map((type) => {
-      const intervalKm = serviceIntervals[type];
-      if (!Number.isFinite(intervalKm)) return null;
-      return { type, intervalKm, nextDueKm: numericKm + intervalKm };
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.nextDueKm - b.nextDueKm);
-}
 
 export function buildBikeTaskSummary(records) {
   const bikes = {};
@@ -53,10 +66,12 @@ export function buildBikeTaskSummary(records) {
     const bike = record.motorbike || "Unknown bike";
     const km = Number(record.km);
 
-    if (!bikes[bike]) bikes[bike] = { bike, currentKm: 0, tasks: {}, records: [] };
-
-    bikes[bike].records.push(record);
-    if (Number.isFinite(km) && km > bikes[bike].currentKm) bikes[bike].currentKm = km;
+    if (!bikes[bike]) {
+      bikes[bike] = { bike, currentKm: 0, tasks: {} };
+    }
+    if (Number.isFinite(km) && km > bikes[bike].currentKm) {
+      bikes[bike].currentKm = km;
+    }
 
     const taskList = Array.isArray(record.type) ? record.type : [];
     for (const task of taskList) {
@@ -66,7 +81,7 @@ export function buildBikeTaskSummary(records) {
 
       const shouldReplace =
         !existing ||
-        (Number.isFinite(km) && Number(record.km) > Number(existing.km)) ||
+        (Number.isFinite(km) && km > Number(existing.lastServiceKm)) ||
         (recordDate && existingDate && recordDate > existingDate);
 
       if (shouldReplace) {
@@ -77,7 +92,7 @@ export function buildBikeTaskSummary(records) {
           date: record.date,
           notes: record.notes || "",
           advisories: record.advisories || "",
-          intervalKm: serviceIntervals[task] || null,
+          intervalKm: SERVICE_INTERVALS_KM[task] ?? null,
           sourceRecordId: record._id,
           createdAt: record.createdAt,
         };
@@ -96,7 +111,14 @@ export function buildBikeTaskSummary(records) {
           Number.isFinite(nextDueKm) && Number.isFinite(bikeData.currentKm)
             ? nextDueKm - bikeData.currentKm
             : null;
-        return { ...task, nextDueKm, currentBikeKm: bikeData.currentKm, remainingKm, status: getTaskStatus(remainingKm) };
+
+        return {
+          ...task,
+          nextDueKm,
+          currentBikeKm: bikeData.currentKm,
+          remainingKm,
+          status: getTaskStatus(remainingKm),
+        };
       })
       .sort((a, b) => {
         const aVal = Number.isFinite(a.nextDueKm) ? a.nextDueKm : Number.MAX_SAFE_INTEGER;
@@ -113,4 +135,18 @@ export function buildBikeTaskSummary(records) {
       upcoming: taskItems.filter((t) => Number.isFinite(t.remainingKm) && t.remainingKm > 1500),
     };
   });
+}
+
+export function getPreviewFromForm(types, km) {
+  const numericKm = Number(km);
+  if (!Array.isArray(types) || !types.length || !Number.isFinite(numericKm)) return [];
+
+  return types
+    .map((type) => {
+      const intervalKm = SERVICE_INTERVALS_KM[type];
+      if (!Number.isFinite(intervalKm)) return null;
+      return { type, intervalKm, nextDueKm: numericKm + intervalKm };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.nextDueKm - b.nextDueKm);
 }

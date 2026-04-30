@@ -1,18 +1,13 @@
-import clientPromise from "../../../../lib/mongodb";
+import clientPromise from "@/lib/mongodb";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-
-function cleanString(value) {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed ? trimmed : null;
-}
+import { cleanString, cleanEmail } from "@/lib/utils";
 
 export async function POST(req) {
   try {
     const body = await req.json();
 
-    const email = cleanString(body.email)?.toLowerCase();
+    const email = cleanEmail(body.email);
     const fullName = cleanString(body.fullName);
     const motorbike = cleanString(body.motorbike);
     const phone = cleanString(body.phone);
@@ -44,8 +39,7 @@ export async function POST(req) {
         );
       }
 
-      const saltRounds = 10;
-      updateDoc.passwordHash = await bcrypt.hash(password, saltRounds);
+      updateDoc.passwordHash = await bcrypt.hash(password, 10);
     }
 
     if (Object.keys(updateDoc).length === 0) {
@@ -53,13 +47,10 @@ export async function POST(req) {
     }
 
     const client = await clientPromise;
-    const db = client.db("login");
-    const userCollection = db.collection("user");
-
-    const result = await userCollection.updateOne(
-      { email },
-      { $set: updateDoc }
-    );
+    const result = await client
+      .db("login")
+      .collection("user")
+      .updateOne({ email }, { $set: updateDoc });
 
     if (result.matchedCount === 0) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });

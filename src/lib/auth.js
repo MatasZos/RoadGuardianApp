@@ -1,12 +1,7 @@
 import Credentials from "next-auth/providers/credentials";
 import clientPromise from "@/lib/mongodb";
+import { cleanString } from "@/lib/utils";
 import bcrypt from "bcryptjs";
-
-function cleanString(v) {
-  if (typeof v !== "string") return null;
-  const s = v.trim();
-  return s ? s : null;
-}
 
 export const authOptions = {
   session: { strategy: "jwt" },

@@ -1,10 +1,17 @@
-// ─── Emergency feature: chat sidebar 
-// Slide-out panel where the rider in distress and any helpers message each other in real time. 
+// Slide-out chat panel: rider in distress + their helper(s) talk here.
 
 "use client";
 import { useEffect, useRef } from "react";
-import {Offcanvas,Form,Button,InputGroup,Stack,Spinner,Alert,Badge,} from "react-bootstrap";
-// Reusable message bubble component defined at the bottom of the file.
+import {
+  Offcanvas,
+  Form,
+  Button,
+  InputGroup,
+  Stack,
+  Spinner,
+  Alert,
+} from "react-bootstrap";
+
 export default function ChatSidebar({
   open,
   onClose,
@@ -22,7 +29,7 @@ export default function ChatSidebar({
   onStartChat,
   onSendMessage,
 }) {
-  // Auto-scroll the messages pane to the bottom whenever a new message arrives or the user opens a conversation.
+  // Stick to the bottom whenever a new message arrives or the user switches chat.
   const messagesEndRef = useRef(null);
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -30,7 +37,7 @@ export default function ChatSidebar({
 
   return (
     <>
-      {/*Action button*/}
+      {/* Floating "open chat" button when the sidebar is closed. */}
       {!open && (
         <Button
           variant="primary"
@@ -42,13 +49,12 @@ export default function ChatSidebar({
         </Button>
       )}
 
-      {/* Message panel */}
       <Offcanvas
         show={open}
         onHide={() => onClose(false)}
         placement="end"
-        backdrop={false}//User needs to see the map
-        scroll={true}// Allow the page behind to keep scrolling
+        backdrop={false} /* don't dim the page — user still needs to see the map */
+        scroll={true}
         className="rg-chat-offcanvas bg-dark text-light"
       >
         <Offcanvas.Header
@@ -62,13 +68,11 @@ export default function ChatSidebar({
           </Offcanvas.Title>
         </Offcanvas.Header>
 
-        {/* The body is a CSS grid: list on the left, message panel on the right.
-            On very narrow screens we stack — see the styled-jsx block below. */}
+        {/* Two-column grid: conversation list + active conversation.
+            Stacks vertically on narrow screens (see the @media block below). */}
         <Offcanvas.Body className="p-0 d-flex flex-column">
           <div className="rg-chat-grid flex-grow-1 d-grid">
-            {/* Conversation list and new chat form */}
             <div className="rg-chat-list border-end border-secondary-subtle p-3 d-flex flex-column">
-              {/* Start a new chat by email */}
               <div className="mb-3">
                 <Form.Label className="small fw-semibold text-body-secondary text-uppercase mb-1">
                   New Chat
@@ -92,7 +96,6 @@ export default function ChatSidebar({
                 </InputGroup>
               </div>
 
-              {/* Authentication errors etc*/}
               {chatError && (
                 <Alert variant="danger" className="py-2 px-3 small mb-2">
                   <i className="bi bi-exclamation-triangle-fill me-1"></i>
@@ -100,7 +103,6 @@ export default function ChatSidebar({
                 </Alert>
               )}
 
-              {/* Existing conversations */}
               <div className="small fw-semibold text-body-secondary text-uppercase mb-2">
                 Conversations
               </div>
@@ -112,12 +114,9 @@ export default function ChatSidebar({
                 ) : (
                   <Stack gap={2}>
                     {conversations.map((conv) => {
-                      // For each conversation, find the "other user" (the one who isn't the current rider) to display as the button label.
                       const otherUser =
                         conv.participants.find((p) => p !== email) || "Unknown";
-                      const isActive =
-                        selectedConversation?._id === conv._id;
-                        // Conversation button is highlighted if it's the active one. Clicking it selects that conversation and loads the messages in the right pane.
+                      const isActive = selectedConversation?._id === conv._id;
                       return (
                         <Button
                           key={conv._id}
@@ -137,10 +136,8 @@ export default function ChatSidebar({
               </div>
             </div>
 
-            {/*Active conversation panel*/}
             <div className="rg-chat-panel d-flex flex-column">
               {!selectedConversation ? (
-                // Nothing picked yet, shows a placeholder instead
                 <div className="d-flex flex-column align-items-center justify-content-center h-100 text-body-secondary p-4 text-center">
                   <i className="bi bi-chat-square-dots fs-1 mb-3 opacity-50"></i>
                   <div className="small">
@@ -149,7 +146,6 @@ export default function ChatSidebar({
                 </div>
               ) : (
                 <>
-                  {/* Messages scrollable area */}
                   <div className="rg-chat-messages flex-grow-1 overflow-auto p-3">
                     {messages.length === 0 ? (
                       <div className="text-center text-body-secondary small mt-3">
@@ -169,7 +165,6 @@ export default function ChatSidebar({
                     <div ref={messagesEndRef} />
                   </div>
 
-                  {/* Input + send row, pinned to the bottom of the panel */}
                   <div className="border-top border-secondary-subtle p-2">
                     <InputGroup>
                       <Form.Control
@@ -202,9 +197,7 @@ export default function ChatSidebar({
         </Offcanvas.Body>
       </Offcanvas>
 
-      {/*Component styles*/}
       <style>{`
-        /* Floating action button positioned bottom-right of the page */
         .rg-chat-fab {
           position: fixed;
           right: 20px;
@@ -215,13 +208,9 @@ export default function ChatSidebar({
           padding: 0;
           z-index: 200;
         }
-        /* Width of the offcanvas panel — slightly wider than default to fit
-           the two-column layout comfortably. */
         .rg-chat-offcanvas {
           width: min(520px, 100vw) !important;
         }
-        /* Two-column grid: conversation list, message panel.
-           Stack vertically on narrow screens. */
         .rg-chat-grid {
           grid-template-columns: 165px 1fr;
         }
@@ -235,9 +224,8 @@ export default function ChatSidebar({
             max-height: 220px;
           }
         }
-        /* Ensure the panel takes up the offcanvas body height fully */
         .rg-chat-panel {
-          min-height: 0; /* allow flex child to shrink */
+          min-height: 0; /* let flex child shrink */
           background: rgba(255, 255, 255, 0.02);
         }
         .rg-chat-messages {
@@ -248,7 +236,6 @@ export default function ChatSidebar({
   );
 }
 
-// Single message bubble and styled
 function MessageBubble({ message, isMine }) {
   return (
     <div

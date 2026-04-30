@@ -1,5 +1,3 @@
-// Emergency page
-
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -7,12 +5,27 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Container,Card,Button,Form,Alert,Badge,Spinner,Stack,} from "react-bootstrap";
+import {
+  Container,
+  Card,
+  Button,
+  Form,
+  Alert,
+  Spinner,
+  Stack,
+} from "react-bootstrap";
 
 import Navbar from "../components/Navbar";
 import { getAblyClient } from "../../lib/ablyClient";
 
-import {isClosedStatus,haversineKm,markerColorForIncident,popupBtnStyle,prettify,formatTime,} from "./utils";
+import {
+  isClosedStatus,
+  haversineKm,
+  markerColorForIncident,
+  popupBtnStyle,
+  prettify,
+  formatTime,
+} from "./utils";
 import { STATUS_LABELS } from "./constants";
 import { useMapbox } from "./useMapbox";
 
@@ -21,17 +34,17 @@ import ActiveIncidentCard from "./ActiveIncidentCard";
 import IncidentList from "./IncidentList";
 import ChatSidebar from "./ChatSidebar";
 
-// the main emergency page that the user sees
+const LOCATION_PUSH_INTERVAL_MS = 5000;
+
 export default function EmergencyPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const email = session?.user?.email || null;
 
-  // page values we need to remember
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState("");
-  const [coords, setCoords] = useState(null); // where the user is
-  const [followMode, setFollowMode] = useState(true); // map follows the user
+  const [coords, setCoords] = useState(null);
+  const [followMode, setFollowMode] = useState(true);
   const [incidents, setIncidents] = useState([]);
   const [liveRiders, setLiveRiders] = useState([]);
   const [loadingIncidents, setLoadingIncidents] = useState(false);
@@ -40,7 +53,6 @@ export default function EmergencyPage() {
   const [showEmergencyForm, setShowEmergencyForm] = useState(false);
   const [shareLiveLocation, setShareLiveLocation] = useState(false);
 
-  // form for sending a new emergency
   const [form, setForm] = useState({
     reportMode: "self",
     reportedForName: "",
@@ -52,7 +64,6 @@ export default function EmergencyPage() {
     phone: "",
   });
 
-  // chat values
   const [chatOpen, setChatOpen] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -62,22 +73,28 @@ export default function EmergencyPage() {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState("");
 
-  // map stuff
-  const {mapContainerRef,mapRef,myMarkerRef,incidentMarkersRef,riderMarkersRef,followModeRef,} = useMapbox({ status, chatOpen, setError, setFollowMode });
+  const {
+    mapContainerRef,
+    mapRef,
+    myMarkerRef,
+    incidentMarkersRef,
+    riderMarkersRef,
+    followModeRef,
+  } = useMapbox({ status, chatOpen, setError, setFollowMode });
 
-  // other things we want to remember across renders
-  const hasCenteredRef = useRef(false); // have we centered the map yet
-  const lastCoordsRef = useRef(null); // last location we sent
-  const watchIdRef = useRef(null); // id for the location watcher
-  const lastEmergencyLocationUpdateRef = useRef(0); // last time we sent an emergency update
-  const lastRiderLocationUpdateRef = useRef(0); // last time we sent a rider update
-  const ablyRef = useRef(null); // live updates client
-  const userSubscriptionRef = useRef(null); // listens for messages to this user
-  const conversationSubscriptionRef = useRef(null); // listens for messages in the open chat
-  const emergenciesSubscriptionRef = useRef(null); // listens for emergency changes
-  const ridersSubscriptionRef = useRef(null); // listens for rider movement
+  // Refs that persist across renders without triggering re-renders themselves.
+  const hasCenteredRef = useRef(false);
+  const lastCoordsRef = useRef(null);
+  const watchIdRef = useRef(null);
+  const lastEmergencyLocationUpdateRef = useRef(0);
+  const lastRiderLocationUpdateRef = useRef(0);
+  const ablyRef = useRef(null);
+  const userSubscriptionRef = useRef(null);
+  const conversationSubscriptionRef = useRef(null);
+  const emergenciesSubscriptionRef = useRef(null);
+  const ridersSubscriptionRef = useRef(null);
 
-  // values worked out from the state above
+  // The incident the current user has open and is waiting for help on (if any).
   const myActiveIncident = useMemo(
     () =>
       incidents.find(
@@ -89,7 +106,6 @@ export default function EmergencyPage() {
     [incidents, email]
   );
 
-  // split incidents into open ones and finished ones
   const activeIncidents = useMemo(
     () => incidents.filter((i) => !isClosedStatus(i.status)),
     [incidents]
@@ -99,12 +115,12 @@ export default function EmergencyPage() {
     [incidents]
   );
 
-  // keep the follow mode ref in sync with the state
+  // followModeRef mirrors the state so map handlers can read it without
+  // forcing a re-render of the whole map effect.
   useEffect(() => {
     followModeRef.current = followMode;
   }, [followMode]);
 
-  // send the user to login if they are not signed in
   useEffect(() => {
     if (status === "loading") return;
     if (status === "unauthenticated") {
@@ -114,7 +130,7 @@ export default function EmergencyPage() {
     setFullName(session?.user?.name || "");
   }, [status, session, router]);
 
-  // watch where the user is and keep things up to date
+  // Track the user's location while the page is open.
   useEffect(() => {
     if (!email || !("geolocation" in navigator) || watchIdRef.current !== null)
       return;
@@ -125,7 +141,7 @@ export default function EmergencyPage() {
         setCoords({ lat, lng });
         myMarkerRef.current?.setLngLat([lng, lat]);
 
-        // only move the map around when there is an active emergency
+        // Only chase the camera when this user is the one in distress.
         if (myActiveIncident) {
           updateDrivingCamera(lat, lng);
           maybeSendEmergencyLocationUpdate(lat, lng);
@@ -144,12 +160,12 @@ export default function EmergencyPage() {
     };
   }, [email, myActiveIncident, shareLiveLocation]);
 
-  // put the user's own marker on the map and center it the first time
+  // Drop the user's "you are here" marker, and centre the map on first fix.
   useEffect(() => {
     if (!mapRef.current || !coords) return;
 
     if (!myMarkerRef.current) {
-      myMarkerRef.current = new mapboxgl.Marker({ color: "#f97316" }) // orange marker for you
+      myMarkerRef.current = new mapboxgl.Marker({ color: "#f97316" })
         .setLngLat([coords.lng, coords.lat])
         .setPopup(
           new mapboxgl.Popup().setHTML(
@@ -163,7 +179,6 @@ export default function EmergencyPage() {
       myMarkerRef.current.setLngLat([coords.lng, coords.lat]);
     }
 
-    // only center the map on the user once at the start
     if (!hasCenteredRef.current) {
       mapRef.current.jumpTo({
         center: [coords.lng, coords.lat],
@@ -175,7 +190,8 @@ export default function EmergencyPage() {
     }
   }, [coords, fullName]);
 
-  // show a marker on the map for every active emergency
+  // Render a Mapbox marker for every active incident, attaching click handlers
+  // to the buttons we inject into each popup's HTML.
   useEffect(() => {
     if (!mapRef.current) return;
     const seenIds = new Set();
@@ -191,7 +207,8 @@ export default function EmergencyPage() {
         ? haversineKm(coords, { lat: incident.lat, lng: incident.lng })
         : null;
 
-      // build the buttons that show inside the marker popup
+      // Action set varies with the viewer's relationship to the incident:
+      // reporter sees cancel/resolve, others see "offer help" + route + chat.
       const helperActions = !isMine
         ? `
         <button class="claim-help-btn"     data-id="${id}" style="${popupBtnStyle("#16a34a")}">Offer help</button>
@@ -203,7 +220,7 @@ export default function EmergencyPage() {
         <button class="resolve-incident-btn" data-id="${id}" style="${popupBtnStyle("#16a34a")}">Mark resolved</button>
       `;
 
-      // extra buttons for the helper that is on the way
+      // The user who claimed this incident gets the "on the way / arrived" controls.
       const helperControls =
         incident.helperUserEmail === email
           ? `
@@ -233,7 +250,6 @@ export default function EmergencyPage() {
       `;
 
       if (!incidentMarkersRef.current[id]) {
-        // new emergency, make a marker for it
         const popup = new mapboxgl.Popup().setHTML(popupHtml);
         const marker = new mapboxgl.Marker({
           color: isMine ? "#f97316" : markerColorForIncident(incident.status),
@@ -242,7 +258,7 @@ export default function EmergencyPage() {
           .setPopup(popup)
           .addTo(mapRef.current);
 
-        // make the popup buttons do something when clicked
+        // Bind the action buttons after the popup actually mounts to the DOM.
         popup.on("open", () =>
           setTimeout(() => {
             const el = popup.getElement();
@@ -275,12 +291,12 @@ export default function EmergencyPage() {
 
         incidentMarkersRef.current[id] = marker;
       } else {
-        // marker already exists, just move it to the new spot
+        // Marker already exists — just move it.
         incidentMarkersRef.current[id].setLngLat([incident.lng, incident.lat]);
       }
     });
 
-    // remove any markers for emergencies that are no longer there
+    // Remove markers for incidents we no longer have in state.
     Object.keys(incidentMarkersRef.current).forEach((id) => {
       if (!seenIds.has(id)) {
         incidentMarkersRef.current[id].remove();
@@ -289,7 +305,7 @@ export default function EmergencyPage() {
     });
   }, [activeIncidents, coords, email, conversations]);
 
-  // show markers for nearby riders that are sharing their location
+  // Same dance for nearby riders that are broadcasting their location.
   useEffect(() => {
     if (!mapRef.current) return;
     const activeEmails = new Set(activeIncidents.map((i) => i.userEmail));
@@ -359,7 +375,7 @@ export default function EmergencyPage() {
     });
   }, [liveRiders, coords, email, activeIncidents, conversations]);
 
-  // listen for live updates about emergencies and riders
+  // Subscribe to the global "emergencies" and "riders" channels.
   useEffect(() => {
     if (!email) return;
     const ably = getAblyClient();
@@ -384,7 +400,7 @@ export default function EmergencyPage() {
     };
   }, [email]);
 
-  // listen for new chats opened with this user
+  // Per-user channel: someone started a new chat with us, or sent a message.
   useEffect(() => {
     if (!email) return;
     const ably = getAblyClient();
@@ -402,7 +418,7 @@ export default function EmergencyPage() {
     return () => userChannel.unsubscribe(handler);
   }, [email]);
 
-  // listen for new messages in the chat that is currently open
+  // Per-conversation channel: refresh messages whenever the active chat moves.
   useEffect(() => {
     if (!selectedConversation?._id || !email) return;
     const ably = ablyRef.current || getAblyClient();
@@ -418,7 +434,7 @@ export default function EmergencyPage() {
     return () => channel.unsubscribe(handler);
   }, [selectedConversation?._id, email]);
 
-  // tell the server when the user turns location sharing on or off
+  // Push the live-location switch state up to the server whenever it flips.
   useEffect(() => {
     if (!email || !coords) return;
     fetch("/api/live-location", {
@@ -432,22 +448,20 @@ export default function EmergencyPage() {
     }).catch(console.error);
   }, [shareLiveLocation, email, coords]);
 
-  // load chats whenever the chat panel opens
   useEffect(() => {
     if (!chatOpen || !email) return;
     loadConversations();
   }, [chatOpen, email]);
 
-  // first time loading the page, get the emergencies and riders
+  // Initial load of incidents + nearby riders once we know who the user is.
   useEffect(() => {
     if (!email) return;
     fetchIncidents();
     fetchLiveRiders();
   }, [email]);
 
-  // helpers below
+  // ── Helpers ──────────────────────────────────────────────────────────────
 
-  // get the user's current location once
   function getLiveCoords() {
     return new Promise((resolve, reject) => {
       if (!("geolocation" in navigator)) {
@@ -463,7 +477,8 @@ export default function EmergencyPage() {
     });
   }
 
-  // work out which direction the user is facing
+  // Compass bearing (degrees) from one lat/lng to another. Used to point the
+  // sat-nav-style camera in the direction the user is travelling.
   function getBearing(from, to) {
     const toRad = (d) => (d * Math.PI) / 180;
     const toDeg = (r) => (r * 180) / Math.PI;
@@ -478,7 +493,6 @@ export default function EmergencyPage() {
     return (toDeg(Math.atan2(y, x)) + 360) % 360;
   }
 
-  // make the map follow the user like a sat nav
   function updateDrivingCamera(lat, lng) {
     if (!mapRef.current || !followModeRef.current) return;
     const bearing = lastCoordsRef.current
@@ -496,7 +510,6 @@ export default function EmergencyPage() {
     lastCoordsRef.current = { lat, lng };
   }
 
-  // draw a driving route on the map from the user to a place
   async function drawRouteToUser(targetLng, targetLat) {
     if (!mapRef.current) return;
     try {
@@ -518,10 +531,8 @@ export default function EmergencyPage() {
 
       const geoJSON = { type: "Feature", properties: {}, geometry: route };
       if (mapRef.current.getSource("route")) {
-        // route already drawn, just update it
         mapRef.current.getSource("route").setData(geoJSON);
       } else {
-        // first time, add the route line to the map
         mapRef.current.addSource("route", {
           type: "geojson",
           data: geoJSON,
@@ -539,7 +550,7 @@ export default function EmergencyPage() {
         });
       }
 
-      // zoom the map so the whole route is visible
+      // Frame the whole route on screen.
       const bounds = new mapboxgl.LngLatBounds();
       route.coordinates.forEach((c) => bounds.extend(c));
       mapRef.current.fitBounds(bounds, { padding: 55 });
@@ -549,14 +560,12 @@ export default function EmergencyPage() {
     }
   }
 
-  // remove the route line from the map
   function clearRoute() {
     if (!mapRef.current) return;
     if (mapRef.current.getLayer("route")) mapRef.current.removeLayer("route");
     if (mapRef.current.getSource("route")) mapRef.current.removeSource("route");
   }
 
-  // get the latest list of emergencies from the server
   async function fetchIncidents() {
     setLoadingIncidents(true);
     try {
@@ -574,7 +583,6 @@ export default function EmergencyPage() {
     }
   }
 
-  // get the latest list of riders sharing their location
   async function fetchLiveRiders() {
     try {
       const res = await fetch("/api/live-location", { cache: "no-store" });
@@ -585,11 +593,11 @@ export default function EmergencyPage() {
     }
   }
 
-  // send the user's location to the server for their emergency, but not too often
+  // Throttled location push for an active emergency.
   async function maybeSendEmergencyLocationUpdate(lat, lng) {
     if (!myActiveIncident?.shareLiveLocation) return;
     const now = Date.now();
-    if (now - lastEmergencyLocationUpdateRef.current < 5000) return;
+    if (now - lastEmergencyLocationUpdateRef.current < LOCATION_PUSH_INTERVAL_MS) return;
     lastEmergencyLocationUpdateRef.current = now;
     try {
       await fetch("/api/emergency", {
@@ -607,11 +615,11 @@ export default function EmergencyPage() {
     }
   }
 
-  // send the user's regular live location to the server, but not too often
+  // Throttled location push for the "I'm visible to nearby riders" feature.
   async function maybeSendLiveLocation(lat, lng) {
     if (!shareLiveLocation || !email) return;
     const now = Date.now();
-    if (now - lastRiderLocationUpdateRef.current < 5000) return;
+    if (now - lastRiderLocationUpdateRef.current < LOCATION_PUSH_INTERVAL_MS) return;
     lastRiderLocationUpdateRef.current = now;
     try {
       await fetch("/api/live-location", {
@@ -624,7 +632,6 @@ export default function EmergencyPage() {
     }
   }
 
-  // change an emergency in some way (claim it, resolve it, cancel it, etc.)
   async function updateIncident(emergencyId, action) {
     try {
       const res = await fetch("/api/emergency", {
@@ -640,7 +647,7 @@ export default function EmergencyPage() {
 
       await fetchIncidents();
 
-      // open chat with a preset message when starting to help
+      // When the user starts helping, pop the chat open with a preset message.
       if (action === "claim-help" || action === "route-started") {
         setChatOpen(true);
         const incident = data?.emergency;
@@ -660,12 +667,11 @@ export default function EmergencyPage() {
     }
   }
 
-  // send a new emergency to the server
   async function handleCreateEmergency() {
     setSubmitLoading(true);
     setError("");
 
-    // do not let the user send an emergency unless live location is on
+    // Live location is mandatory — otherwise helpers can't find the user.
     if (!shareLiveLocation) {
       setError("Live location must be enabled before sending an emergency.");
       setSubmitLoading(false);
@@ -702,7 +708,6 @@ export default function EmergencyPage() {
     }
   }
 
-  // get the user's chats from the server
   async function loadConversations() {
     if (!email) return;
     const res = await fetch("/api/conversations", {
@@ -713,7 +718,6 @@ export default function EmergencyPage() {
     setConversations(Array.isArray(data) ? data : []);
   }
 
-  // get the messages for one chat
   async function loadMessages(conversationId) {
     if (!email || !conversationId) return;
     const res = await fetch(
@@ -724,7 +728,8 @@ export default function EmergencyPage() {
     setMessages(Array.isArray(data) ? data : []);
   }
 
-  // open a chat with another user, making a new one if needed
+  // Open the chat panel with a conversation — creating one server-side if
+  // this is the first time these two users have spoken.
   async function startOrOpenConversation(
     otherUserEmail,
     presetText = "",
@@ -760,7 +765,6 @@ export default function EmergencyPage() {
     if (presetText) setChatText(presetText);
   }
 
-  // start a new chat from the sidebar
   async function handleStartChat() {
     setChatError("");
     const otherUserEmail = newChatEmail.trim().toLowerCase();
@@ -790,7 +794,7 @@ export default function EmergencyPage() {
     setNewChatEmail("");
     await loadMessages(String(data._id));
 
-    // tell both users so the new chat shows up right away
+    // Notify both sides so the new conversation shows up immediately.
     try {
       const ably = ablyRef.current || getAblyClient();
       await ably.channels
@@ -809,14 +813,12 @@ export default function EmergencyPage() {
     }
   }
 
-  // open a chat the user clicked on in the list
   async function handleSelectConversation(conversation) {
     setSelectedConversation(conversation);
     await loadMessages(String(conversation._id));
     setChatError("");
   }
 
-  // send a message in the open chat
   async function handleSendMessage() {
     const text = chatText.trim();
     if (!text || !selectedConversation || !email) return;
@@ -852,7 +854,8 @@ export default function EmergencyPage() {
     await loadConversations();
     await loadMessages(String(selectedConversation._id));
 
-    // tell both users so they see the new message right away
+    // Realtime fan-out: conversation channel for the message itself, plus
+    // a per-user "conversation-updated" ping so each side's list refreshes.
     try {
       const ably = ablyRef.current || getAblyClient();
       const convChannel = ably.channels.get(
@@ -877,9 +880,6 @@ export default function EmergencyPage() {
     }
   }
 
-  // what the page looks like
-
-  // show a loading spinner while checking the user is signed in
   if (status === "loading") {
     return (
       <div className="rg-emergency-page d-flex align-items-center justify-content-center min-vh-100">
@@ -894,7 +894,6 @@ export default function EmergencyPage() {
 
       <Container fluid="xxl" className="py-4">
         <Stack gap={3}>
-          {/* top of the page with the title and main buttons */}
           <div className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
             <div>
               <h1 className="rg-page-title fw-bold mb-1 text-danger">
@@ -907,13 +906,11 @@ export default function EmergencyPage() {
               </p>
             </div>
 
-            {/* the row of action buttons */}
             <div className="d-flex flex-wrap gap-2">
               <Button
                 variant="danger"
                 size="lg"
                 onClick={() => {
-                  // user must have live location on before reporting
                   if (!shareLiveLocation) {
                     setError(
                       "You must enable live location before reporting an emergency."
@@ -947,7 +944,7 @@ export default function EmergencyPage() {
             </div>
           </div>
 
-          {/* live location switch and the map color guide */}
+          {/* Live-location toggle + map colour legend. */}
           <Card className="rg-control-bar border-0">
             <Card.Body className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 py-3">
               <Form.Check
@@ -958,7 +955,6 @@ export default function EmergencyPage() {
                 onChange={(e) => setShareLiveLocation(e.target.checked)}
               />
 
-              {/* shows what each color on the map means */}
               <div className="d-flex flex-wrap gap-3 small text-body-secondary">
                 <LegendDot color="#ef4444" label="Emergency active" />
                 <LegendDot color="#3b82f6" label="Nearby rider" />
@@ -968,12 +964,10 @@ export default function EmergencyPage() {
             </Card.Body>
           </Card>
 
-          {/* the map */}
           <div className="rg-map-wrap rounded-4 overflow-hidden shadow">
             <div ref={mapContainerRef} className="rg-map" />
           </div>
 
-          {/* error message that the user can close */}
           {error && (
             <Alert
               variant="danger"
@@ -986,7 +980,6 @@ export default function EmergencyPage() {
             </Alert>
           )}
 
-          {/* the form for sending a new emergency, only shown when needed */}
           {showEmergencyForm && !myActiveIncident && (
             <EmergencyForm
               form={form}
@@ -997,7 +990,6 @@ export default function EmergencyPage() {
             />
           )}
 
-          {/* the card for the user's own active emergency */}
           {myActiveIncident && (
             <ActiveIncidentCard
               incident={myActiveIncident}
@@ -1006,7 +998,6 @@ export default function EmergencyPage() {
             />
           )}
 
-          {/* the lists of active and recent emergencies */}
           <IncidentList
             activeIncidents={activeIncidents}
             recentHistory={recentHistory}
@@ -1019,7 +1010,6 @@ export default function EmergencyPage() {
         </Stack>
       </Container>
 
-      {/* the chat panel on the side */}
       <ChatSidebar
         open={chatOpen}
         onClose={setChatOpen}
@@ -1039,7 +1029,6 @@ export default function EmergencyPage() {
         onSendMessage={handleSendMessage}
       />
 
-      {/* styles just for this page */}
       <style>{`
         .rg-emergency-page {
           background:
@@ -1052,7 +1041,6 @@ export default function EmergencyPage() {
           font-size: clamp(1.8rem, 3.5vw, 2.4rem);
           letter-spacing: -0.02em;
         }
-        /* the card boxes around the page all look the same */
         .rg-control-bar,
         .rg-emergency-panel,
         .rg-active-incident,
@@ -1062,7 +1050,6 @@ export default function EmergencyPage() {
             rgba(15, 23, 42, 0.92) !important;
           border: 1px solid rgba(255, 255, 255, 0.08) !important;
         }
-        /* the active emergency card has a red border */
         .rg-active-incident {
           border-color: rgba(239, 68, 68, 0.35) !important;
           box-shadow: 0 10px 28px rgba(239, 68, 68, 0.12);
@@ -1075,7 +1062,6 @@ export default function EmergencyPage() {
           width: 100%;
           height: 460px;
         }
-        /* make form boxes look right on the dark page */
         .rg-emergency-page .form-control,
         .rg-emergency-page .form-select {
           background: rgba(0, 0, 0, 0.3);
@@ -1092,7 +1078,6 @@ export default function EmergencyPage() {
         .rg-emergency-page .form-control::placeholder {
           color: rgba(255, 255, 255, 0.4);
         }
-        /* make the on/off switch match the orange brand color */
         .rg-emergency-page .form-check-input:checked {
           background-color: var(--bs-primary);
           border-color: var(--bs-primary);
@@ -1101,7 +1086,6 @@ export default function EmergencyPage() {
           box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
           border-color: var(--bs-primary);
         }
-        /* the rows in the active emergency list */
         .rg-incident-item {
           background: rgba(0, 0, 0, 0.25);
           border: 1px solid rgba(255, 255, 255, 0.06);
@@ -1115,7 +1099,6 @@ export default function EmergencyPage() {
   );
 }
 
-// small colored dot used in the map color guide
 function LegendDot({ color, label }) {
   return (
     <span className="d-inline-flex align-items-center gap-2">

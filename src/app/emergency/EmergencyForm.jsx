@@ -1,25 +1,27 @@
-//Emergency form component for creating new emergencies
-
-import {Card,Form,Button,Row,Col,Spinner,} from "react-bootstrap";
+import { Card, Form, Button, Row, Col, Spinner } from "react-bootstrap";
 import { INCIDENT_TYPES, SEVERITIES } from "./constants";
 import { prettify } from "./utils";
-export default function EmergencyForm({form,setForm,submitLoading,onSubmit,onClose,}) 
-{
-  // Helper function to update form state on input changes. Takes the field name and new value, and merges it into the existing form state.
-  const update = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+
+export default function EmergencyForm({
+  form,
+  setForm,
+  submitLoading,
+  onSubmit,
+  onClose,
+}) {
+  const update = (field, value) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
 
   return (
     <Card className="rg-emergency-panel border-0 shadow-sm">
       <Card.Body className="p-4">
-        {/*Title */}
         <h2 className="h4 fw-bold mb-4 d-flex align-items-center gap-2">
           <i className="bi bi-exclamation-octagon-fill text-danger"></i>
           Create Emergency
         </h2>
 
-        {/* Form fields */}
         <Row className="g-3">
-          {/* Who am I reporting for? Self vs third party */}
+          {/* Self vs third-party report */}
           <Col xs={12} md={6}>
             <Form.Group controlId="emergencyReportMode">
               <Form.Label className="small fw-semibold text-body-secondary">
@@ -35,7 +37,6 @@ export default function EmergencyForm({form,setForm,submitLoading,onSubmit,onClo
             </Form.Group>
           </Col>
 
-          {/* Reported for name */}
           {form.reportMode === "third_party" && (
             <Col xs={12} md={6}>
               <Form.Group controlId="emergencyReportedForName">
@@ -51,7 +52,6 @@ export default function EmergencyForm({form,setForm,submitLoading,onSubmit,onClo
             </Col>
           )}
 
-          {/* Incident type */}
           <Col xs={12} md={6}>
             <Form.Group controlId="emergencyType">
               <Form.Label className="small fw-semibold text-body-secondary">
@@ -70,7 +70,6 @@ export default function EmergencyForm({form,setForm,submitLoading,onSubmit,onClo
             </Form.Group>
           </Col>
 
-          {/* Severity — low/medium/high/critical */}
           <Col xs={12} md={6}>
             <Form.Group controlId="emergencySeverity">
               <Form.Label className="small fw-semibold text-body-secondary">
@@ -89,7 +88,6 @@ export default function EmergencyForm({form,setForm,submitLoading,onSubmit,onClo
             </Form.Group>
           </Col>
 
-          {/* Description */}
           <Col xs={12}>
             <Form.Group controlId="emergencyDescription">
               <Form.Label className="small fw-semibold text-body-secondary">
@@ -106,7 +104,7 @@ export default function EmergencyForm({form,setForm,submitLoading,onSubmit,onClo
             </Form.Group>
           </Col>
 
-          {/* Contact phone — shown to anyone who claims the emergency */}
+          {/* Phone is shown to whoever claims the emergency. */}
           <Col xs={12} md={6}>
             <Form.Group controlId="emergencyPhone">
               <Form.Label className="small fw-semibold text-body-secondary">
@@ -121,7 +119,6 @@ export default function EmergencyForm({form,setForm,submitLoading,onSubmit,onClo
             </Form.Group>
           </Col>
 
-          {/* Status flags */}
           <Col xs={12} md={6}>
             <div className="d-flex flex-column gap-2 h-100 justify-content-center pt-md-3">
               <Form.Check
@@ -142,7 +139,6 @@ export default function EmergencyForm({form,setForm,submitLoading,onSubmit,onClo
           </Col>
         </Row>
 
-        {/*Action buttons */}
         <div className="d-flex flex-wrap gap-2 mt-4">
           <Button
             variant="danger"

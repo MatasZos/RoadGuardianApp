@@ -1,11 +1,10 @@
-// Emergency feature: incident cards for active emergencies
 import { Card, Row, Col, Badge, Button } from "react-bootstrap";
 import { STATUS_LABELS } from "./constants";
 import { prettify, formatTime } from "./utils";
 
+// Big red-bordered card the reporter sees while their own emergency is open.
 export default function ActiveIncidentCard({ incident, onResolve, onCancel }) {
   return (
-    // Red glow border to make it visually unmistakable that this is an active emergency that belongs to u
     <Card className="rg-active-incident border-0 shadow">
       <Card.Body className="p-4">
         <div className="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
@@ -23,7 +22,6 @@ export default function ActiveIncidentCard({ incident, onResolve, onCancel }) {
           </Badge>
         </div>
 
-        {/* Info grid */}
         <Row className="g-3 mb-3">
           <InfoCell label="Created" value={formatTime(incident.createdAt)} />
           <InfoCell label="Phone" value={incident.phone || "—"} />
@@ -43,7 +41,6 @@ export default function ActiveIncidentCard({ incident, onResolve, onCancel }) {
           />
         </Row>
 
-        {/*Description*/}
         {incident.description && (
           <div className="mb-3">
             <div className="small fw-semibold text-body-secondary mb-1">
@@ -53,7 +50,6 @@ export default function ActiveIncidentCard({ incident, onResolve, onCancel }) {
           </div>
         )}
 
-        {/*Action buttons: resolve or cancel*/}
         <div className="d-flex flex-wrap gap-2">
           <Button variant="success" onClick={onResolve}>
             <i className="bi bi-check-circle-fill me-2"></i>
@@ -69,7 +65,6 @@ export default function ActiveIncidentCard({ incident, onResolve, onCancel }) {
   );
 }
 
-// reusable component for displaying a label and value in the info gri
 function InfoCell({ label, value, highlight }) {
   return (
     <Col xs={12} sm={6} md={4}>

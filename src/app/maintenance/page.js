@@ -1,4 +1,3 @@
-// Maintenance page
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -7,14 +6,17 @@ import { useSession } from "next-auth/react";
 import { Container, Stack, Spinner, Card, Row, Col } from "react-bootstrap";
 
 import Navbar from "../components/Navbar";
-import { groupByMonth, getPreviewFromForm, buildBikeTaskSummary } from "./utils";
+import {
+  groupByMonth,
+  getPreviewFromForm,
+  buildBikeTaskSummary,
+} from "@/lib/maintenance";
 
 import BikeSelector from "./BikeSelector";
 import StatusBoard from "./StatusBoard";
 import MaintenanceForm from "./MaintenanceForm";
 import MaintenanceTimeline from "./MaintenanceTimeline";
 
-// the empty form values used when the page loads or after saving
 const EMPTY_FORM = {
   type: [],
   date: "",
@@ -23,46 +25,32 @@ const EMPTY_FORM = {
   advisories: "",
 };
 
-// the main maintenance page that the user sees
 export default function MaintenancePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const email = session?.user?.email || null;
 
-  // page values we need to remember
   const [records, setRecords] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
 
-  // bike picker values
   const [selectedBike, setSelectedBike] = useState("");
-  const [bikeSearch, setBikeSearch] = useState({
-    make: "",
-    model: "",
-    year: "",
-  });
+  const [bikeSearch, setBikeSearch] = useState({ make: "", model: "", year: "" });
   const [bikeResults, setBikeResults] = useState([]);
   const [bikeLoading, setBikeLoading] = useState(false);
 
-  // group the records by month so the timeline has section headers
   const monthSections = useMemo(
     () => Object.entries(groupByMonth(records)),
     [records]
   );
 
-  // small list shown under the form telling the user when each task is due next
   const previewList = useMemo(
     () => getPreviewFromForm(form.type, form.km),
     [form.type, form.km]
   );
 
-  // work out a summary for every bike the user has records for
-  const bikeSummaries = useMemo(
-    () => buildBikeTaskSummary(records),
-    [records]
-  );
+  const bikeSummaries = useMemo(() => buildBikeTaskSummary(records), [records]);
 
-  // pick the summary for the bike that is currently selected
   const selectedBikeSummary = useMemo(
     () =>
       selectedBike
@@ -71,14 +59,11 @@ export default function MaintenancePage() {
     [bikeSummaries, selectedBike]
   );
 
-  // send the user to login if they are not signed in
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
+    if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
-  // load the saved bike from the browser and set today's date in the form
+  // Restore the last bike the user picked, and pre-fill the date with today.
   useEffect(() => {
     setSelectedBike(localStorage.getItem("userMotorbike") || "");
     setForm((prev) => ({
@@ -87,12 +72,10 @@ export default function MaintenancePage() {
     }));
   }, []);
 
-  // get the records when we know who the user is
   useEffect(() => {
     fetchRecords();
   }, [email]);
 
-  // get the user's maintenance records from the server
   async function fetchRecords() {
     if (!email) return;
 
@@ -105,12 +88,10 @@ export default function MaintenancePage() {
     setRecords(Array.isArray(data) ? data : []);
   }
 
-  // search for bikes that match what the user typed in
   async function handleBikeSearch() {
     setBikeResults([]);
 
     const { make, model, year } = bikeSearch;
-
     if (!make.trim() && !model.trim()) {
       alert("Enter a Make or Model to search.");
       return;
@@ -122,16 +103,13 @@ export default function MaintenancePage() {
     if (year.trim()) qs.set("year", year.trim());
 
     setBikeLoading(true);
-
     try {
       const res = await fetch(`/api/motorcycles?${qs}`);
       const data = await res.json();
-
       if (!res.ok) {
         alert(data.error || "Bike search failed");
         return;
       }
-
       setBikeResults(Array.isArray(data) ? data : []);
       if (!data?.length) alert("No bikes found.");
     } catch {
@@ -141,7 +119,6 @@ export default function MaintenancePage() {
     }
   }
 
-  // user picked a bike from the search results
   function pickBike(bike) {
     const label = `${bike.make} ${String(bike.model).trim()} (${bike.year})`;
     setSelectedBike(label);
@@ -149,7 +126,6 @@ export default function MaintenancePage() {
     setBikeResults([]);
   }
 
-  // tick or untick a maintenance task in the form
   function toggleTask(task) {
     setForm((prev) => ({
       ...prev,
@@ -159,12 +135,9 @@ export default function MaintenancePage() {
     }));
   }
 
-  // save the form as a new record or an edit to an old one
   async function handleSubmit(e) {
     e.preventDefault();
-
     if (!email) return;
-
     if (!selectedBike) {
       alert("Please select a motorbike before adding a record.");
       return;
@@ -181,16 +154,11 @@ export default function MaintenancePage() {
       }),
     });
 
-    // clear the form and refresh the list
-    setForm({
-      ...EMPTY_FORM,
-      date: new Date().toISOString().slice(0, 10),
-    });
+    setForm({ ...EMPTY_FORM, date: new Date().toISOString().slice(0, 10) });
     setEditingId(null);
     await fetchRecords();
   }
 
-  // load an existing record into the form for editing
   function startEdit(record) {
     setEditingId(record._id);
     setSelectedBike(record.motorbike || "");
@@ -203,18 +171,15 @@ export default function MaintenancePage() {
     });
   }
 
-  // remove a record from the server and the page
   async function deleteRecord(id) {
     await fetch("/api/maintenance", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ _id: id }),
     });
-
     setRecords((prev) => prev.filter((r) => r._id !== id));
   }
 
-  // show a loading spinner while checking the user is signed in
   if (status === "loading") {
     return (
       <div className="rg-maintenance-page d-flex align-items-center justify-content-center min-vh-100">
@@ -229,7 +194,6 @@ export default function MaintenancePage() {
 
       <Container fluid="xxl" className="py-4">
         <Stack gap={3}>
-          {/* top of the page with the title */}
           <div>
             <h1 className="rg-page-title fw-bold mb-1 text-primary">
               <i className="bi bi-tools me-2"></i>
@@ -241,9 +205,7 @@ export default function MaintenancePage() {
             </p>
           </div>
 
-          {/* main two column layout */}
           <Row className="g-3">
-            {/* left side panel showing what is due */}
             <Col xs={12} lg={4}>
               <StatusBoard
                 summary={selectedBikeSummary}
@@ -251,10 +213,8 @@ export default function MaintenancePage() {
               />
             </Col>
 
-            {/* right side with the bike picker, the form and the timeline */}
             <Col xs={12} lg={8}>
               <Stack gap={3}>
-                {/* bike picker card */}
                 <Card className="rg-section-card border-0">
                   <Card.Body>
                     <div className="mb-3">
@@ -277,7 +237,6 @@ export default function MaintenancePage() {
                   </Card.Body>
                 </Card>
 
-                {/* add or edit a record card */}
                 <Card className="rg-section-card border-0">
                   <Card.Body>
                     <div className="mb-3">
@@ -303,7 +262,6 @@ export default function MaintenancePage() {
                   </Card.Body>
                 </Card>
 
-                {/* timeline card with all past records */}
                 <Card className="rg-section-card border-0">
                   <Card.Body>
                     <div className="mb-3">
@@ -328,7 +286,6 @@ export default function MaintenancePage() {
         </Stack>
       </Container>
 
-      {/* styles just for this page */}
       <style>{`
         .rg-maintenance-page {
           background:
@@ -341,20 +298,17 @@ export default function MaintenancePage() {
           font-size: clamp(1.8rem, 3.5vw, 2.4rem);
           letter-spacing: -0.02em;
         }
-        /* the card boxes around the page all look the same */
         .rg-section-card {
           background:
             linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
             rgba(15, 23, 42, 0.92) !important;
           border: 1px solid rgba(255, 255, 255, 0.08) !important;
         }
-        /* timeline can get long so let it scroll inside the card */
         .rg-timeline-scroll {
           max-height: 640px;
           overflow-y: auto;
           padding-right: 4px;
         }
-        /* make form boxes look right on the dark page */
         .rg-maintenance-page .form-control,
         .rg-maintenance-page .form-select {
           background: rgba(0, 0, 0, 0.3);
@@ -371,7 +325,6 @@ export default function MaintenancePage() {
         .rg-maintenance-page .form-control::placeholder {
           color: rgba(255, 255, 255, 0.4);
         }
-        /* checkbox color matches the brand */
         .rg-maintenance-page .form-check-input:checked {
           background-color: var(--bs-primary);
           border-color: var(--bs-primary);

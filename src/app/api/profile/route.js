@@ -1,14 +1,9 @@
-import clientPromise from "../../../lib/mongodb";
+import clientPromise from "@/lib/mongodb";
 import { NextResponse } from "next/server";
-
-function cleanString(value) {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed ? trimmed : null;
-}
+import { cleanEmail } from "@/lib/utils";
 
 export async function GET(req) {
-  const email = cleanString(req.headers.get("x-user-email"))?.toLowerCase();
+  const email = cleanEmail(req.headers.get("x-user-email"));
 
   if (!email) {
     return NextResponse.json({ error: "Email missing" }, { status: 400 });
@@ -16,10 +11,7 @@ export async function GET(req) {
 
   try {
     const client = await clientPromise;
-    const db = client.db("login");
-    const userCollection = db.collection("user");
-
-    const user = await userCollection.findOne({ email });
+    const user = await client.db("login").collection("user").findOne({ email });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });

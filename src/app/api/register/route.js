@@ -1,10 +1,6 @@
-import clientPromise from "../../../lib/mongodb";
+import clientPromise from "@/lib/mongodb";
 import bcrypt from "bcryptjs";
-
-function cleanString(value) {
-  if (typeof value !== "string") return null;
-  return value.trim();
-}
+import { cleanString, cleanEmail } from "@/lib/utils";
 
 function validEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -36,7 +32,7 @@ export async function POST(req) {
   }
 
   const fullName = cleanString(body.fullName);
-  const email = cleanString(body.email)?.toLowerCase();
+  const email = cleanEmail(body.email);
   const password = cleanString(body.password);
   const phone = cleanString(body.phone);
   const accountType = cleanString(body.accountType);
