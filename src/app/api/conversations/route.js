@@ -23,7 +23,8 @@ export async function GET(req) {
     if (!email) {
       return NextResponse.json({ error: "Missing email" }, { status: 400 });
     }
-    // Connect to MongoDB, access the conversations collection, and query for conversations where the user is a participant. 
+    // Connect to MongoDB, access the conversations collection, and query for conversations where the user is a participant.
+    const client = await clientPromise;
     const db = client.db("login");
     const conversations = db.collection("conversations");
     // Find conversations where the user is a participant, sorted by most recently updated. The results are then serialized and returned as JSON.
