@@ -1,5 +1,5 @@
-// Boots up the Mapbox instance for the emergency page and hands back the
-// refs the page needs to drop markers / draw routes on top of it.
+// Boots up the Mapbox instance for the emergency page and hands back the refs
+// the page needs to drop markers / draw routes.
 
 import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
@@ -9,8 +9,10 @@ const DUBLIN_CENTER = [-6.2603, 53.3498];
 export function useMapbox({ status, chatOpen, setError, setFollowMode }) {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
+
+  // These are mutated by the marker hooks, so refs are the easiest option.
   const myMarkerRef = useRef(null);
-  const incidentMarkersRef = useRef({});
+  const emergencyMarkersRef = useRef({});
   const riderMarkersRef = useRef({});
   const followModeRef = useRef(true);
 
@@ -24,6 +26,7 @@ export function useMapbox({ status, chatOpen, setError, setFollowMode }) {
       return;
     }
 
+    // If the page hot-reloads, make sure we don't leave a zombie map behind.
     if (mapRef.current) {
       mapRef.current.remove();
       mapRef.current = null;
@@ -52,18 +55,21 @@ export function useMapbox({ status, chatOpen, setError, setFollowMode }) {
 
     return () => {
       clearTimeout(resizeTimer);
-      Object.values(incidentMarkersRef.current).forEach((m) => m.remove());
-      Object.values(riderMarkersRef.current).forEach((m) => m.remove());
-      incidentMarkersRef.current = {};
+
+      Object.values(emergencyMarkersRef.current).forEach((marker) => marker.remove());
+      Object.values(riderMarkersRef.current).forEach((marker) => marker.remove());
+
+      emergencyMarkersRef.current = {};
       riderMarkersRef.current = {};
+
       myMarkerRef.current?.remove();
       myMarkerRef.current = null;
+
       if (mapRef.current?.getLayer("route")) mapRef.current.removeLayer("route");
       if (mapRef.current?.getSource("route")) mapRef.current.removeSource("route");
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
+
+      mapRef.current?.remove();
+      mapRef.current = null;
     };
   }, [status]);
 
@@ -79,7 +85,7 @@ export function useMapbox({ status, chatOpen, setError, setFollowMode }) {
     mapContainerRef,
     mapRef,
     myMarkerRef,
-    incidentMarkersRef,
+    emergencyMarkersRef,
     riderMarkersRef,
     followModeRef,
   };

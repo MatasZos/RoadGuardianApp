@@ -1,31 +1,28 @@
 import { useEffect } from "react";
 import { getAblyClient } from "@/lib/ablyClient";
 
-// Subscribes to the two global Ably channels that drive the live map:
-//   - "emergencies:live"  — fires whenever any incident is created/updated
-//   - "riders:live"       — fires whenever a rider's broadcast position moves
-// On either event the page re-fetches the relevant list.
-export function useEmergencyRealtime({ email, onIncidentEvent, onRiderEvent }) {
+// Listen for live updates and refresh the lists when something changes.
+export function useEmergencyRealtime({ email, onEmergencyEvent, onRiderEvent }) {
   useEffect(() => {
     if (!email) return;
 
     const ably = getAblyClient();
-    const emergencies = ably.channels.get("emergencies:live");
-    const riders = ably.channels.get("riders:live");
+    const emergencyChannel = ably.channels.get("emergencies:live");
+    const riderChannel = ably.channels.get("riders:live");
 
-    const incidentHandler = (msg) => {
-      if (msg.name === "emergency-updated") onIncidentEvent?.();
+    const handleEmergencyEvent = (msg) => {
+      if (msg.name === "emergency-updated") onEmergencyEvent?.();
     };
-    const riderHandler = (msg) => {
+    const handleRiderEvent = (msg) => {
       if (msg.name === "live-location-updated") onRiderEvent?.();
     };
 
-    emergencies.subscribe(incidentHandler);
-    riders.subscribe(riderHandler);
+    emergencyChannel.subscribe(handleEmergencyEvent);
+    riderChannel.subscribe(handleRiderEvent);
 
     return () => {
-      emergencies.unsubscribe(incidentHandler);
-      riders.unsubscribe(riderHandler);
+      emergencyChannel.unsubscribe(handleEmergencyEvent);
+      riderChannel.unsubscribe(handleRiderEvent);
     };
   }, [email]);
 }

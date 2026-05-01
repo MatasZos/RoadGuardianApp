@@ -3,17 +3,55 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getAblyRest } from "@/lib/ablyServer";
+import { ObjectId } from "mongodb";
+
+// Keep the public status list small and consistent. Older values still show up
+// in the database from earlier iterations of the project, so we normalise them
+// on read/update instead of breaking old records.
+const EMERGENCY_STATUS = {
+  REPORTED: "reported",
+  HELPER_ASSIGNED: "helper_assigned",
+  ON_THE_WAY: "on_the_way",
+  ARRIVED: "arrived",
+  RESOLVED: "resolved",
+  CANCELLED: "cancelled",
+};
+
+const LEGACY_STATUS_NORMALISATION = {
+  dispatching: EMERGENCY_STATUS.REPORTED,
+  rider_responding: EMERGENCY_STATUS.HELPER_ASSIGNED,
+  help_on_the_way: EMERGENCY_STATUS.ON_THE_WAY,
+  assistance_received: EMERGENCY_STATUS.ARRIVED,
+};
 
 const ACTIVE_STATUSES = [
-  "reported",
+  // Current statuses
+  EMERGENCY_STATUS.REPORTED,
+  EMERGENCY_STATUS.HELPER_ASSIGNED,
+  EMERGENCY_STATUS.ON_THE_WAY,
+  EMERGENCY_STATUS.ARRIVED,
+  // Legacy statuses (kept for duplicate-emergency checks)
   "dispatching",
   "rider_responding",
   "help_on_the_way",
   "assistance_received",
 ];
 
-function isClosed(status) {
-  return status === "resolved" || status === "cancelled";
+function isClosedStatus(status) {
+  return status === EMERGENCY_STATUS.RESOLVED || status === EMERGENCY_STATUS.CANCELLED;
+}
+
+function normaliseStatus(status) {
+  if (!status) return EMERGENCY_STATUS.REPORTED;
+  return LEGACY_STATUS_NORMALISATION[status] ?? status;
+}
+
+function toClientEmergency(doc) {
+  return {
+    ...doc,
+    _id: String(doc._id),
+    status: normaliseStatus(doc.status),
+  };
 }
 
 export async function GET() {
@@ -28,10 +66,7 @@ export async function GET() {
       .toArray();
 
     return NextResponse.json({
-      emergencies: items.map((item) => ({
-        ...item,
-        _id: String(item._id),
-      })),
+      emergencies: items.map(toClientEmergency),
     });
   } catch (e) {
     console.error("EMERGENCY GET ERROR:", e);
@@ -137,6 +172,9 @@ export async function POST(req) {
       helperUserName: null,
       helperUserId: null,
 
+      helperAssignedAt: null,
+      onTheWayAt: null,
+      // Kept for older UI code that still reads this field.
       routeStartedAt: null,
       arrivedAt: null,
       resolvedAt: null,
@@ -191,7 +229,7 @@ export async function PATCH(req) {
     const emergencies = db.collection("emergencies");
 
     const emergency = await emergencies.findOne({
-      _id: new (await import("mongodb")).ObjectId(emergencyId),
+      _id: new ObjectId(emergencyId),
     });
 
     if (!emergency) {
@@ -199,63 +237,129 @@ export async function PATCH(req) {
     }
 
     const now = new Date();
+    const viewerEmail = session.user.email;
+    const viewerName = session.user.name || "Rider";
+
+    const isReporter = emergency.userEmail === viewerEmail;
+    const isHelper = emergency.helperUserEmail === viewerEmail;
+    const isClosed = isClosedStatus(normaliseStatus(emergency.status));
+
+    if (isClosed && action !== "update-location") {
+      return NextResponse.json(
+        { error: "This emergency is already closed." },
+        { status: 400 }
+      );
+    }
+
     let update = {};
 
     switch (action) {
       case "claim-help":
+      case "assign-helper": {
+        if (isReporter) {
+          return NextResponse.json(
+            { error: "You can't assign yourself as the helper." },
+            { status: 400 }
+          );
+        }
+        if (emergency.helperUserEmail && !isHelper) {
+          return NextResponse.json(
+            { error: "A helper is already assigned to this emergency." },
+            { status: 400 }
+          );
+        }
         update = {
-          status: "rider_responding",
-          helperUserEmail: session.user.email,
-          helperUserName: session.user.name,
-          latestUpdate: "Helper assigned",
+          status: EMERGENCY_STATUS.HELPER_ASSIGNED,
+          helperUserEmail: viewerEmail,
+          helperUserName: viewerName,
+          helperAssignedAt: now,
+          latestUpdate: `${viewerName} offered to help`,
           updatedAt: now,
         };
         break;
+      }
 
       case "route-started":
+      case "on-the-way": {
+        if (!isHelper) {
+          return NextResponse.json(
+            { error: "Only the assigned helper can mark 'On The Way'." },
+            { status: 403 }
+          );
+        }
         update = {
-          status: "help_on_the_way",
+          status: EMERGENCY_STATUS.ON_THE_WAY,
+          onTheWayAt: now,
           routeStartedAt: now,
           latestUpdate: "Helper is on the way",
           updatedAt: now,
         };
         break;
+      }
 
       case "arrived":
+      case "mark-arrived": {
+        if (!isHelper) {
+          return NextResponse.json(
+            { error: "Only the assigned helper can mark 'Arrived'." },
+            { status: 403 }
+          );
+        }
         update = {
-          status: "assistance_received",
+          status: EMERGENCY_STATUS.ARRIVED,
           arrivedAt: now,
           latestUpdate: "Helper has arrived",
           updatedAt: now,
         };
         break;
+      }
 
       case "resolve":
+      case "mark-resolved": {
+        if (!isHelper && !isReporter) {
+          return NextResponse.json(
+            { error: "Only the reporter or helper can resolve this emergency." },
+            { status: 403 }
+          );
+        }
         update = {
-          status: "resolved",
+          status: EMERGENCY_STATUS.RESOLVED,
           resolvedAt: now,
-          latestUpdate: "Incident resolved",
+          latestUpdate: "Emergency resolved",
+          shareLiveLocation: false,
           updatedAt: now,
         };
         break;
+      }
 
       case "cancel":
+      case "cancel-request": {
+        if (!isReporter) {
+          return NextResponse.json(
+            { error: "Only the reporter can cancel this request." },
+            { status: 403 }
+          );
+        }
         update = {
-          status: "cancelled",
+          status: EMERGENCY_STATUS.CANCELLED,
           cancelledAt: now,
           latestUpdate: "Request cancelled",
+          shareLiveLocation: false,
           updatedAt: now,
         };
         break;
+      }
 
       case "update-location":
-        if (typeof lat === "number" && typeof lng === "number") {
-          update = {
-            lat,
-            lng,
-            updatedAt: now,
-          };
+        if (!isReporter) {
+          return NextResponse.json(
+            { error: "Only the reporter can update the emergency location." },
+            { status: 403 }
+          );
         }
+        if (!emergency.shareLiveLocation) break;
+        if (typeof lat !== "number" || typeof lng !== "number") break;
+        update = { lat, lng, updatedAt: now };
         break;
 
       default:
@@ -276,16 +380,13 @@ export async function PATCH(req) {
       const ably = getAblyRest();
       await ably.channels.get("emergencies:live").publish("emergency-updated", {
         action,
-        emergency: {
-          ...updated,
-          _id: String(updated._id),
-        },
+        emergency: toClientEmergency(updated),
       });
     } catch (err) {
       console.error("ABLY PATCH publish error:", err);
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, emergency: toClientEmergency(updated) });
   } catch (e) {
     console.error("EMERGENCY PATCH ERROR:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
