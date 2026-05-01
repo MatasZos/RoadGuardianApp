@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Container, Row, Col, Card, Spinner } from "react-bootstrap";
 import Navbar from "../components/Navbar";
-import AssistantChat from "../components/AssistantChat";
+import AiChat from "../components/AiChat";
 
 const actions = [
   {
@@ -97,7 +97,7 @@ export default function HomePage() {
         </Row>
 
         <h2 className="h5 fw-bold mb-3">Assistant</h2>
-        <AssistantChat />
+        <AiChat />
       </Container>
 
       <style>{`

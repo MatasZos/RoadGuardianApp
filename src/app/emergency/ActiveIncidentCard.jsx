@@ -1,61 +1,59 @@
 import { Card, Row, Col, Badge, Button } from "react-bootstrap";
-import { EMERGENCY_STATUS_LABELS } from "./emergencyConfig";
-import { humaniseLabel, formatDateTime } from "./emergencyHelpers";
+import { STATUS_LABELS } from "./constants";
+import { prettify, formatTime } from "./utils";
 
-// Big red-bordered card the reporter sees while their own emergency is still active.
-export default function ActiveEmergencyCard({ emergency, onResolve, onCancel }) {
+// Big red-bordered card the reporter sees while their own emergency is open.
+export default function ActiveIncidentCard({ incident, onResolve, onCancel }) {
   return (
-    <Card className="rg-active-emergency border-0 shadow">
+    <Card className="rg-active-incident border-0 shadow">
       <Card.Body className="p-4">
         <div className="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
           <div>
             <h2 className="h4 fw-bold text-danger mb-1">
               <i className="bi bi-exclamation-octagon-fill me-2"></i>
-              {humaniseLabel(emergency.type)}
+              {prettify(incident.type)}
             </h2>
             <p className="text-body-secondary mb-0">
-              {EMERGENCY_STATUS_LABELS[emergency.status] || emergency.status}
+              {STATUS_LABELS[incident.status] || incident.status}
             </p>
           </div>
           <Badge bg="danger" className="px-3 py-2 fs-6">
-            {humaniseLabel(emergency.severity)}
+            {prettify(incident.severity)}
           </Badge>
         </div>
 
-        {/* Quick info so the reporter can sanity-check the details they sent. */}
         <Row className="g-3 mb-3">
-          <InfoCell label="Created" value={formatDateTime(emergency.createdAt)} />
-          <InfoCell label="Phone" value={emergency.phone || "—"} />
+          <InfoCell label="Created" value={formatTime(incident.createdAt)} />
+          <InfoCell label="Phone" value={incident.phone || "—"} />
           <InfoCell
             label="Injured"
-            value={emergency.injured ? "Yes" : "No"}
-            highlight={emergency.injured}
+            value={incident.injured ? "Yes" : "No"}
+            highlight={incident.injured}
           />
           <InfoCell
             label="Bike rideable"
-            value={emergency.bikeRideable ? "Yes" : "No"}
+            value={incident.bikeRideable ? "Yes" : "No"}
           />
-          <InfoCell label="Latest update" value={emergency.latestUpdate || "—"} />
+          <InfoCell label="Latest update" value={incident.latestUpdate || "—"} />
           <InfoCell
             label="Helper"
-            value={emergency.helperUserName || "No rider assigned yet"}
+            value={incident.helperUserName || "No rider assigned yet"}
           />
         </Row>
 
-        {emergency.description && (
+        {incident.description && (
           <div className="mb-3">
             <div className="small fw-semibold text-body-secondary mb-1">
               DESCRIPTION
             </div>
-            <p className="text-body mb-0">{emergency.description}</p>
+            <p className="text-body mb-0">{incident.description}</p>
           </div>
         )}
 
-        {/* The two actions the reporter always needs. */}
         <div className="d-flex flex-wrap gap-2">
           <Button variant="success" onClick={onResolve}>
             <i className="bi bi-check-circle-fill me-2"></i>
-            Mark Resolved
+            Assistance Received / Resolve
           </Button>
           <Button variant="outline-danger" onClick={onCancel}>
             <i className="bi bi-x-circle-fill me-2"></i>

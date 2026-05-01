@@ -1,63 +1,36 @@
-# RoadGuardian
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-RoadGuardian is a Next.js + MongoDB group project aimed at making it easier for riders to:
+## Getting Started
 
-- log maintenance
-- store key documents
-- share live location (opt-in)
-- report emergencies and coordinate help on a live map
-- message other riders during an emergency
-- use a simple “assistant” chat for quick tips
+First, run the development server:
 
-## Emergency Workflow (Statuses)
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-Emergencies move through a small set of statuses so the UI stays clear:
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-- Reported
-- Helper Assigned
-- On The Way
-- Arrived
-- Resolved
-- Cancelled
+You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
 
-Reporter actions:
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-- Cancel Request
-- Mark Resolved
+## Learn More
 
-Helper actions:
+To learn more about Next.js, take a look at the following resources:
 
-- I’m On The Way
-- Mark Arrived
-- Mark Resolved
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-When an emergency is resolved/cancelled it disappears from the live map and active list, clears any route line, and shows in recent history.
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Local Setup
+## Deploy on Vercel
 
-1. Install dependencies: `npm install`
-2. Create `.env.local` (see below)
-3. Run the dev server: `npm run dev`
-4. Open `http://localhost:3000`
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-## Environment Variables
-
-Required for core app:
-
-- `MONGODB_URI`
-- `NEXTAUTH_SECRET`
-
-Required for real-time features:
-
-- `ABLY_API_KEY`
-
-Required for the emergency map:
-
-- `NEXT_PUBLIC_MAPBOX_TOKEN`
-
-Optional (only needed for certain pages/features):
-
-- `OPENROUTER_API_KEY` (assistant chat)
-- `OPENROUTER_MODEL` (assistant chat model override)
-- `OPENROUTER_SITE_URL` / `OPENROUTER_APP_NAME` (assistant chat headers)
-- `API_NINJAS_KEY` (motorcycle lookup)
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

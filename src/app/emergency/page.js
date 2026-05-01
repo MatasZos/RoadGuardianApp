@@ -16,19 +16,19 @@ import {
 } from "react-bootstrap";
 
 import Navbar from "../components/Navbar";
-import { isEmergencyClosed } from "./emergencyHelpers";
+import { isClosedStatus } from "./utils";
 
 import { useMapbox } from "./hooks/useMapbox";
 import { useGeolocation, getLiveCoords } from "./hooks/useGeolocation";
 import { useMapRoute } from "./hooks/useMapRoute";
-import { useEmergencyMarkers } from "./hooks/useEmergencyMarkers";
+import { useIncidentMarkers } from "./hooks/useIncidentMarkers";
 import { useRiderMarkers } from "./hooks/useRiderMarkers";
 import { useEmergencyRealtime } from "./hooks/useEmergencyRealtime";
 import { useEmergencyChat } from "./hooks/useEmergencyChat";
 
 import EmergencyForm from "./EmergencyForm";
-import ActiveEmergencyCard from "./ActiveEmergencyCard";
-import EmergencyList from "./EmergencyList";
+import ActiveIncidentCard from "./ActiveIncidentCard";
+import IncidentList from "./IncidentList";
 import ChatSidebar from "./ChatSidebar";
 
 // Don't push location updates more than once every five seconds.
@@ -53,21 +53,20 @@ export default function EmergencyPage() {
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState("");
   const [followMode, setFollowMode] = useState(true);
-  const [emergencies, setEmergencies] = useState([]);
+  const [incidents, setIncidents] = useState([]);
   const [liveRiders, setLiveRiders] = useState([]);
-  const [loadingEmergencies, setLoadingEmergencies] = useState(false);
+  const [loadingIncidents, setLoadingIncidents] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [showEmergencyForm, setShowEmergencyForm] = useState(false);
   const [shareLiveLocation, setShareLiveLocation] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
-  const [routeTarget, setRouteTarget] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
 
   const {
     mapContainerRef,
     mapRef,
     myMarkerRef,
-    emergencyMarkersRef,
+    incidentMarkersRef,
     riderMarkersRef,
     followModeRef,
   } = useMapbox({ status, chatOpen, setError, setFollowMode });
@@ -76,45 +75,33 @@ export default function EmergencyPage() {
   const lastEmergencyPushRef = useRef(0);
   const lastLivePushRef = useRef(0);
 
-  const activeEmergencies = useMemo(
-    () => emergencies.filter((emergency) => !isEmergencyClosed(emergency.status)),
-    [emergencies]
+  const activeIncidents = useMemo(
+    () => incidents.filter((i) => !isClosedStatus(i.status)),
+    [incidents]
   );
   const recentHistory = useMemo(
-    () => emergencies.filter((emergency) => isEmergencyClosed(emergency.status)).slice(0, 8),
-    [emergencies]
+    () => incidents.filter((i) => isClosedStatus(i.status)).slice(0, 8),
+    [incidents]
   );
-
-  // If we were routing to an emergency that gets resolved/cancelled elsewhere,
-  // clear the line so the map doesn't feel "stuck" on old info.
-  useEffect(() => {
-    if (routeTarget?.type !== "emergency") return;
-    const stillActive = activeEmergencies.some(
-      (emergency) => String(emergency._id) === routeTarget.id
-    );
-    if (stillActive) return;
-    clearRoute();
-    setRouteTarget(null);
-  }, [activeEmergencies, routeTarget, clearRoute]);
 
   // The user's own active emergency (if any). Drives the camera, the
   // active-incident banner, and the throttled location push.
-  const myActiveEmergency = useMemo(
+  const myActiveIncident = useMemo(
     () =>
-      emergencies.find(
-        (emergency) =>
-          emergency.userEmail === email &&
-          emergency.reportMode === "self" &&
-          !isEmergencyClosed(emergency.status)
+      incidents.find(
+        (i) =>
+          i.userEmail === email &&
+          i.reportMode === "self" &&
+          !isClosedStatus(i.status)
       ),
-    [emergencies, email]
+    [incidents, email]
   );
 
   const { coords, setCoords } = useGeolocation({
     email,
     onPosition: ({ lat, lng }) => {
       myMarkerRef.current?.setLngLat([lng, lat]);
-      if (myActiveEmergency) {
+      if (myActiveIncident) {
         updateDrivingCamera(lat, lng);
         maybeSendEmergencyLocationUpdate(lat, lng);
       }
@@ -132,20 +119,14 @@ export default function EmergencyPage() {
 
   const chat = useEmergencyChat({ email, setChatOpen });
 
-  async function routeToEmergency(emergency) {
-    if (!emergency) return;
-    setRouteTarget({ type: "emergency", id: String(emergency._id) });
-    await drawRouteToUser(emergency.lng, emergency.lat);
-  }
-
-  useEmergencyMarkers({
+  useIncidentMarkers({
     mapRef,
-    markersRef: emergencyMarkersRef,
-    emergencies: activeEmergencies,
+    markersRef: incidentMarkersRef,
+    incidents: activeIncidents,
     coords,
     email,
-    onUpdateEmergency: updateEmergency,
-    onDrawRoute: routeToEmergency,
+    onUpdateIncident: updateIncident,
+    onDrawRoute: drawRouteToUser,
     onMessageUser: chat.startOrOpenConversation,
   });
 
@@ -153,7 +134,7 @@ export default function EmergencyPage() {
     mapRef,
     markersRef: riderMarkersRef,
     riders: liveRiders,
-    activeEmergencies,
+    activeIncidents,
     coords,
     email,
     onDrawRoute: drawRouteToUser,
@@ -162,7 +143,7 @@ export default function EmergencyPage() {
 
   useEmergencyRealtime({
     email,
-    onEmergencyEvent: loadEmergencies,
+    onIncidentEvent: fetchIncidents,
     onRiderEvent: fetchLiveRiders,
   });
 
@@ -230,14 +211,14 @@ export default function EmergencyPage() {
 
   useEffect(() => {
     if (!email) return;
-    loadEmergencies();
+    fetchIncidents();
     fetchLiveRiders();
   }, [email]);
 
   // ── Server actions ───────────────────────────────────────────────────────
 
-  async function loadEmergencies() {
-    setLoadingEmergencies(true);
+  async function fetchIncidents() {
+    setLoadingIncidents(true);
     try {
       const res = await fetch("/api/emergency", { cache: "no-store" });
       const data = await res.json().catch(() => ({}));
@@ -245,11 +226,11 @@ export default function EmergencyPage() {
         setError(data?.error || "Failed to fetch emergencies.");
         return;
       }
-      setEmergencies(Array.isArray(data.emergencies) ? data.emergencies : []);
+      setIncidents(Array.isArray(data.emergencies) ? data.emergencies : []);
     } catch {
       setError("Failed to fetch emergencies.");
     } finally {
-      setLoadingEmergencies(false);
+      setLoadingIncidents(false);
     }
   }
 
@@ -264,7 +245,7 @@ export default function EmergencyPage() {
   }
 
   async function maybeSendEmergencyLocationUpdate(lat, lng) {
-    if (!myActiveEmergency?.shareLiveLocation) return;
+    if (!myActiveIncident?.shareLiveLocation) return;
     const now = Date.now();
     if (now - lastEmergencyPushRef.current < LOCATION_PUSH_INTERVAL_MS) return;
     lastEmergencyPushRef.current = now;
@@ -273,7 +254,7 @@ export default function EmergencyPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          emergencyId: myActiveEmergency._id,
+          emergencyId: myActiveIncident._id,
           action: "update-location",
           lat,
           lng,
@@ -300,7 +281,7 @@ export default function EmergencyPage() {
     }
   }
 
-  async function updateEmergency(emergencyId, action) {
+  async function updateIncident(emergencyId, action) {
     try {
       const res = await fetch("/api/emergency", {
         method: "PATCH",
@@ -309,31 +290,28 @@ export default function EmergencyPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || "Failed to update emergency.");
+        setError(data.error || "Failed to update incident.");
         return;
       }
 
-      await loadEmergencies();
+      await fetchIncidents();
 
       // When the user starts helping, pop the chat open with a preset message.
-      if (action === "assign-helper" || action === "on-the-way") {
+      if (action === "claim-help" || action === "route-started") {
         setChatOpen(true);
-        const updatedEmergency = data?.emergency;
-        if (updatedEmergency?.userEmail) {
+        const incident = data?.emergency;
+        if (incident?.userEmail) {
           const presetText =
-            action === "assign-helper"
-              ? "I've picked up your emergency and I'm heading your way."
+            action === "claim-help"
+              ? "I've claimed your incident and I'm helping."
               : "I'm on the way.";
-          await chat.startOrOpenConversation(updatedEmergency.userEmail, presetText);
+          await chat.startOrOpenConversation(incident.userEmail, presetText);
         }
       }
 
-      if (action === "mark-resolved" || action === "cancel-request") {
-        clearRoute();
-        setRouteTarget(null);
-      }
+      if (action === "resolve" || action === "cancel") clearRoute();
     } catch {
-      setError("Failed to update emergency.");
+      setError("Failed to update incident.");
     }
   }
 
@@ -371,7 +349,7 @@ export default function EmergencyPage() {
       }
 
       setShowEmergencyForm(false);
-      await loadEmergencies();
+      await fetchIncidents();
     } catch {
       setError("Could not create emergency.");
     } finally {
@@ -411,7 +389,7 @@ export default function EmergencyPage() {
                 Emergency Hub
               </h1>
               <p className="text-body-secondary mb-0">
-                Report emergencies, see nearby riders, and coordinate support live.
+                Report incidents, see nearby riders, and coordinate support live.
               </p>
             </div>
 
@@ -420,10 +398,10 @@ export default function EmergencyPage() {
                 variant="danger"
                 size="lg"
                 onClick={handleReportClick}
-                disabled={Boolean(myActiveEmergency)}
+                disabled={Boolean(myActiveIncident)}
               >
                 <i className="bi bi-exclamation-octagon-fill me-2"></i>
-                {myActiveEmergency ? "Active Emergency Exists" : "Report Emergency"}
+                {myActiveIncident ? "Active Emergency Exists" : "Report Emergency"}
               </Button>
               <Button variant="outline-light" onClick={clearRoute}>
                 <i className="bi bi-x-lg me-2"></i>Clear Route
@@ -469,7 +447,7 @@ export default function EmergencyPage() {
             </Alert>
           )}
 
-          {showEmergencyForm && !myActiveEmergency && (
+          {showEmergencyForm && !myActiveIncident && (
             <EmergencyForm
               form={form}
               setForm={setForm}
@@ -479,25 +457,21 @@ export default function EmergencyPage() {
             />
           )}
 
-          {myActiveEmergency && (
-            <ActiveEmergencyCard
-              emergency={myActiveEmergency}
-              onResolve={() =>
-                updateEmergency(myActiveEmergency._id, "mark-resolved")
-              }
-              onCancel={() =>
-                updateEmergency(myActiveEmergency._id, "cancel-request")
-              }
+          {myActiveIncident && (
+            <ActiveIncidentCard
+              incident={myActiveIncident}
+              onResolve={() => updateIncident(myActiveIncident._id, "resolve")}
+              onCancel={() => updateIncident(myActiveIncident._id, "cancel")}
             />
           )}
 
-          <EmergencyList
-            activeEmergencies={activeEmergencies}
+          <IncidentList
+            activeIncidents={activeIncidents}
             recentHistory={recentHistory}
-            loadingEmergencies={loadingEmergencies}
+            loadingIncidents={loadingIncidents}
             email={email}
-            onRouteToEmergency={routeToEmergency}
-            onUpdateEmergency={updateEmergency}
+            onRoute={drawRouteToUser}
+            onUpdateIncident={updateIncident}
             onMessage={chat.startOrOpenConversation}
           />
         </Stack>
@@ -535,14 +509,14 @@ export default function EmergencyPage() {
         }
         .rg-control-bar,
         .rg-emergency-panel,
-        .rg-active-emergency,
+        .rg-active-incident,
         .rg-list-panel {
           background:
             linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
             rgba(15, 23, 42, 0.92) !important;
           border: 1px solid rgba(255, 255, 255, 0.08) !important;
         }
-        .rg-active-emergency {
+        .rg-active-incident {
           border-color: rgba(239, 68, 68, 0.35) !important;
           box-shadow: 0 10px 28px rgba(239, 68, 68, 0.12);
         }
@@ -578,7 +552,7 @@ export default function EmergencyPage() {
           box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
           border-color: var(--bs-primary);
         }
-        .rg-emergency-item {
+        .rg-incident-item {
           background: rgba(0, 0, 0, 0.25);
           border: 1px solid rgba(255, 255, 255, 0.06);
         }

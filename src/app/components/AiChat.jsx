@@ -1,31 +1,37 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Card, Form, Button, InputGroup, Spinner, Stack } from "react-bootstrap";
+import {
+  Card,
+  Form,
+  Button,
+  InputGroup,
+  Spinner,
+  Stack,
+} from "react-bootstrap";
 
-export default function AssistantChat() {
+export default function AiChat() {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content:
-        "Hey — I'm your RoadGuardian assistant. Ask me anything about your bike, the road, or what to do in an emergency.",
+      content: "Hey — I'm your RoadGuardian assistant. Ask me anything about your bike, the road, or what to do in an emergency.",
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
 
-  // Keep the latest message in view.
   useEffect(() => {
-    if (!scrollRef.current) return;
-    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
   }, [messages, loading]);
 
-  async function sendMessage() {
+  async function send() {
     const text = input.trim();
     if (!text || loading) return;
 
-    setMessages((current) => [...current, { role: "user", content: text }]);
+    setMessages((m) => [...m, { role: "user", content: text }]);
     setInput("");
     setLoading(true);
 
@@ -39,8 +45,8 @@ export default function AssistantChat() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setMessages((current) => [
-          ...current,
+        setMessages((m) => [
+          ...m,
           {
             role: "assistant",
             content: data.error || "Sorry, the AI is unreachable right now.",
@@ -50,13 +56,10 @@ export default function AssistantChat() {
         return;
       }
 
-      setMessages((current) => [
-        ...current,
-        { role: "assistant", content: data.text },
-      ]);
-    } catch {
-      setMessages((current) => [
-        ...current,
+      setMessages((m) => [...m, { role: "assistant", content: data.text }]);
+    } catch (err) {
+      setMessages((m) => [
+        ...m,
         {
           role: "assistant",
           content: "Network error — check your connection and try again.",
@@ -71,7 +74,7 @@ export default function AssistantChat() {
   function handleKeyDown(e) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      send();
     }
   }
 
@@ -83,7 +86,9 @@ export default function AssistantChat() {
         </div>
         <div>
           <div className="fw-semibold">AI Assistant</div>
-          <small className="text-body-secondary">Quick help for riders</small>
+          <small className="text-body-secondary">
+            Quick help for riders
+          </small>
         </div>
       </Card.Header>
 
@@ -94,10 +99,9 @@ export default function AssistantChat() {
           style={{ height: 280, overflowY: "auto" }}
         >
           <Stack gap={3}>
-            {messages.map((message, i) => (
-              <ChatBubble key={i} message={message} />
+            {messages.map((m, i) => (
+              <ChatBubble key={i} message={m} />
             ))}
-
             {loading && (
               <div className="d-flex align-items-center gap-2 text-body-secondary small">
                 <Spinner animation="grow" size="sm" />
@@ -123,7 +127,7 @@ export default function AssistantChat() {
           />
           <Button
             variant="primary"
-            onClick={sendMessage}
+            onClick={send}
             disabled={loading || !input.trim()}
           >
             {loading ? (
@@ -160,14 +164,16 @@ function ChatBubble({ message }) {
   const isError = message.isError;
 
   return (
-    <div className={`d-flex ${isUser ? "justify-content-end" : "justify-content-start"}`}>
+    <div
+      className={`d-flex ${isUser ? "justify-content-end" : "justify-content-start"}`}
+    >
       <div
         className={`px-3 py-2 rounded-3 ${
           isUser
             ? "bg-primary text-white"
             : isError
-              ? "bg-danger-subtle text-danger-emphasis border border-danger-subtle"
-              : "bg-body-tertiary"
+            ? "bg-danger-subtle text-danger-emphasis border border-danger-subtle"
+            : "bg-body-tertiary"
         }`}
         style={{ maxWidth: "85%", whiteSpace: "pre-wrap" }}
       >

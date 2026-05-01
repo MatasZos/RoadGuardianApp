@@ -1,6 +1,6 @@
 import { Card, Form, Button, Row, Col, Spinner } from "react-bootstrap";
-import { EMERGENCY_TYPES, EMERGENCY_SEVERITIES } from "./emergencyConfig";
-import { humaniseLabel } from "./emergencyHelpers";
+import { INCIDENT_TYPES, SEVERITIES } from "./constants";
+import { prettify } from "./utils";
 
 export default function EmergencyForm({
   form,
@@ -55,15 +55,15 @@ export default function EmergencyForm({
           <Col xs={12} md={6}>
             <Form.Group controlId="emergencyType">
               <Form.Label className="small fw-semibold text-body-secondary">
-                EMERGENCY TYPE
+                INCIDENT TYPE
               </Form.Label>
               <Form.Select
                 value={form.type}
                 onChange={(e) => update("type", e.target.value)}
               >
-                {EMERGENCY_TYPES.map((t) => (
+                {INCIDENT_TYPES.map((t) => (
                   <option key={t} value={t}>
-                    {humaniseLabel(t)}
+                    {prettify(t)}
                   </option>
                 ))}
               </Form.Select>
@@ -79,9 +79,9 @@ export default function EmergencyForm({
                 value={form.severity}
                 onChange={(e) => update("severity", e.target.value)}
               >
-                {EMERGENCY_SEVERITIES.map((level) => (
+                {SEVERITIES.map((level) => (
                   <option key={level} value={level}>
-                    {humaniseLabel(level)}
+                    {prettify(level)}
                   </option>
                 ))}
               </Form.Select>

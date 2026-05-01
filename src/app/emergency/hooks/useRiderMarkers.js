@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import mapboxgl from "mapbox-gl";
-import { distanceKmBetween } from "../emergencyHelpers";
-import { buildRiderPopupHtml } from "../emergencyPopups";
+import { haversineKm } from "../utils";
+import { buildRiderPopupHTML } from "../popups";
 
 // Same marker-management pattern as incidents, but for nearby riders who
 // have toggled "share my live location" on. Riders who currently have an
@@ -10,7 +10,7 @@ export function useRiderMarkers({
   mapRef,
   markersRef,
   riders,
-  activeEmergencies,
+  activeIncidents,
   coords,
   email,
   onDrawRoute,
@@ -19,19 +19,19 @@ export function useRiderMarkers({
   useEffect(() => {
     if (!mapRef.current) return;
 
-    const emergencyEmails = new Set(activeEmergencies.map((e) => e.userEmail));
+    const incidentEmails = new Set(activeIncidents.map((i) => i.userEmail));
     const seenIds = new Set();
 
     riders.forEach((rider) => {
       if (!rider?.enabled || rider.userEmail === email) return;
-      if (emergencyEmails.has(rider.userEmail)) return;
+      if (incidentEmails.has(rider.userEmail)) return;
       if (typeof rider.lat !== "number" || typeof rider.lng !== "number") return;
 
       const id = String(rider._id);
       seenIds.add(id);
 
       const distanceKm = coords
-        ? distanceKmBetween(coords, { lat: rider.lat, lng: rider.lng })
+        ? haversineKm(coords, { lat: rider.lat, lng: rider.lng })
         : null;
 
       if (markersRef.current[id]) {
@@ -40,7 +40,7 @@ export function useRiderMarkers({
       }
 
       const popup = new mapboxgl.Popup().setHTML(
-        buildRiderPopupHtml({ rider, distanceKm })
+        buildRiderPopupHTML({ rider, distanceKm })
       );
       const marker = new mapboxgl.Marker({ color: "#3b82f6" })
         .setLngLat([rider.lng, rider.lat])
@@ -78,5 +78,5 @@ export function useRiderMarkers({
         delete markersRef.current[id];
       }
     });
-  }, [riders, activeEmergencies, coords, email]);
+  }, [riders, activeIncidents, coords, email]);
 }
