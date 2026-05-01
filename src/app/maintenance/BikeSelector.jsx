@@ -1,7 +1,5 @@
-// the search box and list for picking a bike
 import { Form, Button, Row, Col, ListGroup, Card, Spinner } from "react-bootstrap";
 
-// shows what bike is picked and lets the user search for a different one
 export default function BikeSelector({
   selectedBike,
   bikeSearch,
@@ -13,7 +11,6 @@ export default function BikeSelector({
 }) {
   return (
     <div>
-      {/* shows the bike that is currently picked */}
       <Card className="rg-selected-bike border-0 mb-3">
         <Card.Body className="py-3">
           <div className="text-uppercase small text-body-secondary fw-semibold">
@@ -29,7 +26,6 @@ export default function BikeSelector({
         </Card.Body>
       </Card>
 
-      {/* the search row with three input boxes and a button */}
       <Row className="g-2">
         <Col xs={12} md={4}>
           <Form.Control
@@ -83,7 +79,6 @@ export default function BikeSelector({
         </Col>
       </Row>
 
-      {/* list of matching bikes the user can pick from */}
       {bikeResults.length > 0 && (
         <ListGroup className="rg-bike-results mt-3">
           {bikeResults.slice(0, 8).map((bike, idx) => (
@@ -107,7 +102,6 @@ export default function BikeSelector({
         </ListGroup>
       )}
 
-      {/* extra styles only for this part */}
       <style jsx>{`
         :global(.rg-selected-bike) {
           background: rgba(0, 0, 0, 0.25) !important;

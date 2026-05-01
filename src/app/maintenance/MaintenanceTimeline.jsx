@@ -2,7 +2,6 @@ import { Card, Button, Stack } from "react-bootstrap";
 import { formatDisplayDate } from "@/lib/maintenance";
 
 export default function MaintenanceTimeline({ monthSections, onEdit, onDelete }) {
-  // friendly message when there are no records yet
   if (monthSections.length === 0) {
     return (
       <p className="text-body-secondary mb-0">No maintenance records yet</p>
@@ -11,7 +10,6 @@ export default function MaintenanceTimeline({ monthSections, onEdit, onDelete })
 
   return (
     <div className="rg-timeline">
-      {/* one section per month */}
       {monthSections.map(([month, items]) => (
         <div key={month} className="mb-4">
           <h2 className="h6 fw-bold text-uppercase text-body-secondary mb-3">
@@ -19,16 +17,13 @@ export default function MaintenanceTimeline({ monthSections, onEdit, onDelete })
           </h2>
 
           <Stack gap={2}>
-            {/* one card per record in that month */}
             {items.map((r) => (
               <Card key={r._id} className="rg-timeline-card border-0">
                 <Card.Body>
-                  {/* the work that was done */}
                   <h3 className="h6 fw-bold mb-2">
                     {Array.isArray(r.type) ? r.type.join(", ") : r.type}
                   </h3>
 
-                  {/* which bike, when and at what km */}
                   {r.motorbike && (
                     <div className="small mb-1">
                       <strong>Bike:</strong> {r.motorbike}
@@ -42,21 +37,18 @@ export default function MaintenanceTimeline({ monthSections, onEdit, onDelete })
                     {Number(r.km).toLocaleString()}
                   </div>
 
-                  {/* extra notes the user wrote */}
                   {r.notes && (
                     <p className="small text-body-secondary mt-2 mb-0">
                       {r.notes}
                     </p>
                   )}
 
-                  {/* warnings or things to watch */}
                   {r.advisories && (
                     <div className="rg-advisory-box small mt-2 p-2 rounded">
                       <strong>Advisories:</strong> {r.advisories}
                     </div>
                   )}
 
-                  {/* edit and delete buttons for this record */}
                   <div className="d-flex gap-2 mt-3">
                     <Button
                       size="sm"
@@ -80,7 +72,6 @@ export default function MaintenanceTimeline({ monthSections, onEdit, onDelete })
         </div>
       ))}
 
-      {/* extra styles only for this part */}
       <style jsx>{`
         :global(.rg-timeline-card) {
           background: rgba(0, 0, 0, 0.25) !important;

@@ -25,9 +25,7 @@ export default function MaintenanceForm({
         ))}
       </div>
 
-      {/* the rest of the form fields */}
       <Row className="g-3">
-        {/* read only summary of which tasks are picked */}
         <Col xs={12}>
           <Form.Control
             as="textarea"
@@ -38,7 +36,6 @@ export default function MaintenanceForm({
           />
         </Col>
 
-        {/* date the work was done */}
         <Col xs={12} md={6}>
           <Form.Control
             type="date"
@@ -48,7 +45,6 @@ export default function MaintenanceForm({
           />
         </Col>
 
-        {/* km on the bike at the time of service */}
         <Col xs={12} md={6}>
           <Form.Control
             type="number"
@@ -59,7 +55,6 @@ export default function MaintenanceForm({
           />
         </Col>
 
-        {/* general notes about the service */}
         <Col xs={12}>
           <Form.Control
             as="textarea"
@@ -70,7 +65,6 @@ export default function MaintenanceForm({
           />
         </Col>
 
-        {/* warnings or things to keep an eye on next time */}
         <Col xs={12}>
           <Form.Control
             as="textarea"
@@ -84,7 +78,6 @@ export default function MaintenanceForm({
         </Col>
       </Row>
 
-      {/* preview shown under the form telling the user when each task is due next */}
       {previewList.length > 0 && (
         <div className="rg-preview-box mt-3 p-3 rounded">
           <h3 className="h6 fw-bold mb-2">Task Due Preview</h3>
@@ -98,7 +91,6 @@ export default function MaintenanceForm({
         </div>
       )}
 
-      {/* save button */}
       <div className="d-flex justify-content-end mt-3">
         <Button type="submit" variant="primary">
           <i className="bi bi-check2-circle me-2"></i>
@@ -106,7 +98,6 @@ export default function MaintenanceForm({
         </Button>
       </div>
 
-      {/* extra styles only for this part */}
       <style jsx>{`
         :global(.rg-preview-box) {
           background: rgba(34, 197, 94, 0.1);

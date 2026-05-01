@@ -5,11 +5,6 @@ import { getAblyRest } from "@/lib/ablyServer";
 import { cleanStringOrEmpty } from "@/lib/utils";
 import { buildBikeTaskSummary } from "@/lib/maintenance";
 
-// Mirrors the user's maintenance state into the notifications collection.
-//
-// We rebuild the desired notification set from scratch every time a record is
-// added / edited / deleted (or read), then diff against what's already stored
-// so old "due soon" entries get cleared once the user logs the service.
 async function syncMaintenanceNotifications(db, userEmail) {
   const notifications = db.collection("notifications");
   const records = await db
@@ -18,7 +13,7 @@ async function syncMaintenanceNotifications(db, userEmail) {
     .sort({ createdAt: -1, _id: -1 })
     .toArray();
 
-  const desired = [];
+  const pendingNotifications = [];
   for (const bike of buildBikeTaskSummary(records)) {
     for (const task of bike.tasks) {
       if (!Number.isFinite(task.remainingKm)) continue;
@@ -35,7 +30,7 @@ async function syncMaintenanceNotifications(db, userEmail) {
         continue;
       }
 
-      desired.push({
+      pendingNotifications.push({
         userEmail,
         title,
         text,
@@ -52,16 +47,16 @@ async function syncMaintenanceNotifications(db, userEmail) {
     }
   }
 
-  // Drop any "maintenanceDue" notifications that are no longer in the desired set.
-  const desiredIds = desired.map((n) => n.sourceId);
+  // Drop any "maintenanceDue" notifications that are no longer in the pending set.
+  const pendingSourceIds = pendingNotifications.map((n) => n.sourceId);
   await notifications.deleteMany({
     userEmail,
     sourceType: "maintenanceDue",
-    ...(desiredIds.length > 0 ? { sourceId: { $nin: desiredIds } } : {}),
+    ...(pendingSourceIds.length > 0 ? { sourceId: { $nin: pendingSourceIds } } : {}),
   });
 
   const ably = getAblyRest();
-  for (const notif of desired) {
+  for (const notif of pendingNotifications) {
     const existing = await notifications.findOne({
       userEmail,
       sourceType: "maintenanceDue",

@@ -12,25 +12,22 @@ const ACTIVE_STATUSES = [
   "assistance_received",
 ];
 
-function isClosed(status) {
-  return status === "resolved" || status === "cancelled";
-}
 
 export async function GET() {
   try {
     const client = await clientPromise;
     const db = client.db("login");
 
-    const items = await db
+    const allEmergencies = await db
       .collection("emergencies")
       .find({})
       .sort({ createdAt: -1 })
       .toArray();
 
     return NextResponse.json({
-      emergencies: items.map((item) => ({
-        ...item,
-        _id: String(item._id),
+      emergencies: allEmergencies.map((emergency) => ({
+        ...emergency,
+        _id: String(emergency._id),
       })),
     });
   } catch (e) {

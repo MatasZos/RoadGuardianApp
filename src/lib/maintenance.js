@@ -1,5 +1,3 @@
-
-
 export const SERVICE_INTERVALS_KM = {
   "Oil Change": 5000,
   "Oil Filter Replacement": 5000,
