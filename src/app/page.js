@@ -3,9 +3,10 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Container, Row, Col, Button, Card } from "react-bootstrap";
-
+// data file for the landing page features section
 const features = [
   {
+    //maintenance tracking feature with title, description, image and icon
     title: "Maintenance Tracking",
     description:
       "Log oil changes, tire rotations, inspections and more — never lose track of your bike's service history again.",
@@ -13,6 +14,7 @@ const features = [
     icon: "bi-wrench-adjustable",
   },
   {
+    //document storage feature with title, description, image and icon
     title: "Document Storage",
     description:
       "Insurance, registration, receipts — all in one place, encrypted and accessible from anywhere.",
@@ -21,6 +23,7 @@ const features = [
     reverse: true,
   },
   {
+    //emergency help feature with title, description, image and icon
     title: "Emergency Help",
     description:
       "One tap puts you in touch with emergency contacts and roadside assistance — with your live location.",
@@ -28,6 +31,7 @@ const features = [
     icon: "bi-exclamation-triangle-fill",
   },
   {
+    //AI assistant feature with title, description, image and icon
     title: "AI Assistant",
     description:
       "Real-time guidance for repairs, route planning and on-the-go troubleshooting from a built-in AI.",
@@ -36,6 +40,7 @@ const features = [
     reverse: true,
   },
   {
+    //community chat feature with title, description, image and icon
     title: "Community Chat",
     description:
       "Connect with riders nearby, share routes, swap tips and meet up.",
@@ -44,10 +49,12 @@ const features = [
   },
 ];
 
+// landing page component that showcases the features of the app, and contains a login and register button
 export default function LandingPage() {
   const router = useRouter();
   const featureRefs = useRef([]);
 
+  //fade in animation for the features section using Intersection Observer API
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -60,6 +67,7 @@ export default function LandingPage() {
       { threshold: 0.2 }
     );
 
+    //observe each feature element and add the fade-in class when it comes into view
     const currentRefs = featureRefs.current;
     currentRefs.forEach((el) => el && observer.observe(el));
     return () => currentRefs.forEach((el) => el && observer.unobserve(el));
@@ -67,7 +75,7 @@ export default function LandingPage() {
 
   return (
     <div className="bg-body text-body min-vh-100">
-      {/* Hero */}
+      {/* header of the page */}
       <section className="rg-hero py-5 py-md-6 text-center">
         <Container>
           <div className="rg-hero-eyebrow text-uppercase small fw-semibold mb-3">
@@ -81,7 +89,7 @@ export default function LandingPage() {
         </Container>
       </section>
 
-      {/* Features */}
+      {/* Features displayed on the page */}
       <section className="py-5">
         <Container>
           {features.map((f, i) => (
@@ -113,7 +121,7 @@ export default function LandingPage() {
           ))}
         </Container>
       </section>
-
+      {/* buttons with register and login */}
       <section className="py-5 rg-cta">
         <Container className="text-center">
           <h2 className="fw-bold mb-3">Get Started</h2>
@@ -140,6 +148,7 @@ export default function LandingPage() {
           </div>
         </Container>
       </section>
+      // custom styles for the landing page, including the hero section, feature icons and fade-in animation
       <style>{`
         .rg-hero {
           background:

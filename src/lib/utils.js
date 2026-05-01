@@ -1,18 +1,16 @@
-// Tiny shared helpers used by both API routes and pages.
-
+// cleanstring trims the string and returns null if its empty after trimming
 export function cleanString(value) {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
 }
 
-// Same as cleanString but returns "" instead of null. Handy for $set updates
-// where we want an empty field rather than `null`.
+// returns cleaned string or empty string
 export function cleanStringOrEmpty(value) {
   return cleanString(value) ?? "";
 }
 
-// Lower-cased clean string, used everywhere we key on email.
+// lower case clean string, used everywhere we key on email.
 export function cleanEmail(value) {
   return cleanString(value)?.toLowerCase() ?? null;
 }

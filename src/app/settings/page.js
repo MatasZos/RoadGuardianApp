@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -207,6 +206,7 @@ export default function SettingsPage() {
           autohide
           bg={toast?.variant}
         >
+        
           <Toast.Body className="text-white d-flex align-items-center gap-2">
             <i
               className={`bi ${
@@ -219,7 +219,6 @@ export default function SettingsPage() {
           </Toast.Body>
         </Toast>
       </ToastContainer>
-
       <style>{`
         .rg-settings-page {
           background: radial-gradient(circle at top, #101a1f, #000);
@@ -252,6 +251,7 @@ export default function SettingsPage() {
   );
 }
 
+// a section component for grouping related settings together
 function SettingsSection({ title, icon, children, isLast }) {
   return (
     <section className={isLast ? "pt-3" : "pt-3 pb-2 border-bottom border-secondary-subtle mb-3"}>
@@ -264,6 +264,7 @@ function SettingsSection({ title, icon, children, isLast }) {
   );
 }
 
+//a single setting row component that shows the setting title, description and a toggle switch to enable or disable the setting
 function SettingRow({ id, title, desc, enabled, onToggle }) {
   return (
     <div className="d-flex align-items-start justify-content-between gap-3">
@@ -282,6 +283,7 @@ function SettingRow({ id, title, desc, enabled, onToggle }) {
   );
 }
 
+//a simple loading skeleton component that shows a spinner while the settings are being loaded from the server
 function LoadingSkeleton() {
   return (
     <div className="d-flex align-items-center justify-content-center py-4">
