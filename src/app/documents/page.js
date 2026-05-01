@@ -6,122 +6,112 @@ import { useSession } from "next-auth/react";
 import Navbar from "../components/Navbar";
 import styles from "./documents.module.css";
 
+const DOCUMENT_TYPES = [
+  { label: "Insurance", expires: true },
+  { label: "Motor Tax", expires: true },
+  { label: "Warranty", expires: true },
+  { label: "Service Receipt", expires: false },
+  { label: "Product Purchase", expires: false },
+  { label: "Other", expires: false },
+];
+
+const EMPTY_FORM = { title: "", expiryDate: "", notes: "" };
+
+const SOON_THRESHOLD_DAYS = 30;
+
+function parseISODate(value) {
+  if (!value) return null;
+  const d = new Date(`${value}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatDisplayDate(value) {
+  const d = parseISODate(value);
+  if (!d) return String(value || "");
+  return d.toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function daysUntil(expiryDateStr) {
+  const d = parseISODate(expiryDateStr);
+  if (!d) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+// Bucket documents into Expired / Expiring soon / Valid / No expiry, each
+// sorted by soonest expiry (or by most recently created for the no-expiry pile).
+function categorize(docs) {
+  const expired = [];
+  const expiringSoon = [];
+  const valid = [];
+  const noExpiry = [];
+
+  for (const doc of docs) {
+    if (!doc.expiryDate) {
+      noExpiry.push(doc);
+      continue;
+    }
+    const dLeft = daysUntil(doc.expiryDate);
+    if (dLeft === null) noExpiry.push(doc);
+    else if (dLeft < 0) expired.push(doc);
+    else if (dLeft <= SOON_THRESHOLD_DAYS) expiringSoon.push(doc);
+    else valid.push(doc);
+  }
+
+  const bySoonest = (a, b) => {
+    const da = daysUntil(a.expiryDate) ?? Number.MAX_SAFE_INTEGER;
+    const db = daysUntil(b.expiryDate) ?? Number.MAX_SAFE_INTEGER;
+    return da - db;
+  };
+
+  expired.sort(bySoonest);
+  expiringSoon.sort(bySoonest);
+  valid.sort(bySoonest);
+  noExpiry.sort((a, b) => {
+    const ca = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const cb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return cb - ca;
+  });
+
+  return { expired, expiringSoon, valid, noExpiry };
+}
+
 export default function DocumentsPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const email = session?.user?.email || null;
 
   const [docs, setDocs] = useState([]);
   const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
 
-  const [form, setForm] = useState({
-    title: "",
-    expiryDate: "",
-    notes: "",
-  });
-
-  const email = session?.user?.email || null;
-
-  const documentTypes = [
-    { label: "Insurance", expires: true },
-    { label: "Motor Tax", expires: true },
-    { label: "Warranty", expires: true },
-    { label: "Service Receipt", expires: false },
-    { label: "Product Purchase", expires: false },
-    { label: "Other", expires: false },
-  ];
-
-  const selectedType = documentTypes.find((t) => t.label === form.title);
+  const selectedType = DOCUMENT_TYPES.find((t) => t.label === form.title);
+  const categorized = useMemo(() => categorize(docs), [docs]);
 
   useEffect(() => {
     if (status === "loading") return;
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
-  function parseISODate(value) {
-    if (!value) return null;
-    const d = new Date(`${value}T00:00:00`);
-    return Number.isNaN(d.getTime()) ? null : d;
-  }
-
-  function formatDisplayDate(value) {
-    const d = parseISODate(value);
-    if (!d) return String(value || "");
-    return d.toLocaleDateString(undefined, {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  }
-
-  function daysUntil(expiryDateStr) {
-    const d = parseISODate(expiryDateStr);
-    if (!d) return null;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const diffMs = d.getTime() - today.getTime();
-    return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  }
-
-  const categorized = useMemo(() => {
-    const expired = [];
-    const expiringSoon = [];
-    const valid = [];
-    const noExpiry = [];
-
-    for (const doc of docs) {
-      if (!doc.expiryDate) {
-        noExpiry.push(doc);
-        continue;
-      }
-
-      const dLeft = daysUntil(doc.expiryDate);
-
-      if (dLeft === null) {
-        noExpiry.push(doc);
-        continue;
-      }
-
-      if (dLeft < 0) expired.push(doc);
-      else if (dLeft <= 30) expiringSoon.push(doc);
-      else valid.push(doc);
-    }
-
-    const bySoonest = (a, b) => {
-      const da = daysUntil(a.expiryDate) ?? 999999;
-      const db = daysUntil(b.expiryDate) ?? 999999;
-      return da - db;
-    };
-
-    expired.sort(bySoonest);
-    expiringSoon.sort(bySoonest);
-    valid.sort(bySoonest);
-
-    noExpiry.sort((a, b) => {
-      const ca = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const cb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return cb - ca;
-    });
-
-    return { expired, expiringSoon, valid, noExpiry };
-  }, [docs]);
-
   useEffect(() => {
     if (!email) return;
-
-    async function fetchDocs() {
-      const res = await fetch("/api/documents", {
-        headers: { "x-user-email": email },
-        cache: "no-store",
-      });
-
-      const data = await res.json();
-      setDocs(Array.isArray(data) ? data : []);
-    }
-
     fetchDocs();
   }, [email]);
+
+  async function fetchDocs() {
+    const res = await fetch("/api/documents", {
+      headers: { "x-user-email": email },
+      cache: "no-store",
+    });
+    const data = await res.json();
+    setDocs(Array.isArray(data) ? data : []);
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -132,28 +122,15 @@ export default function DocumentsPage() {
       return;
     }
 
-    const method = editingId ? "PUT" : "POST";
-
     await fetch("/api/documents", {
-      method,
+      method: editingId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userEmail: email,
-        _id: editingId,
-        ...form,
-      }),
+      body: JSON.stringify({ userEmail: email, _id: editingId, ...form }),
     });
 
-    setForm({ title: "", expiryDate: "", notes: "" });
+    setForm(EMPTY_FORM);
     setEditingId(null);
-
-    const res = await fetch("/api/documents", {
-      headers: { "x-user-email": email },
-      cache: "no-store",
-    });
-
-    const data = await res.json();
-    setDocs(Array.isArray(data) ? data : []);
+    await fetchDocs();
   }
 
   function startEdit(doc) {
@@ -171,83 +148,16 @@ export default function DocumentsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ _id: id }),
     });
-
     setDocs((prev) => prev.filter((d) => String(d._id) !== String(id)));
   }
 
   function cancelEdit() {
     setEditingId(null);
-    setForm({ title: "", expiryDate: "", notes: "" });
+    setForm(EMPTY_FORM);
   }
 
   if (status === "loading") {
     return <div className={styles.loading}>Loading...</div>;
-  }
-
-  function Section({ title, subtitle, items, accentClass, badgeClass, cardClass }) {
-    return (
-      <div className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <h2 className={`${styles.sectionTitle} ${accentClass}`}>{title}</h2>
-            {subtitle && <p className={styles.sectionSubtitle}>{subtitle}</p>}
-          </div>
-
-          <div className={`${styles.badge} ${badgeClass}`}>{items.length}</div>
-        </div>
-
-        {items.length === 0 ? (
-          <p className={styles.emptyText}>None</p>
-        ) : (
-          <div className={styles.list}>
-            {items.map((d) => {
-              const dLeft = d.expiryDate ? daysUntil(d.expiryDate) : null;
-
-              return (
-                <div key={d._id} className={`${styles.card} ${cardClass}`}>
-                  <h3 className={styles.cardTitle}>{d.title}</h3>
-
-                  {d.expiryDate ? (
-                    <p className={styles.cardText}>
-                      <strong>Expires:</strong> {formatDisplayDate(d.expiryDate)}
-                      {typeof dLeft === "number" && (
-                        <span className={styles.daysPill}>
-                          {dLeft < 0
-                            ? `${Math.abs(dLeft)} day(s) ago`
-                            : `${dLeft} day(s) left`}
-                        </span>
-                      )}
-                    </p>
-                  ) : (
-                    <p className={styles.cardText}>
-                      <strong>Expiry:</strong> Not required
-                    </p>
-                  )}
-
-                  {d.notes && <p className={styles.cardNotes}>{d.notes}</p>}
-
-                  <div className={styles.cardActions}>
-                    <button
-                      className={styles.editBtn}
-                      onClick={() => startEdit(d)}
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      className={styles.deleteBtn}
-                      onClick={() => deleteDoc(d._id)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
   }
 
   return (
@@ -259,7 +169,8 @@ export default function DocumentsPage() {
           <div className={styles.hero}>
             <h1 className={styles.title}>Your Documents</h1>
             <p className={styles.heroText}>
-              Manage insurance, tax, warranties and other motorbike-related records in one place.
+              Manage insurance, tax, warranties and other motorbike-related
+              records in one place.
             </p>
           </div>
 
@@ -282,8 +193,8 @@ export default function DocumentsPage() {
               required
             >
               <option value="">Select Document Type</option>
-              {documentTypes.map((type, i) => (
-                <option key={i} value={type.label}>
+              {DOCUMENT_TYPES.map((type) => (
+                <option key={type.label} value={type.label}>
                   {type.label}
                 </option>
               ))}
@@ -337,6 +248,8 @@ export default function DocumentsPage() {
               accentClass={styles.expiredText}
               badgeClass={styles.expiredBadge}
               cardClass={styles.expiredCard}
+              onEdit={startEdit}
+              onDelete={deleteDoc}
             />
 
             <Section
@@ -346,6 +259,8 @@ export default function DocumentsPage() {
               accentClass={styles.warningText}
               badgeClass={styles.warningBadge}
               cardClass={styles.warningCard}
+              onEdit={startEdit}
+              onDelete={deleteDoc}
             />
 
             <Section
@@ -355,6 +270,8 @@ export default function DocumentsPage() {
               accentClass={styles.validText}
               badgeClass={styles.validBadge}
               cardClass={styles.validCard}
+              onEdit={startEdit}
+              onDelete={deleteDoc}
             />
 
             <Section
@@ -364,10 +281,89 @@ export default function DocumentsPage() {
               accentClass={styles.infoText}
               badgeClass={styles.infoBadge}
               cardClass={styles.infoCard}
+              onEdit={startEdit}
+              onDelete={deleteDoc}
             />
           </div>
         </div>
       </div>
     </>
+  );
+}
+
+function Section({
+  title,
+  subtitle,
+  items,
+  accentClass,
+  badgeClass,
+  cardClass,
+  onEdit,
+  onDelete,
+}) {
+  return (
+    <div className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <div>
+          <h2 className={`${styles.sectionTitle} ${accentClass}`}>{title}</h2>
+          {subtitle && <p className={styles.sectionSubtitle}>{subtitle}</p>}
+        </div>
+        <div className={`${styles.badge} ${badgeClass}`}>{items.length}</div>
+      </div>
+
+      {items.length === 0 ? (
+        <p className={styles.emptyText}>None</p>
+      ) : (
+        <div className={styles.list}>
+          {items.map((d) => (
+            <DocumentCard
+              key={d._id}
+              doc={d}
+              cardClass={cardClass}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DocumentCard({ doc, cardClass, onEdit, onDelete }) {
+  const dLeft = doc.expiryDate ? daysUntil(doc.expiryDate) : null;
+
+  return (
+    <div className={`${styles.card} ${cardClass}`}>
+      <h3 className={styles.cardTitle}>{doc.title}</h3>
+
+      {doc.expiryDate ? (
+        <p className={styles.cardText}>
+          <strong>Expires:</strong> {formatDisplayDate(doc.expiryDate)}
+          {typeof dLeft === "number" && (
+            <span className={styles.daysPill}>
+              {dLeft < 0
+                ? `${Math.abs(dLeft)} day(s) ago`
+                : `${dLeft} day(s) left`}
+            </span>
+          )}
+        </p>
+      ) : (
+        <p className={styles.cardText}>
+          <strong>Expiry:</strong> Not required
+        </p>
+      )}
+
+      {doc.notes && <p className={styles.cardNotes}>{doc.notes}</p>}
+
+      <div className={styles.cardActions}>
+        <button className={styles.editBtn} onClick={() => onEdit(doc)}>
+          Edit
+        </button>
+        <button className={styles.deleteBtn} onClick={() => onDelete(doc._id)}>
+          Delete
+        </button>
+      </div>
+    </div>
   );
 }

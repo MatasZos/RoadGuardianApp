@@ -17,6 +17,8 @@ import {
   ToastContainer,
 } from "react-bootstrap";
 import Navbar from "../components/Navbar";
+import AccountPill from "../components/AccountPill";
+import UnauthedPrompt from "../components/UnauthedPrompt";
 
 const ISSUE_TYPES = [
   "Account Issue",
@@ -108,20 +110,7 @@ export default function SupportPage() {
                 your account.
               </p>
             </div>
-            <Badge
-              pill
-              bg="dark"
-              className="rg-account-pill px-3 py-2 d-inline-flex align-items-center gap-2"
-            >
-              <span
-                className={`rg-status-dot ${
-                  unauthenticated ? "rg-status-off" : "rg-status-on"
-                }`}
-              ></span>
-              <span className="text-body-secondary fw-normal small">
-                {unauthenticated ? "Signed out" : `Signed in as: ${email}`}
-              </span>
-            </Badge>
+            <AccountPill email={unauthenticated ? null : email} />
           </div>
           <Card className="rg-section-card border-0">
             <Card.Body className="p-4">
@@ -130,7 +119,10 @@ export default function SupportPage() {
                   <Spinner animation="border" variant="primary" />
                 </div>
               ) : unauthenticated ? (
-                <UnauthedPrompt onLogin={() => router.push("/login")} />
+                <UnauthedPrompt
+                  message="Please log in to submit a support ticket."
+                  onLogin={() => router.push("/login")}
+                />
               ) : (
                 <>
                   <div className="rg-support-banner d-flex align-items-center justify-content-between gap-3 p-3 rounded-3 mb-4">
@@ -300,23 +292,6 @@ export default function SupportPage() {
           border: 1px solid rgba(255,255,255,0.10) !important;
           box-shadow: 0 18px 60px rgba(0,0,0,0.6);
         }
-        .rg-account-pill {
-          background: rgba(255,255,255,0.06) !important;
-          border: 1px solid rgba(255,255,255,0.10);
-        }
-        .rg-status-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 999px;
-          display: inline-block;
-        }
-        .rg-status-on {
-          background: var(--bs-primary);
-          box-shadow: 0 0 12px rgba(var(--bs-primary-rgb), 0.55);
-        }
-        .rg-status-off {
-          background: #6b7280;
-        }
         .rg-support-banner {
           background: linear-gradient(90deg, rgba(var(--bs-primary-rgb), 0.18), rgba(0,0,0,0.15));
           border: 1px solid rgba(var(--bs-primary-rgb), 0.22);
@@ -351,31 +326,3 @@ export default function SupportPage() {
   );
 }
 
-function UnauthedPrompt({ onLogin }) {
-  return (
-    <div className="d-flex gap-3 align-items-start">
-      <div
-        className="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0"
-        style={{
-          width: 44,
-          height: 44,
-          background: "rgba(231,76,60,0.12)",
-          border: "1px solid rgba(231,76,60,0.25)",
-          color: "#e74c3c",
-        }}
-      >
-        <i className="bi bi-exclamation-lg fs-4"></i>
-      </div>
-      <div>
-        <div className="fw-bold mb-1">You're not signed in</div>
-        <p className="text-body-secondary small mb-3">
-          Please log in to submit a support ticket.
-        </p>
-        <Button variant="danger" onClick={onLogin}>
-          <i className="bi bi-box-arrow-in-right me-2"></i>
-          Go to Login
-        </Button>
-      </div>
-    </div>
-  );
-}

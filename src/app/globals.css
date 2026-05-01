@@ -34,6 +34,27 @@ body {
   --bs-link-hover-color: #ffd29a;
   --bs-link-color-rgb: 255, 180, 90;
 }
+.rg-account-pill {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.rg-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.rg-status-on {
+  background: var(--bs-primary);
+  box-shadow: 0 0 12px rgba(var(--bs-primary-rgb), 0.55);
+}
+
+.rg-status-off {
+  background: #6b7280;
+}
+
 .btn-primary {
   --bs-btn-color: #111;
   --bs-btn-bg: #ff8c00;

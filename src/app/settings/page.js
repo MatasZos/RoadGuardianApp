@@ -9,13 +9,14 @@ import {
   Card,
   Form,
   Button,
-  Badge,
   Spinner,
   Stack,
   Toast,
   ToastContainer,
 } from "react-bootstrap";
 import Navbar from "../components/Navbar";
+import AccountPill from "../components/AccountPill";
+import UnauthedPrompt from "../components/UnauthedPrompt";
 
 // the values used when the user has no saved settings yet
 const DEFAULTS = {
@@ -113,22 +114,7 @@ export default function SettingsPage() {
                 Manage your preferences and reminders for RoadGuardian.
               </p>
             </div>
-            <Badge
-              pill
-              bg="dark"
-              className="rg-account-pill px-3 py-2 d-inline-flex align-items-center gap-2"
-            >
-              <span
-                className={`rg-status-dot ${
-                  unauthenticated ? "rg-status-off" : "rg-status-on"
-                }`}
-              ></span>
-              <span className="text-body-secondary fw-normal small">
-                {unauthenticated
-                  ? "Signed out"
-                  : `Signed in as: ${session?.user?.email || ""}`}
-              </span>
-            </Badge>
+            <AccountPill email={unauthenticated ? null : session?.user?.email} />
           </div>
           {/* the main card holding all the settings */}
           <Card className="rg-section-card border-0">
@@ -136,7 +122,10 @@ export default function SettingsPage() {
               {loading ? (
                 <LoadingSkeleton />
               ) : unauthenticated ? (
-                <UnauthedPrompt onLogin={() => router.push("/login")} />
+                <UnauthedPrompt
+                  message="Please log in to view and update your settings."
+                  onLogin={() => router.push("/login")}
+                />
               ) : (
                 <>
                   {/* heading row with the save button on the right */}
@@ -265,23 +254,6 @@ export default function SettingsPage() {
           border: 1px solid rgba(255,255,255,0.10) !important;
           box-shadow: 0 18px 60px rgba(0,0,0,0.6);
         }
-        .rg-account-pill {
-          background: rgba(255,255,255,0.06) !important;
-          border: 1px solid rgba(255,255,255,0.10);
-        }
-        .rg-status-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 999px;
-          display: inline-block;
-        }
-        .rg-status-on {
-          background: var(--bs-primary);
-          box-shadow: 0 0 12px rgba(var(--bs-primary-rgb), 0.55);
-        }
-        .rg-status-off {
-          background: #6b7280;
-        }
         .rg-settings-page .form-check-input {
           width: 2.5rem;
           height: 1.4rem;
@@ -341,32 +313,3 @@ function LoadingSkeleton() {
   );
 }
 
-// shown when the user is not signed in, asking them to log in
-function UnauthedPrompt({ onLogin }) {
-  return (
-    <div className="d-flex gap-3 align-items-start">
-      <div
-        className="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0"
-        style={{
-          width: 44,
-          height: 44,
-          background: "rgba(231,76,60,0.12)",
-          border: "1px solid rgba(231,76,60,0.25)",
-          color: "#e74c3c",
-        }}
-      >
-        <i className="bi bi-exclamation-lg fs-4"></i>
-      </div>
-      <div>
-        <div className="fw-bold mb-1">You're not signed in</div>
-        <p className="text-body-secondary small mb-3">
-          Please log in to view and update your settings.
-        </p>
-        <Button variant="danger" onClick={onLogin}>
-          <i className="bi bi-box-arrow-in-right me-2"></i>
-          Go to Login
-        </Button>
-      </div>
-    </div>
-  );
-}
